@@ -36,37 +36,60 @@ void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
 
 } // unnamed namespace
 
+size_t binary_search_pid(const Array<ProcessStat> &stats, int pid) {
+  size_t left = 0;
+  size_t right = stats.size;
+  while (left < right) {
+    size_t mid = left + (right - left) / 2;
+    if (stats.data[mid].pid < pid) {
+      left = mid + 1;
+    } else if (stats.data[mid].pid > pid) {
+      right = mid;
+    } else {
+      return mid;
+    }
+  }
+  return SIZE_MAX;
+}
+
+// Rebuilds lines in previous display order (with new processes appended) for stable sorting.
 void brief_table_update(
   BriefTableState &my_state, State &state, const StateSnapshot &old) {
 
   const StateSnapshot &new_snapshot = state.snapshot;
+  const Array<BriefTableLine> &old_lines = my_state.lines;
 
-  const Array<BriefTableLine>& old_lines = my_state.lines;
-  std::sort(old_lines.data, old_lines.data + old_lines.size,
-      [](const BriefTableLine &left, const BriefTableLine &right) {
-        return left.pid < right.pid;
-      });
+  Array<bool> added = Array<bool>::create(state.snapshot_arena, new_snapshot.stats.size);
+  for (size_t i = 0; i < added.size; ++i) {
+    added.data[i] = false;
+  }
 
   Array<BriefTableLine> new_lines = Array<BriefTableLine>::create(state.snapshot_arena, new_snapshot.stats.size);
+  size_t new_lines_count = 0;
 
-  size_t old_lines_idx = 0;
-  for (size_t i = 0; i < new_lines.size; ++i) {
-    BriefTableLine &new_line = new_lines.data[i];
-    const ProcessStat &new_stat = new_snapshot.stats.data[i];
+  for (size_t i = 0; i < old_lines.size; ++i) {
+    const BriefTableLine &old_line = old_lines.data[i];
+    size_t state_index = binary_search_pid(new_snapshot.stats, old_line.pid);
 
-    new_line.pid = new_stat.pid;
-    new_line.state_index = i;
-
-    while (old_lines_idx < old_lines.size && new_stat.pid > old_lines.data[old_lines_idx].pid) {
-      ++old_lines_idx;
-    }
-
-    if (old_lines_idx < old_lines.size && new_line.pid == old_lines.data[old_lines_idx].pid) {
-      const BriefTableLine &old_line = old_lines.data[old_lines_idx];
+    if (state_index != SIZE_MAX) {
+      BriefTableLine &new_line = new_lines.data[new_lines_count++];
+      new_line.pid = old_line.pid;
+      new_line.state_index = state_index;
       new_line.selected = old_line.selected;
+      added.data[state_index] = true;
     }
   }
 
+  for (size_t i = 0; i < new_snapshot.stats.size; ++i) {
+    if (!added.data[i]) {
+      BriefTableLine &new_line = new_lines.data[new_lines_count++];
+      new_line.pid = new_snapshot.stats.data[i].pid;
+      new_line.state_index = i;
+      new_line.selected = false;
+    }
+  }
+
+  new_lines.size = new_lines_count;
   my_state.lines = new_lines;
   sort_as_requested(my_state, new_snapshot);
 }
