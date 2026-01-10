@@ -34,13 +34,11 @@ void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
   }
 }
 
-} // unnamed namespace
-
 size_t binary_search_pid(const Array<ProcessStat> &stats, int pid) {
   size_t left = 0;
   size_t right = stats.size;
   while (left < right) {
-    size_t mid = left + (right - left) / 2;
+    size_t mid = (left + right) / 2;
     if (stats.data[mid].pid < pid) {
       left = mid + 1;
     } else if (stats.data[mid].pid > pid) {
@@ -51,6 +49,9 @@ size_t binary_search_pid(const Array<ProcessStat> &stats, int pid) {
   }
   return SIZE_MAX;
 }
+
+} // unnamed namespace
+
 
 // Rebuilds lines in previous display order (with new processes appended) for stable sorting.
 void brief_table_update(

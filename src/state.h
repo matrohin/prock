@@ -20,6 +20,8 @@ struct ProcessDerivedStat {
 struct StateSnapshot {
   Array<ProcessStat> stats;
   Array<ProcessDerivedStat> derived_stats;
+  Array<CpuCoreStat> cpu_stats;      // Raw ticks from /proc/stat
+  Array<double> cpu_usage_perc;      // Computed: [0]=total, [1..n]=per-core
   SteadyTimePoint at;
 };
 

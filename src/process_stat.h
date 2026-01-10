@@ -134,6 +134,24 @@ struct ProcessStat {
   ulong statm_data;
 };
 
+// From /proc/stat - all values are cumulative ticks
+struct CpuCoreStat {
+  ulong user;
+  ulong nice;
+  ulong system;
+  ulong idle;
+  ulong iowait;
+  ulong irq;
+  ulong softirq;
+
+  ulong total() const {
+    return user + nice + system + idle + iowait + irq + softirq;
+  }
+  ulong busy() const {
+    return user + nice + system + irq + softirq;
+  }
+};
+
 struct GatheringState {
   SteadyTimePoint last_update;
 };

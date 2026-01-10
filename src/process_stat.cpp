@@ -102,11 +102,54 @@ Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
   return result;
 }
 
+// Reads /proc/stat for system-wide CPU stats
+// Returns array where [0] = total, [1..n] = per-core
+Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
+  FILE *stat_file = fopen("/proc/stat", "r");
+  if (!stat_file) {
+    return {};
+  }
+
+  // Count CPU lines first (total + per-core)
+  int num_cpus = 0;
+  char line[256];
+  while (fgets(line, sizeof(line), stat_file)) {
+    if (strncmp(line, "cpu", 3) == 0 && (line[3] == ' ' || (line[3] >= '0' && line[3] <= '9'))) {
+      ++num_cpus;
+    } else if (num_cpus > 0) {
+      break;  // CPU lines are at the top, stop when we hit non-CPU lines
+    }
+  }
+
+  rewind(stat_file);
+
+  Array<CpuCoreStat> result = Array<CpuCoreStat>::create(arena, num_cpus);
+  int idx = 0;
+  while (fgets(line, sizeof(line), stat_file) && idx < num_cpus) {
+    if (strncmp(line, "cpu", 3) != 0) {
+      continue;
+    }
+    // Skip "cpu" or "cpuN" prefix
+    char *p = line + 3;
+    while (*p && *p != ' ') ++p;
+
+    CpuCoreStat &stat = result.data[idx];
+    sscanf(p, "%lu %lu %lu %lu %lu %lu %lu",
+           &stat.user, &stat.nice, &stat.system, &stat.idle,
+           &stat.iowait, &stat.irq, &stat.softirq);
+    ++idx;
+  }
+
+  fclose(stat_file);
+  return result;
+}
+
 } // unnamed namespace
 
 void gather(GatheringState &state, Sync &sync) {
   BumpArena arena = BumpArena::create();
-  const auto result = read_all_processes(arena);
+  const auto process_stats = read_all_processes(arena);
+  const auto cpu_stats = read_cpu_stats(arena);
 
   const Seconds period = Seconds{0.5};
   {
@@ -121,7 +164,8 @@ void gather(GatheringState &state, Sync &sync) {
   const SystemTimePoint system_now = SystemClock::now();
   sync.update_queue.push(UpdateSnapshot{
       arena,
-      result,
+      process_stats,
+      cpu_stats,
       state.last_update,
       system_now
   });

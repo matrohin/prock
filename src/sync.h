@@ -9,6 +9,7 @@
 struct UpdateSnapshot {
   BumpArena owner_arena;
   Array<ProcessStat> stats;
+  Array<CpuCoreStat> cpu_stats;  // [0]=total, [1..n]=per-core
   SteadyTimePoint at;
   SystemTimePoint system_time;
 };

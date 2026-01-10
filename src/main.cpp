@@ -28,6 +28,7 @@
 #include "views/brief_table.cpp"
 #include "views/cpu_chart.cpp"
 #include "views/mem_chart.cpp"
+#include "views/core_chart.cpp"
 
 namespace {
 
@@ -100,7 +101,10 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_s
   ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
   ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
-  views_draw(view_state, state);
+  FrameContext frame_ctx = {};
+  views_draw(frame_ctx, view_state, state);
+  frame_ctx.frame_arena.destroy();
+
   ImGui::End();
 
   ImGui::Render();

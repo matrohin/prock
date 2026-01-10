@@ -1,4 +1,5 @@
 #include "state.h"
+#include "sync.h"
 
 
 StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state, const UpdateSnapshot &snapshot) {
@@ -25,5 +26,15 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state, co
     }
   }
 
-  return StateSnapshot{snapshot.stats, derived_stats, snapshot.at};
+  // Compute system-wide CPU usage percentages
+  Array<double> cpu_usage_perc = Array<double>::create(arena, snapshot.cpu_stats.size);
+  for (size_t i = 0; i < snapshot.cpu_stats.size && i < old.cpu_stats.size; ++i) {
+    const CpuCoreStat &cur = snapshot.cpu_stats.data[i];
+    const CpuCoreStat &prev = old.cpu_stats.data[i];
+    ulong total_delta = cur.total() - prev.total();
+    ulong busy_delta = cur.busy() - prev.busy();
+    cpu_usage_perc.data[i] = total_delta > 0 ? (busy_delta * 100.0) / total_delta : 0.0;
+  }
+
+  return StateSnapshot{snapshot.stats, derived_stats, snapshot.cpu_stats, cpu_usage_perc, snapshot.at};
 }
