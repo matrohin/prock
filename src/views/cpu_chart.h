@@ -1,0 +1,20 @@
+#pragma once
+
+struct CpuChartData {
+  int pid;
+  char label[128];
+  GrowingArray<double> times;
+  GrowingArray<double> cpu_kernel_perc;
+  GrowingArray<double> cpu_total_perc;
+};
+
+struct CpuChartState {
+  BumpArena cur_arena; // TODO: gets changed every now and then via Array<T>::realloc
+  GrowingArray<CpuChartData> charts;
+  size_t wasted_bytes = 0;
+};
+
+void cpu_chart_update(CpuChartState &my_state, const State &state, const StateSnapshot &old);
+void cpu_chart_draw(CpuChartState &my_state, const State &state);
+
+void cpu_chart_add(CpuChartState &my_state, int pid, const char *comm);
