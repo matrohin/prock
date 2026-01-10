@@ -199,6 +199,7 @@ int main(int, char **) {
 
   // Cleanup
   sync.quit.store(true);
+  sync.quit_cv.notify_one();
   gathering_thread.join();
 
   ImGui_ImplOpenGL3_Shutdown();

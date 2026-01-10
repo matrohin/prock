@@ -109,7 +109,14 @@ void gather(GatheringState &state, Sync &sync) {
   const auto result = read_all_processes(arena);
 
   const Seconds period = Seconds{0.5};
-  std::this_thread::sleep_until(state.last_update + period);
+  {
+    std::unique_lock<std::mutex> lock(sync.quit_mutex);
+    sync.quit_cv.wait_until(lock, state.last_update + period);
+  }
+  if (sync.quit.load()) {
+    arena.destroy();
+    return;
+  }
   state.last_update = SteadyClock::now();
   const SystemTimePoint system_now = SystemClock::now();
   sync.update_queue.push(UpdateSnapshot{
