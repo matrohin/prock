@@ -5,6 +5,7 @@
 
 #include "imgui.h"
 #include "implot.h"
+#include "implot_internal.h"
 
 void core_chart_update(CoreChartState &my_state, const State &state, const StateSnapshot &old) {
   const StateSnapshot &snapshot = state.snapshot;
@@ -22,7 +23,7 @@ void core_chart_update(CoreChartState &my_state, const State &state, const State
   if (num_cores > MAX_CORES) num_cores = MAX_CORES;
   my_state.num_cores = num_cores;
 
-  for (int i = 0; i < num_cores; ++i) {
+  for (size_t i = 0; i < num_cores; ++i) {
     *my_state.core_usage[i].emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_usage_perc.data[i + 1];
   }
 
@@ -32,7 +33,7 @@ void core_chart_update(CoreChartState &my_state, const State &state, const State
 
     my_state.times.realloc(new_arena);
     my_state.total_usage.realloc(new_arena);
-    for (int i = 0; i < my_state.num_cores; ++i) {
+    for (size_t i = 0; i < my_state.num_cores; ++i) {
       my_state.core_usage[i].realloc(new_arena);
     }
 
@@ -65,29 +66,36 @@ void core_chart_draw(FrameContext &ctx, CoreChartState &my_state, const State &s
       ImPlot::PlotLine("Total", my_state.times.data(), my_state.total_usage.data(), my_state.total_usage.size());
     } else if (my_state.stacked) {
       // Stacked per-core view
-      int n = (int)my_state.core_usage[0].size();
+      size_t n = my_state.core_usage[0].size();
       if (n > 0 && my_state.num_cores > 0) {
-        // Allocate two buffers for prev/curr cumulative values
         Array<double> prev = Array<double>::create(ctx.frame_arena, n);
         Array<double> curr = Array<double>::create(ctx.frame_arena, n);
         memset(prev.data, 0, n * sizeof(double));
 
         ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.7f);
-        for (int i = 0; i < my_state.num_cores; ++i) {
-          // curr = prev + core_usage[i]
-          const double *core_data = my_state.core_usage[i].data();
-          for (int j = 0; j < n; ++j) {
-            curr.data[j] = prev.data[j] + core_data[j];
+
+        // Call SetupLock manually to get correct GetItem id
+        // for the first line if it was hidden by the user:
+        ImPlot::SetupLock();
+        for (size_t i = 0; i < my_state.num_cores; ++i) {
+          char label[16];
+          snprintf(label, sizeof(label), "Core %d", (int) i);
+
+          ImPlotItem *item = ImPlot::GetCurrentPlot()->Items.GetItem(label);
+          const bool is_hidden = item && !item->Show;
+
+          if (is_hidden) {
+            std::swap(prev.data, curr.data);
+          } else {
+            const double *core_data = my_state.core_usage[i].data();
+            for (size_t j = 0; j < n; ++j) {
+              curr.data[j] = prev.data[j] + core_data[j];
+            }
           }
 
-          char label[16];
-          snprintf(label, sizeof(label), "Core %d", i);
           ImPlot::PlotShaded(label, my_state.times.data(), prev.data, curr.data, n, CHART_FLAGS);
 
-          // Swap buffers
-          double *tmp = prev.data;
-          prev.data = curr.data;
-          curr.data = tmp;
+          std::swap(prev.data, curr.data);
         }
         ImPlot::PopStyleVar();
       }
@@ -95,7 +103,7 @@ void core_chart_draw(FrameContext &ctx, CoreChartState &my_state, const State &s
       // Separate lines per-core view
       for (int i = 0; i < my_state.num_cores; ++i) {
         char label[16];
-        snprintf(label, sizeof(label), "Core %d", i);
+        snprintf(label, sizeof(label), "Core %d", (int) i);
         ImPlot::PlotLine(label, my_state.times.data(), my_state.core_usage[i].data(), my_state.core_usage[i].size());
       }
     }
