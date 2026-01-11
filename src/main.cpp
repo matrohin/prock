@@ -14,8 +14,11 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <dirent.h>
+#include <limits.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
@@ -116,6 +119,7 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_s
   glClear(GL_COLOR_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
+
 const char* DEFAULT_INI = R"(
 [Window][prock]
 Pos=0,0
@@ -146,11 +150,11 @@ Collapsed=0
 DockId=0x00000003,0
 
 [Docking][Data]
-DockSpace     ID=0x55EF6A19 Window=0xEA9D8568 Pos=0,0 Size=1280,800 Split=Y
-  DockNode    ID=0x00000001 Parent=0x55EF6A19 SizeRef=1280,296 Split=X Selected=0x8286D95C
+DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,0 Size=1280,800 Split=Y
+  DockNode    ID=0x00000001 Parent=0xF352448A SizeRef=1280,296 Split=X Selected=0x8286D95C
     DockNode  ID=0x00000003 Parent=0x00000001 SizeRef=640,397 Selected=0x8286D95C
     DockNode  ID=0x00000004 Parent=0x00000001 SizeRef=638,397 Selected=0x49AB4810
-  DockNode    ID=0x00000002 Parent=0x55EF6A19 SizeRef=1280,502 CentralNode=1 Selected=0x5DB0E023
+  DockNode    ID=0x00000002 Parent=0xF352448A SizeRef=1280,502 CentralNode=1 Selected=0x5DB0E023
 )";
 
 } // unnamed namespace
@@ -188,8 +192,30 @@ int main(int, char **) {
       ImGuiConfigFlags_NavEnableKeyboard;           // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
 
-  // TODO: move default IniFilename to $HOME/.config/prock/imgui.ini
-  if (access(ImGui::GetIO().IniFilename, F_OK) != 0) {
+  // Set up config path in $HOME/.config/prock/
+  static char ini_path[PATH_MAX] = {};
+  const char* home = getenv("HOME");
+  if (home) {
+    char dir_path[PATH_MAX] = {};
+    int n = 0;
+    // Ensure .config directory exists
+    n = snprintf(dir_path, sizeof(dir_path), "%s/.config", home);
+    if (n > 0 && (size_t)n < sizeof(dir_path)) {
+      mkdir(dir_path, 0755);
+      // Ensure .config/prock directory exists
+      n = snprintf(dir_path, sizeof(dir_path), "%s/.config/prock", home);
+      if (n > 0 && (size_t)n < sizeof(dir_path)) {
+        mkdir(dir_path, 0755);
+        // Set the ini file path
+        n = snprintf(ini_path, sizeof(ini_path), "%s/.config/prock/imgui.ini", home);
+        if (n > 0 && (size_t)n < sizeof(ini_path)) {
+          io.IniFilename = ini_path;
+        }
+      }
+    }
+  }
+
+  if (access(io.IniFilename, F_OK) != 0) {
     ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
   }
 
