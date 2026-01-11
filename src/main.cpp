@@ -50,9 +50,16 @@ void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error: %s\n", description);
 }
 
-void state_init(State &state) {
-  state.system.ticks_in_second = sysconf(_SC_CLK_TCK);
-  state.system.mem_page_size = sysconf(_SC_PAGESIZE);
+bool state_init(State &state) {
+  const long ticks = sysconf(_SC_CLK_TCK);
+  const long page_size = sysconf(_SC_PAGESIZE);
+  if (ticks <= 0 || page_size <= 0) {
+    fprintf(stderr, "Failed to get system configuration\n");
+    return false;
+  }
+  state.system.ticks_in_second = ticks;
+  state.system.mem_page_size = page_size;
+  return true;
 }
 
 void state_update(State &state, ViewState &view_state, const UpdateSnapshot &snapshot) {
@@ -239,6 +246,12 @@ int main(int, char **) {
 
 
   // Setup state
+  State state = {};
+  ViewState view_state = {};
+  if (!state_init(state)) {
+    return 1;
+  }
+
   Sync sync = {};
   std::thread gathering_thread{
     [&sync]() {
@@ -249,10 +262,6 @@ int main(int, char **) {
       }
     }
   };
-
-  State state = {};
-  ViewState view_state = {};
-  state_init(state);
 
   while (!glfwWindowShouldClose(window)) {
     if (g_needs_updates > 0) {

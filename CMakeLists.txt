@@ -9,6 +9,7 @@ add_subdirectory(glfw-3.4)
 add_executable(${PROJECT_NAME} src/main.cpp src/imgui_all.cpp)
 
 target_link_libraries(${PROJECT_NAME} glfw OpenGL::GLES2 X11::X11)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/implot)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

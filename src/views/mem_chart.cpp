@@ -29,6 +29,7 @@ void mem_chart_update(
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
+    old_arena.destroy();
   }
 }
 
@@ -87,7 +88,7 @@ void mem_chart_add(MemChartState &my_state, int pid, const char *comm) {
 
   MemChartData &data = *my_state.charts.emplace_back(my_state.cur_arena, my_state.wasted_bytes);
   data.pid = pid;
-  sprintf(data.label, "Memory Usage: %s (%d)", comm, pid);
+  snprintf(data.label, sizeof(data.label), "Memory Usage: %s (%d)", comm, pid);
 
   common_charts_sort_added(my_state.charts);
 }

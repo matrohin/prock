@@ -20,8 +20,12 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state, co
 
     if (old_state_idx < old.stats.size && new_stat.pid == old.stats.data[old_state_idx].pid) {
       const ProcessStat &old_stat = old.stats.data[old_state_idx];
-      result.cpu_user_perc = (new_stat.utime - old_stat.utime) / ticks_passed * 100;
-      result.cpu_kernel_perc = (new_stat.stime - old_stat.stime) / ticks_passed * 100;
+      if (new_stat.utime >= old_stat.utime) {
+        result.cpu_user_perc = (new_stat.utime - old_stat.utime) / ticks_passed * 100;
+      }
+      if (new_stat.stime >= old_stat.stime) {
+        result.cpu_kernel_perc = (new_stat.stime - old_stat.stime) / ticks_passed * 100;
+      }
       result.mem_resident_bytes = new_stat.statm_resident * old_state.system.mem_page_size;
     }
   }

@@ -28,6 +28,7 @@ struct BriefTableState {
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
   int selected_pid;  // -1 means no selection
+  char kill_error[128];
 };
 
 void brief_table_update(

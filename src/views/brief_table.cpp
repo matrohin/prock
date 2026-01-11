@@ -6,7 +6,9 @@
 
 #include "imgui_internal.h"
 
+#include <cerrno>
 #include <chrono>
+#include <cstring>
 #include <signal.h>
 
 namespace {
@@ -27,6 +29,7 @@ void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
       case eBriefTableColumnId_CpuKernelPerc: return state.derived_stats.data[left.state_index].cpu_kernel_perc < state.derived_stats.data[right.state_index].cpu_kernel_perc;
       case eBriefTableColumnId_MemRssBytes: return state.derived_stats.data[left.state_index].mem_resident_bytes < state.derived_stats.data[right.state_index].mem_resident_bytes;
       case eBriefTableColumnId_MemVirtBytes: return state.stats.data[left.state_index].vsize < state.stats.data[right.state_index].vsize;
+      case eBriefTableColumnId_Count: return false;
     }
     return false;
   };
@@ -140,7 +143,7 @@ void brief_table_draw(ViewState &view_state, const State &state) {
       ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
       {
         char label[32];
-        sprintf(label, "%d", line.pid);
+        snprintf(label, sizeof(label), "%d", line.pid);
         if (ImGui::Selectable(label, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
           my_state.selected_pid = line.pid;
         }
@@ -154,11 +157,15 @@ void brief_table_draw(ViewState &view_state, const State &state) {
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Kill Process", "Del") || ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-            kill(line.pid, SIGTERM);
+            if (kill(line.pid, SIGTERM) != 0) {
+              snprintf(my_state.kill_error, sizeof(my_state.kill_error), "Failed to kill %d: %s", line.pid, strerror(errno));
+            }
             ImGui::CloseCurrentPopup();
           }
           if (ImGui::MenuItem("Force Kill")) {
-            kill(line.pid, SIGKILL);
+            if (kill(line.pid, SIGKILL) != 0) {
+              snprintf(my_state.kill_error, sizeof(my_state.kill_error), "Failed to kill %d: %s", line.pid, strerror(errno));
+            }
           }
           ImGui::EndPopup();
         }
@@ -194,7 +201,22 @@ void brief_table_draw(ViewState &view_state, const State &state) {
 
   // Del key to kill selected process
   if (my_state.selected_pid > 0 && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-    kill(my_state.selected_pid, SIGTERM);
+    if (kill(my_state.selected_pid, SIGTERM) != 0) {
+      snprintf(my_state.kill_error, sizeof(my_state.kill_error), "Failed to kill %d: %s", my_state.selected_pid, strerror(errno));
+    }
+  }
+
+  // Show error popup if there's an error
+  if (my_state.kill_error[0] != '\0') {
+    ImGui::OpenPopup("Kill Error");
+  }
+  if (ImGui::BeginPopupModal("Kill Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("%s", my_state.kill_error);
+    if (ImGui::Button("OK")) {
+      my_state.kill_error[0] = '\0';
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
   }
 
   ImGui::End();

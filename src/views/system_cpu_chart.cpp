@@ -23,7 +23,7 @@ void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, 
   if (num_cores > MAX_CORES) num_cores = MAX_CORES;
   my_state.num_cores = num_cores;
 
-  for (size_t i = 0; i < num_cores; ++i) {
+  for (int i = 0; i < num_cores; ++i) {
     *my_state.core_usage[i].emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_usage_perc.data[i + 1];
   }
 
@@ -33,7 +33,7 @@ void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, 
 
     my_state.times.realloc(new_arena);
     my_state.total_usage.realloc(new_arena);
-    for (size_t i = 0; i < my_state.num_cores; ++i) {
+    for (int i = 0; i < my_state.num_cores; ++i) {
       my_state.core_usage[i].realloc(new_arena);
     }
 
@@ -79,9 +79,9 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State
         // Call SetupLock manually to get correct GetItem id
         // for the first line if it was hidden by the user:
         ImPlot::SetupLock();
-        for (size_t i = 0; i < my_state.num_cores; ++i) {
+        for (int i = 0; i < my_state.num_cores; ++i) {
           char label[16];
-          snprintf(label, sizeof(label), "Core %d", (int) i);
+          snprintf(label, sizeof(label), "Core %d", i);
 
           ImPlotItem *item = ImPlot::GetCurrentPlot()->Items.GetItem(label);
           const bool is_hidden = item && !item->Show;
@@ -105,7 +105,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State
       // Separate lines per-core view
       for (int i = 0; i < my_state.num_cores; ++i) {
         char label[16];
-        snprintf(label, sizeof(label), "Core %d", (int) i);
+        snprintf(label, sizeof(label), "Core %d", i);
         ImPlot::PlotLine(label, my_state.times.data(), my_state.core_usage[i].data(), my_state.core_usage[i].size());
       }
     }

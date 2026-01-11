@@ -6,7 +6,7 @@
 
 namespace {
 
-void read_process(int pid, ProcessStat *out) {
+bool read_process(int pid, ProcessStat *out) {
   constexpr size_t PATH_BUF_SIZE = 64;
 
   char stat_filename[PATH_BUF_SIZE];
@@ -29,7 +29,7 @@ void read_process(int pid, ProcessStat *out) {
     if (stat_file) fclose(stat_file);
     if (statm_file) fclose(statm_file);
     if (comm_file) fclose(comm_file);
-    return;
+    return false;
   }
 
   // Read all files into buffers
@@ -40,13 +40,13 @@ void read_process(int pid, ProcessStat *out) {
     fclose(comm_file);
     fclose(statm_file);
     fclose(stat_file);
-    return;
+    return false;
   }
   if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) {
     fclose(comm_file);
     fclose(statm_file);
     fclose(stat_file);
-    return;
+    return false;
   }
   if (fgets(stat.comm, sizeof(stat.comm), comm_file)) {
     // Strip trailing newline
@@ -63,7 +63,7 @@ void read_process(int pid, ProcessStat *out) {
   // Find last ')' - comm can contain unbalanced parens
   char *after_comm = strrchr(stat_buf, ')');
   if (!after_comm) {
-    return;
+    return false;
   }
 
   sscanf(after_comm + 1,
@@ -89,6 +89,8 @@ void read_process(int pid, ProcessStat *out) {
          "%lu %lu %lu %lu %lu %lu",
          &stat.statm_size, &stat.statm_resident, &stat.statm_shared,
          &stat.statm_text, &unused_lib, &stat.statm_data);
+
+  return true;
 }
 
 Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
@@ -118,10 +120,12 @@ Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
   LinkedNode<long> *it = pids.head;
   ProcessStat *it_result = result.data;
   while (it) {
-    read_process(it->value, it_result);
-    ++it_result;
+    if (read_process(it->value, it_result)) {
+      ++it_result;
+    }
     it = it->next;
   }
+  result.size = it_result - result.data;
 
   closedir(proc_dir);
 
@@ -231,7 +235,7 @@ void gather(GatheringState &state, Sync &sync) {
   }
   state.last_update = SteadyClock::now();
   const SystemTimePoint system_now = SystemClock::now();
-  sync.update_queue.push(UpdateSnapshot{
+  const bool pushed = sync.update_queue.push(UpdateSnapshot{
       arena,
       process_stats,
       cpu_stats,
@@ -239,5 +243,8 @@ void gather(GatheringState &state, Sync &sync) {
       state.last_update,
       system_now
   });
+  if (!pushed) {
+    arena.destroy();
+  }
 }
 
