@@ -2,7 +2,7 @@
 
 constexpr int MAX_CORES = 128;
 
-struct CoreChartState {
+struct SystemCpuChartState {
   BumpArena cur_arena;
   GrowingArray<double> times;
   GrowingArray<double> total_usage;
@@ -14,5 +14,5 @@ struct CoreChartState {
   bool stacked = false;
 };
 
-void core_chart_update(CoreChartState &my_state, const State &state, const StateSnapshot &old);
-void core_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state);
+void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, const StateSnapshot &old);
+void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state);

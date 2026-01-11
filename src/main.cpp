@@ -28,7 +28,7 @@
 #include "views/brief_table.cpp"
 #include "views/cpu_chart.cpp"
 #include "views/mem_chart.cpp"
-#include "views/core_chart.cpp"
+#include "views/system_cpu_chart.cpp"
 #include "views/system_mem_chart.cpp"
 
 namespace {
