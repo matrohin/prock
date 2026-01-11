@@ -18,13 +18,13 @@ enum BriefTableColumnId {
 struct BriefTableLine {
   int pid;
   size_t state_index;
-  bool selected;
 };
 
 struct BriefTableState {
   Array<BriefTableLine> lines;
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
+  int selected_pid;  // -1 means no selection
 };
 
 void brief_table_update(

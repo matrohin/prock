@@ -7,6 +7,7 @@
 #include "imgui_internal.h"
 
 #include <chrono>
+#include <signal.h>
 
 namespace {
 
@@ -76,7 +77,6 @@ void brief_table_update(
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       new_line.pid = old_line.pid;
       new_line.state_index = state_index;
-      new_line.selected = old_line.selected;
       added.data[state_index] = true;
     }
   }
@@ -86,7 +86,6 @@ void brief_table_update(
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       new_line.pid = new_snapshot.stats.data[i].pid;
       new_line.state_index = i;
-      new_line.selected = false;
     }
   }
 
@@ -135,18 +134,30 @@ void brief_table_draw(ViewState &view_state, const State &state) {
       BriefTableLine &line = my_state.lines.data[i];
       const ProcessStat &stat = state.snapshot.stats.data[line.state_index];
       const ProcessDerivedStat &derived_stat = state.snapshot.derived_stats.data[line.state_index];
+      const bool is_selected = (my_state.selected_pid == line.pid);
+
       ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
       {
         char label[32];
         sprintf(label, "%d", line.pid);
-        ImGui::Selectable(label, &line.selected, ImGuiSelectableFlags_SpanAllColumns);
+        if (ImGui::Selectable(label, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
+          my_state.selected_pid = line.pid;
+        }
         if (ImGui::BeginPopupContextItem(label)) {
-          line.selected = true;
-          if (ImGui::Selectable("CPU Chart")) {
+          my_state.selected_pid = line.pid;
+          if (ImGui::MenuItem("CPU Chart")) {
             cpu_chart_add(view_state.cpu_chart_state, line.pid, stat.comm);
           }
-          if (ImGui::Selectable("Memory Chart")) {
+          if (ImGui::MenuItem("Memory Chart")) {
             mem_chart_add(view_state.mem_chart_state, line.pid, stat.comm);
+          }
+          ImGui::Separator();
+          if (ImGui::MenuItem("Kill Process", "Del") || ImGui::IsKeyPressed(ImGuiKey_Delete)) {
+            kill(line.pid, SIGTERM);
+            ImGui::CloseCurrentPopup();
+          }
+          if (ImGui::MenuItem("Force Kill")) {
+            kill(line.pid, SIGKILL);
           }
           ImGui::EndPopup();
         }
@@ -161,6 +172,11 @@ void brief_table_draw(ViewState &view_state, const State &state) {
     }
 
     ImGui::EndTable();
+  }
+
+  // Del key to kill selected process
+  if (my_state.selected_pid > 0 && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
+    kill(my_state.selected_pid, SIGTERM);
   }
 
   ImGui::End();
