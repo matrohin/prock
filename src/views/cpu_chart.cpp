@@ -5,6 +5,8 @@
 
 #include "implot.h"
 
+#include <cmath>
+
 void cpu_chart_update(
     CpuChartState &my_state, const State &state, const StateSnapshot &old) {
   const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
@@ -51,6 +53,7 @@ void cpu_chart_draw(ViewState &view_state, const State &state) {
     if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time","%", ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
+      ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
       ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 

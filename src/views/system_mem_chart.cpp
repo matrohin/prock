@@ -6,6 +6,8 @@
 #include "imgui.h"
 #include "implot.h"
 
+#include <cmath>
+
 namespace {
 constexpr double KB_TO_GB = 1.0 / (1024.0 * 1024.0);
 }
@@ -51,6 +53,7 @@ void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state, const State
   if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "GB", ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0, my_state.mem_total_gb > 0 ? my_state.mem_total_gb : 16, ImPlotCond_Once);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 

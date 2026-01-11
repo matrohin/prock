@@ -5,6 +5,8 @@
 
 #include "implot.h"
 
+#include <cmath>
+
 void mem_chart_update(
     MemChartState &my_state, const State &state, const StateSnapshot &old) {
   const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
@@ -54,6 +56,7 @@ void mem_chart_draw(ViewState &view_state, const State &state) {
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
     if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time","KB", ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
       ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 

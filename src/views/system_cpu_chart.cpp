@@ -7,6 +7,8 @@
 #include "implot.h"
 #include "implot_internal.h"
 
+#include <cmath>
+
 void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, const StateSnapshot &old) {
   const StateSnapshot &snapshot = state.snapshot;
   if (snapshot.cpu_usage_perc.size == 0) {
@@ -57,6 +59,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State
   if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "%", ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 
