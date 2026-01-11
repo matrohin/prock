@@ -7,33 +7,70 @@
 namespace {
 
 void read_process(int pid, ProcessStat *out) {
-  constexpr size_t BUF_SIZE = 64;
+  constexpr size_t PATH_BUF_SIZE = 64;
 
-  char stat_filename[BUF_SIZE];
-  snprintf(stat_filename, BUF_SIZE, "/proc/%d/stat", pid);
+  char stat_filename[PATH_BUF_SIZE];
+  snprintf(stat_filename, PATH_BUF_SIZE, "/proc/%d/stat", pid);
 
-  char statm_filename[BUF_SIZE];
-  snprintf(statm_filename, BUF_SIZE, "/proc/%d/statm", pid);
+  char statm_filename[PATH_BUF_SIZE];
+  snprintf(statm_filename, PATH_BUF_SIZE, "/proc/%d/statm", pid);
 
-  char comm_filename[BUF_SIZE];
-  snprintf(comm_filename, BUF_SIZE, "/proc/%d/comm", pid);
+  char comm_filename[PATH_BUF_SIZE];
+  snprintf(comm_filename, PATH_BUF_SIZE, "/proc/%d/comm", pid);
 
   ProcessStat &stat = *out;
+  stat.pid = pid;
+  stat.comm[0] = '\0';
 
   FILE *stat_file = fopen(stat_filename, "r");
   FILE *statm_file = fopen(statm_filename, "r");
   FILE *comm_file = fopen(comm_filename, "r");
   if (!stat_file || !statm_file || !comm_file) {
-    stat.pid = pid;
+    if (stat_file) fclose(stat_file);
+    if (statm_file) fclose(statm_file);
+    if (comm_file) fclose(comm_file);
     return;
   }
 
-  // FIXME? The limit of comm is 15 characters but should be we more safe about it?
-  fscanf(stat_file,
-         "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld "
+  // Read all files into buffers
+  char stat_buf[512];
+  char statm_buf[128];
+
+  if (!fgets(stat_buf, sizeof(stat_buf), stat_file)) {
+    fclose(comm_file);
+    fclose(statm_file);
+    fclose(stat_file);
+    return;
+  }
+  if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) {
+    fclose(comm_file);
+    fclose(statm_file);
+    fclose(stat_file);
+    return;
+  }
+  if (fgets(stat.comm, sizeof(stat.comm), comm_file)) {
+    // Strip trailing newline
+    size_t len = strlen(stat.comm);
+    if (len > 0 && stat.comm[len - 1] == '\n') {
+      stat.comm[len - 1] = '\0';
+    }
+  }
+
+  fclose(comm_file);
+  fclose(statm_file);
+  fclose(stat_file);
+
+  // Find last ')' - comm can contain unbalanced parens
+  char *after_comm = strrchr(stat_buf, ')');
+  if (!after_comm) {
+    return;
+  }
+
+  sscanf(after_comm + 1,
+         " %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld "
          "%ld %ld %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu "
          "%lu %d %d %u %u %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %d",
-         &stat.pid, stat.comm, &stat.state, &stat.ppid, &stat.pgrp,
+         &stat.state, &stat.ppid, &stat.pgrp,
          &stat.session, &stat.tty_nr, &stat.tpgid, &stat.flags, &stat.minflt,
          &stat.cminflt, &stat.majflt, &stat.cmajflt, &stat.utime, &stat.stime,
          &stat.cutime, &stat.cstime, &stat.priority, &stat.nice,
@@ -48,16 +85,10 @@ void read_process(int pid, ProcessStat *out) {
          &stat.env_end, &stat.exit_code);
 
   ulong unused_lib = 0;
-  fscanf(statm_file,
+  sscanf(statm_buf,
          "%lu %lu %lu %lu %lu %lu",
          &stat.statm_size, &stat.statm_resident, &stat.statm_shared,
          &stat.statm_text, &unused_lib, &stat.statm_data);
-
-  fscanf(comm_file, "%s", stat.comm);
-
-  fclose(comm_file);
-  fclose(statm_file);
-  fclose(stat_file);
 }
 
 Array<ProcessStat> read_all_processes(BumpArena &result_arena) {

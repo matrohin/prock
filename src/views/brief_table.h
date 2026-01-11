@@ -8,6 +8,7 @@ struct StateSnapshot;
 enum BriefTableColumnId {
   eBriefTableColumnId_Pid,
   eBriefTableColumnId_Name,
+  eBriefTableColumnId_State,
   eBriefTableColumnId_CpuTotalPerc,
   eBriefTableColumnId_CpuUserPerc,
   eBriefTableColumnId_CpuKernelPerc,
