@@ -144,12 +144,50 @@ Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
   return result;
 }
 
+// Reads /proc/meminfo for system-wide memory stats
+// Values are in kB (as reported by /proc/meminfo)
+MemInfo read_mem_info() {
+  FILE *meminfo_file = fopen("/proc/meminfo", "r");
+  if (!meminfo_file) {
+    return {};
+  }
+
+  MemInfo result = {};
+  char line[256];
+  while (fgets(line, sizeof(line), meminfo_file)) {
+    char key[64];
+    ulong value;
+    // Format: "FieldName:       value kB"
+    if (sscanf(line, "%63[^:]: %lu kB", key, &value) == 2) {
+      if (strcmp(key, "MemTotal") == 0) {
+        result.mem_total = value;
+      } else if (strcmp(key, "MemFree") == 0) {
+        result.mem_free = value;
+      } else if (strcmp(key, "MemAvailable") == 0) {
+        result.mem_available = value;
+      } else if (strcmp(key, "Buffers") == 0) {
+        result.buffers = value;
+      } else if (strcmp(key, "Cached") == 0) {
+        result.cached = value;
+      } else if (strcmp(key, "SwapTotal") == 0) {
+        result.swap_total = value;
+      } else if (strcmp(key, "SwapFree") == 0) {
+        result.swap_free = value;
+      }
+    }
+  }
+
+  fclose(meminfo_file);
+  return result;
+}
+
 } // unnamed namespace
 
 void gather(GatheringState &state, Sync &sync) {
   BumpArena arena = BumpArena::create();
   const auto process_stats = read_all_processes(arena);
   const auto cpu_stats = read_cpu_stats(arena);
+  const auto mem_info = read_mem_info();
 
   const Seconds period = Seconds{0.5};
   {
@@ -166,6 +204,7 @@ void gather(GatheringState &state, Sync &sync) {
       arena,
       process_stats,
       cpu_stats,
+      mem_info,
       state.last_update,
       system_now
   });

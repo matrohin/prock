@@ -36,5 +36,5 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state, co
     cpu_usage_perc.data[i] = total_delta > 0 ? (busy_delta * 100.0) / total_delta : 0.0;
   }
 
-  return StateSnapshot{snapshot.stats, derived_stats, snapshot.cpu_stats, cpu_usage_perc, snapshot.at};
+  return StateSnapshot{snapshot.stats, derived_stats, snapshot.cpu_stats, cpu_usage_perc, snapshot.mem_info, snapshot.at};
 }

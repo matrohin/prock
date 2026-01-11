@@ -152,6 +152,17 @@ struct CpuCoreStat {
   }
 };
 
+// From /proc/meminfo - values in kB
+struct MemInfo {
+  ulong mem_total;
+  ulong mem_free;
+  ulong mem_available;
+  ulong buffers;
+  ulong cached;
+  ulong swap_total;
+  ulong swap_free;
+};
+
 struct GatheringState {
   SteadyTimePoint last_update;
 };
