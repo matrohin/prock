@@ -45,11 +45,6 @@ void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state, const State
   SystemMemChartState &my_state = view_state.system_mem_chart_state;
   ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS);
 
-  ImGui::TextDisabled("(?)");
-  if (ImGui::IsItemHovered()) {
-    ImGui::SetTooltip("Used = MemTotal - MemAvailable");
-  }
-
   if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "GB", ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0, my_state.mem_total_gb > 0 ? my_state.mem_total_gb : 16, ImPlotCond_Once);
@@ -61,6 +56,10 @@ void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state, const State
     ImPlot::PlotShaded("Used", my_state.times.data(), my_state.used.data(), my_state.used.size(), 0, CHART_FLAGS);
     ImPlot::PopStyleVar();
     ImPlot::PlotLine("Used", my_state.times.data(), my_state.used.data(), my_state.used.size());
+
+    if (ImPlot::IsLegendEntryHovered("Used")) {
+      ImGui::SetTooltip("Used = MemTotal - MemAvailable");
+    }
 
     ImPlot::EndPlot();
   }
