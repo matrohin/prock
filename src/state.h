@@ -17,11 +17,18 @@ struct ProcessDerivedStat {
   double mem_resident_bytes;
 };
 
+// Computed CPU percentages: [0]=aggregate, [1..n]=per-core
+struct SystemCpuPerc {
+  Array<double> total;
+  Array<double> kernel;
+  Array<double> interrupts;
+};
+
 struct StateSnapshot {
   Array<ProcessStat> stats;
   Array<ProcessDerivedStat> derived_stats;
-  Array<CpuCoreStat> cpu_stats;      // Raw ticks from /proc/stat
-  Array<double> cpu_usage_perc;      // Computed: [0]=total, [1..n]=per-core
+  Array<CpuCoreStat> cpu_stats;  // Raw ticks from /proc/stat
+  SystemCpuPerc cpu_perc;
   MemInfo mem_info;
   SteadyTimePoint at;
 };

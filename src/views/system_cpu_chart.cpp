@@ -11,22 +11,24 @@
 
 void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, const StateSnapshot &old) {
   const StateSnapshot &snapshot = state.snapshot;
-  if (snapshot.cpu_usage_perc.size == 0) {
+  if (snapshot.cpu_perc.total.size == 0) {
     return;
   }
 
   const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
 
   *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = update_at;
-  *my_state.total_usage.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_usage_perc.data[0];
+  *my_state.total_usage.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_perc.total.data[0];
+  *my_state.kernel_usage.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_perc.kernel.data[0];
+  *my_state.interrupts_usage.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_perc.interrupts.data[0];
 
-  // Per-core data (skip index 0 which is total)
-  int num_cores = (int)snapshot.cpu_usage_perc.size - 1;
+  // Per-core data (skip index 0 which is aggregate)
+  int num_cores = (int)snapshot.cpu_perc.total.size - 1;
   if (num_cores > MAX_CORES) num_cores = MAX_CORES;
   my_state.num_cores = num_cores;
 
   for (int i = 0; i < num_cores; ++i) {
-    *my_state.core_usage[i].emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_usage_perc.data[i + 1];
+    *my_state.core_usage[i].emplace_back(my_state.cur_arena, my_state.wasted_bytes) = snapshot.cpu_perc.total.data[i + 1];
   }
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
@@ -35,6 +37,8 @@ void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, 
 
     my_state.times.realloc(new_arena);
     my_state.total_usage.realloc(new_arena);
+    my_state.kernel_usage.realloc(new_arena);
+    my_state.interrupts_usage.realloc(new_arena);
     for (int i = 0; i < my_state.num_cores; ++i) {
       my_state.core_usage[i].realloc(new_arena);
     }
@@ -64,10 +68,13 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 
     if (!my_state.show_per_core) {
-      // Total usage only
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("Total", my_state.times.data(), my_state.total_usage.data(), my_state.total_usage.size(), 0, CHART_FLAGS);
+      ImPlot::PlotShaded("Kernel", my_state.times.data(), my_state.kernel_usage.data(), my_state.kernel_usage.size(), 0, CHART_FLAGS);
+      ImPlot::PlotShaded("Interrupts", my_state.times.data(), my_state.interrupts_usage.data(), my_state.interrupts_usage.size(), 0, CHART_FLAGS);
       ImPlot::PopStyleVar();
+      ImPlot::PlotLine("Interrupts", my_state.times.data(), my_state.interrupts_usage.data(), my_state.interrupts_usage.size());
+      ImPlot::PlotLine("Kernel", my_state.times.data(), my_state.kernel_usage.data(), my_state.kernel_usage.size());
       ImPlot::PlotLine("Total", my_state.times.data(), my_state.total_usage.data(), my_state.total_usage.size());
     } else if (my_state.stacked) {
       // Stacked per-core view

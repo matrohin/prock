@@ -150,6 +150,12 @@ struct CpuCoreStat {
   ulong busy() const {
     return user + nice + system + irq + softirq;
   }
+  ulong kernel() const {
+    return system + irq + softirq;
+  }
+  ulong interrupts() const {
+    return irq + softirq;
+  }
 };
 
 // From /proc/meminfo - values in kB
