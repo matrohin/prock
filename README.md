@@ -1,8 +1,13 @@
+# Prock
 
-Dependencies:
+Process Explorer for Linux.
+Built with Dear ImGui and ImPlot.
+
+## Building
+
+### Dependencies
+
+```bash
+sudo apt install libwayland-dev libxkbcommon-dev xorg-dev libgles2-mesa-dev
 ```
-sudo apt install exuberant-ctags
-sudo apt install libwayland-dev libxkbcommon-dev xorg-dev
-sudo apt-get install libgles2-mesa-dev
-sudo apt install cmake-mozilla
-```
+
