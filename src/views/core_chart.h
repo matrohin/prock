@@ -15,4 +15,4 @@ struct CoreChartState {
 };
 
 void core_chart_update(CoreChartState &my_state, const State &state, const StateSnapshot &old);
-void core_chart_draw(FrameContext &ctx, CoreChartState &my_state, const State &state);
+void core_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state);

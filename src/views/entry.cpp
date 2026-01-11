@@ -19,8 +19,8 @@ void views_update(ViewState &view_state, State &state, const StateSnapshot &old_
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   full_table_draw(state.snapshot);
   brief_table_draw(view_state, state);
-  cpu_chart_draw(view_state.cpu_chart_state, state);
-  mem_chart_draw(view_state.mem_chart_state, state);
-  core_chart_draw(ctx, view_state.core_chart_state, state);
+  cpu_chart_draw(view_state, state);
+  mem_chart_draw(view_state, state);
+  core_chart_draw(ctx, view_state, state);
 }
 

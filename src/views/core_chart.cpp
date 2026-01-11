@@ -43,7 +43,8 @@ void core_chart_update(CoreChartState &my_state, const State &state, const State
   }
 }
 
-void core_chart_draw(FrameContext &ctx, CoreChartState &my_state, const State &state) {
+void core_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+  CoreChartState &my_state = view_state.core_chart_state;
   ImGui::Begin("System CPU Usage", nullptr, COMMON_VIEW_FLAGS);
 
   // UI controls

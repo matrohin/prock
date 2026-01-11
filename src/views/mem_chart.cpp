@@ -32,7 +32,8 @@ void mem_chart_update(
   }
 }
 
-void mem_chart_draw(MemChartState &my_state, const State &state) {
+void mem_chart_draw(ViewState &view_state, const State &state) {
+  MemChartState &my_state = view_state.mem_chart_state;
   size_t last = 0;
 
   for (size_t i = 0; i < my_state.charts.size(); ++i) {
@@ -41,6 +42,7 @@ void mem_chart_draw(MemChartState &my_state, const State &state) {
     }
     const MemChartData &chart = my_state.charts.data()[last];
     bool should_be_opened = true;
+    view_state.cascade.next_if_new(chart.label);
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
     if (ImPlot::BeginPlot("Memory Usage")) {
       ImPlot::SetupAxes("Time","KB", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);

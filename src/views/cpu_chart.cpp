@@ -34,7 +34,9 @@ void cpu_chart_update(
   }
 }
 
-void cpu_chart_draw(CpuChartState &my_state, const State &state) {
+void cpu_chart_draw(ViewState &view_state, const State &state) {
+  CpuChartState &my_state = view_state.cpu_chart_state;
+
   size_t last = 0;
 
   for (size_t i = 0; i < my_state.charts.size(); ++i) {
@@ -43,6 +45,7 @@ void cpu_chart_draw(CpuChartState &my_state, const State &state) {
     }
     const CpuChartData &chart = my_state.charts.data()[last];
     bool should_be_opened = true;
+    view_state.cascade.next_if_new(chart.label);
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
     if (ImPlot::BeginPlot("CPU Usage")) {
       ImPlot::SetupAxes("Time","%", ImPlotAxisFlags_AutoFit);
