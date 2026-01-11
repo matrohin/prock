@@ -26,6 +26,7 @@ void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
       case eBriefTableColumnId_CpuUserPerc: return state.derived_stats.data[left.state_index].cpu_user_perc < state.derived_stats.data[right.state_index].cpu_user_perc;
       case eBriefTableColumnId_CpuKernelPerc: return state.derived_stats.data[left.state_index].cpu_kernel_perc < state.derived_stats.data[right.state_index].cpu_kernel_perc;
       case eBriefTableColumnId_MemRssBytes: return state.derived_stats.data[left.state_index].mem_resident_bytes < state.derived_stats.data[right.state_index].mem_resident_bytes;
+      case eBriefTableColumnId_MemVirtBytes: return state.stats.data[left.state_index].vsize < state.stats.data[right.state_index].vsize;
     }
     return false;
   };
@@ -111,17 +112,13 @@ void brief_table_draw(ViewState &view_state, const State &state) {
     ImGui::TableSetupColumn("Process ID", ImGuiTableColumnFlags_NoHide, 0.0f, eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f, eBriefTableColumnId_Name);
     ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_None, 0.0f, eBriefTableColumnId_State);
-    ImGui::TableSetupColumn("Threads", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_Threads);
+    ImGui::TableSetupColumn("Threads", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_DefaultHide, 0.0f, eBriefTableColumnId_Threads);
     ImGui::TableSetupColumn("CPU Total (%)", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_CpuTotalPerc);
     ImGui::TableSetupColumn("CPU User (%)", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_DefaultHide, 0.0f, eBriefTableColumnId_CpuUserPerc);
     ImGui::TableSetupColumn("CPU Kernel (%)", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_CpuKernelPerc);
     ImGui::TableSetupColumn("RSS (Bytes)", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_MemRssBytes);
+    ImGui::TableSetupColumn("Virtual Size (Bytes)", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_DefaultHide, 0.0f, eBriefTableColumnId_MemVirtBytes);
     ImGui::TableHeadersRow();
-
-    const float cpu_total_width = ImGui::GetColumnWidth(eBriefTableColumnId_CpuTotalPerc);
-    const float cpu_user_width = ImGui::GetColumnWidth(eBriefTableColumnId_CpuUserPerc);
-    const float cpu_kernel_width = ImGui::GetColumnWidth(eBriefTableColumnId_CpuKernelPerc);
-    const float mem_res_width = ImGui::GetColumnWidth(eBriefTableColumnId_MemRssBytes);
 
     if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
       if (sort_specs->SpecsDirty) {
@@ -184,13 +181,12 @@ void brief_table_draw(ViewState &view_state, const State &state) {
           if (desc) ImGui::SetTooltip("%s", desc);
         }
       }
-      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads)) ImGui::Text("%ld", stat.num_threads);
-      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc)) ImGui::TextAligned(1.0f, cpu_total_width, "%.1f", derived_stat.cpu_user_perc + derived_stat.cpu_kernel_perc);
-      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc)) ImGui::TextAligned(1.0f, cpu_user_width, "%.1f", derived_stat.cpu_user_perc);
-      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc)) ImGui::TextAligned(1.0f, cpu_kernel_width, "%.1f", derived_stat.cpu_kernel_perc);
-      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes)) {
-        ImGui::TextAligned(1.0f, mem_res_width, "%.0f K", derived_stat.mem_resident_bytes / 1024);
-      }
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%ld", stat.num_threads);
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f", derived_stat.cpu_user_perc + derived_stat.cpu_kernel_perc);
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f", derived_stat.cpu_user_perc);
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f", derived_stat.cpu_kernel_perc);
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K", derived_stat.mem_resident_bytes / 1024);
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K", stat.vsize / 1024.0);
     }
 
     ImGui::EndTable();
