@@ -5,6 +5,7 @@ struct MemChartData {
   char label[128];
   GrowingArray<double> times;
   GrowingArray<double> mem_resident_kb;
+  bool y_axis_fitted = false;
 };
 
 struct MemChartState {

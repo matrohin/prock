@@ -40,13 +40,21 @@ void mem_chart_draw(ViewState &view_state, const State &state) {
     if (last != i) {
       my_state.charts.data()[last] = my_state.charts.data()[i];
     }
-    const MemChartData &chart = my_state.charts.data()[last];
+    MemChartData &chart = my_state.charts.data()[last];
     bool should_be_opened = true;
     view_state.cascade.next_if_new(chart.label);
+
+    ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
+    if (!chart.y_axis_fitted && chart.mem_resident_kb.size() >= 1) {
+      ImPlot::SetNextAxisToFit(ImAxis_Y1);
+      chart.y_axis_fitted = true;
+    }
+
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
     if (ImPlot::BeginPlot("Memory Usage")) {
-      ImPlot::SetupAxes("Time","KB", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxes("Time","KB", ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("Memory Usage", chart.times.data(), chart.mem_resident_kb.data(), chart.mem_resident_kb.size(), 0, CHART_FLAGS);
@@ -57,6 +65,8 @@ void mem_chart_draw(ViewState &view_state, const State &state) {
       ImPlot::EndPlot();
     }
     ImGui::End();
+
+    ImPlot::PopStyleVar();
 
     // TODO: consider continuing supporting it with a member "opened"
     if (should_be_opened) {
