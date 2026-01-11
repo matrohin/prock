@@ -98,7 +98,7 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_s
   ImGui::Begin("prock", nullptr, main_window_flags);
   ImGui::PopStyleVar(3);
 
-  ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+  ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
   ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
   FrameContext frame_ctx = {};
@@ -116,6 +116,42 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_s
   glClear(GL_COLOR_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
+const char* DEFAULT_INI = R"(
+[Window][prock]
+Pos=0,0
+Size=1280,800
+Collapsed=0
+
+[Window][Debug##Default]
+Pos=60,60
+Size=400,400
+Collapsed=0
+
+[Window][Process Table]
+Pos=0,298
+Size=1280,502
+Collapsed=0
+DockId=0x00000002,0
+
+[Window][System CPU Usage]
+Pos=642,0
+Size=638,296
+Collapsed=0
+DockId=0x00000004,0
+
+[Window][System Memory Usage]
+Pos=0,0
+Size=640,296
+Collapsed=0
+DockId=0x00000003,0
+
+[Docking][Data]
+DockSpace     ID=0x55EF6A19 Window=0xEA9D8568 Pos=0,0 Size=1280,800 Split=Y
+  DockNode    ID=0x00000001 Parent=0x55EF6A19 SizeRef=1280,296 Split=X Selected=0x8286D95C
+    DockNode  ID=0x00000003 Parent=0x00000001 SizeRef=640,397 Selected=0x8286D95C
+    DockNode  ID=0x00000004 Parent=0x00000001 SizeRef=638,397 Selected=0x49AB4810
+  DockNode    ID=0x00000002 Parent=0x55EF6A19 SizeRef=1280,502 CentralNode=1 Selected=0x5DB0E023
+)";
 
 } // unnamed namespace
 
@@ -151,6 +187,11 @@ int main(int, char **) {
   io.ConfigFlags |=
       ImGuiConfigFlags_NavEnableKeyboard;           // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
+
+  // TODO: move default IniFilename to $HOME/.config/prock/imgui.ini
+  if (access(ImGui::GetIO().IniFilename, F_OK) != 0) {
+    ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
+  }
 
   ImGui::StyleColorsLight();
 

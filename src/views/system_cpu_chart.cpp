@@ -54,10 +54,11 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State
     ImGui::Checkbox("Stacked", &my_state.stacked);
   }
 
-  if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1))) {
+  if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "%", ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+    ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 
     if (!my_state.show_per_core) {
       // Total usage only

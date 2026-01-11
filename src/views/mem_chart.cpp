@@ -51,9 +51,10 @@ void mem_chart_draw(ViewState &view_state, const State &state) {
     }
 
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
-    if (ImPlot::BeginPlot("Memory Usage")) {
+    if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time","KB", ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+      ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);

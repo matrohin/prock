@@ -47,10 +47,11 @@ void cpu_chart_draw(ViewState &view_state, const State &state) {
     bool should_be_opened = true;
     view_state.cascade.next_if_new(chart.label);
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
-    if (ImPlot::BeginPlot("CPU Usage")) {
+    if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time","%", ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+      ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("CPU Total Usage", chart.times.data(), chart.cpu_total_perc.data(), chart.cpu_total_perc.size(), 0, CHART_FLAGS);
