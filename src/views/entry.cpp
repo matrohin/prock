@@ -3,7 +3,6 @@
 #include "views/brief_table.h"
 #include "views/system_cpu_chart.h"
 #include "views/cpu_chart.h"
-#include "views/full_table.h"
 #include "views/mem_chart.h"
 #include "views/system_mem_chart.h"
 #include "views/view_state.h"
@@ -19,7 +18,6 @@ void views_update(ViewState &view_state, State &state, const StateSnapshot &old_
 
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
-  full_table_draw(state.snapshot);
   brief_table_draw(view_state, state);
   cpu_chart_draw(view_state, state);
   mem_chart_draw(view_state, state);

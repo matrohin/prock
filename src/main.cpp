@@ -24,7 +24,6 @@
 #include "state.cpp"
 #include "process_stat.cpp"
 #include "views/entry.cpp"
-#include "views/full_table.cpp"
 #include "views/brief_table.cpp"
 #include "views/cpu_chart.cpp"
 #include "views/mem_chart.cpp"
