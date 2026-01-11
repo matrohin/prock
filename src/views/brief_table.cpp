@@ -17,6 +17,7 @@ void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
       case eBriefTableColumnId_Pid: return left.pid < right.pid;
       case eBriefTableColumnId_Name: return strcmp(state.stats.data[left.state_index].comm, state.stats.data[right.state_index].comm) < 0;
       case eBriefTableColumnId_State: return state.stats.data[left.state_index].state < state.stats.data[right.state_index].state;
+      case eBriefTableColumnId_Threads: return state.stats.data[left.state_index].num_threads < state.stats.data[right.state_index].num_threads;
       case eBriefTableColumnId_CpuTotalPerc: {
         const double left_val = state.derived_stats.data[left.state_index].cpu_user_perc + state.derived_stats.data[left.state_index].cpu_kernel_perc;
         const double right_val = state.derived_stats.data[right.state_index].cpu_user_perc + state.derived_stats.data[right.state_index].cpu_kernel_perc;
@@ -110,6 +111,7 @@ void brief_table_draw(ViewState &view_state, const State &state) {
     ImGui::TableSetupColumn("Process ID", ImGuiTableColumnFlags_NoHide, 0.0f, eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f, eBriefTableColumnId_Name);
     ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_None, 0.0f, eBriefTableColumnId_State);
+    ImGui::TableSetupColumn("Threads", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_Threads);
     ImGui::TableSetupColumn("CPU Total (%)", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_CpuTotalPerc);
     ImGui::TableSetupColumn("CPU User (%)", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_DefaultHide, 0.0f, eBriefTableColumnId_CpuUserPerc);
     ImGui::TableSetupColumn("CPU Kernel (%)", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_CpuKernelPerc);
@@ -182,6 +184,7 @@ void brief_table_draw(ViewState &view_state, const State &state) {
           if (desc) ImGui::SetTooltip("%s", desc);
         }
       }
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads)) ImGui::Text("%ld", stat.num_threads);
       if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc)) ImGui::TextAligned(1.0f, cpu_total_width, "%.1f", derived_stat.cpu_user_perc + derived_stat.cpu_kernel_perc);
       if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc)) ImGui::TextAligned(1.0f, cpu_user_width, "%.1f", derived_stat.cpu_user_perc);
       if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc)) ImGui::TextAligned(1.0f, cpu_kernel_width, "%.1f", derived_stat.cpu_kernel_perc);

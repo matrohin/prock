@@ -9,6 +9,7 @@ enum BriefTableColumnId {
   eBriefTableColumnId_Pid,
   eBriefTableColumnId_Name,
   eBriefTableColumnId_State,
+  eBriefTableColumnId_Threads,
   eBriefTableColumnId_CpuTotalPerc,
   eBriefTableColumnId_CpuUserPerc,
   eBriefTableColumnId_CpuKernelPerc,
