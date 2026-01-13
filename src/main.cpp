@@ -43,6 +43,35 @@ void maintaining_second_update(GLFWwindow* /*window*/, int /*button*/, int /*act
   g_needs_updates = 2;
 }
 
+static void* view_settings_read_open(ImGuiContext*, ImGuiSettingsHandler* handler, const char* name) {
+  if (strcmp(name, "SystemCpuChart") == 0) {
+    return handler->UserData;
+  }
+  return nullptr;
+}
+
+static void view_settings_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) {
+  ViewState* view_state = static_cast<ViewState*>(entry);
+  if (!view_state) return;
+
+  int val = 0;
+  if (sscanf(line, "ShowPerCore=%d", &val) == 1) {
+    view_state->system_cpu_chart_state.show_per_core = (val != 0);
+  } else if (sscanf(line, "Stacked=%d", &val) == 1) {
+    view_state->system_cpu_chart_state.stacked = (val != 0);
+  }
+}
+
+static void view_settings_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) {
+  ViewState* view_state = static_cast<ViewState*>(handler->UserData);
+  if (!view_state) return;
+
+  buf->appendf("[%s][SystemCpuChart]\n", handler->TypeName);
+  buf->appendf("ShowPerCore=%d\n", (int) view_state->system_cpu_chart_state.show_per_core);
+  buf->appendf("Stacked=%d\n", (int) view_state->system_cpu_chart_state.stacked);
+  buf->append("\n");
+}
+
 
 constexpr float MIN_DELTA_TIME = 1.0f / 60.0f; // 60fps
 
@@ -214,13 +243,25 @@ int main(int, char **) {
       if (n > 0 && (size_t)n < sizeof(dir_path)) {
         mkdir(dir_path, 0755);
         // Set the ini file path
-        n = snprintf(ini_path, sizeof(ini_path), "%s/.config/prock/imgui.ini", home);
+        n = snprintf(ini_path, sizeof(ini_path), "%s/.config/prock/settings.ini", home);
         if (n > 0 && (size_t)n < sizeof(ini_path)) {
           io.IniFilename = ini_path;
         }
       }
     }
   }
+
+  ViewState view_state = {};
+
+  // Register custom settings handler for view options
+  ImGuiSettingsHandler handler = {};
+  handler.TypeName = "ViewSettings";
+  handler.TypeHash = ImHashStr(handler.TypeName);
+  handler.ReadOpenFn = view_settings_read_open;
+  handler.ReadLineFn = view_settings_read_line;
+  handler.WriteAllFn = view_settings_write_all;
+  handler.UserData = &view_state;
+  ImGui::GetCurrentContext()->SettingsHandlers.push_back(handler);
 
   if (access(io.IniFilename, F_OK) != 0) {
     ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
@@ -247,7 +288,6 @@ int main(int, char **) {
 
   // Setup state
   State state = {};
-  ViewState view_state = {};
   if (!state_init(state)) {
     return 1;
   }
