@@ -21,8 +21,6 @@ void system_mem_chart_update(SystemMemChartState &my_state, const State &state, 
 
   const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
 
-  my_state.mem_total_gb = mem.mem_total * KB_TO_GB;
-
   ulong used_kb = mem.mem_total - mem.mem_available;
 
   *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = update_at;
@@ -43,11 +41,17 @@ void system_mem_chart_update(SystemMemChartState &my_state, const State &state, 
 
 void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   SystemMemChartState &my_state = view_state.system_mem_chart_state;
+
+  ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
+  if (!my_state.y_axis_fitted && my_state.used.size() >= 1) {
+    ImPlot::SetNextAxisToFit(ImAxis_Y1);
+    my_state.y_axis_fitted = true;
+  }
+
   ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS);
 
   if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "GB", ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisLimits(ImAxis_Y1, 0, my_state.mem_total_gb > 0 ? my_state.mem_total_gb : 16, ImPlotCond_Once);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
@@ -65,4 +69,5 @@ void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state, const State
   }
 
   ImGui::End();
+  ImPlot::PopStyleVar();
 }

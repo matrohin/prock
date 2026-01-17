@@ -11,6 +11,7 @@ struct UpdateSnapshot {
   Array<ProcessStat> stats;
   Array<CpuCoreStat> cpu_stats;  // [0]=total, [1..n]=per-core
   MemInfo mem_info;
+  DiskIoStat disk_io_stats;
   SteadyTimePoint at;
   SystemTimePoint system_time;
 };

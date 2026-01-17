@@ -24,12 +24,20 @@ struct SystemCpuPerc {
   Array<double> interrupts;
 };
 
+// Computed disk I/O rates in MB/s
+struct DiskIoRate {
+  double read_mb_per_sec;
+  double write_mb_per_sec;
+};
+
 struct StateSnapshot {
   Array<ProcessStat> stats;
   Array<ProcessDerivedStat> derived_stats;
   Array<CpuCoreStat> cpu_stats;  // Raw ticks from /proc/stat
   SystemCpuPerc cpu_perc;
   MemInfo mem_info;
+  DiskIoStat disk_io_stats;
+  DiskIoRate disk_io_rate;
   SteadyTimePoint at;
 };
 

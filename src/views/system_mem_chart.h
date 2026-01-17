@@ -5,7 +5,7 @@ struct SystemMemChartState {
   GrowingArray<double> times;
   GrowingArray<double> used;        // Used memory in GB (Total - Available)
   size_t wasted_bytes;
-  double mem_total_gb;              // Total memory for axis limit
+  bool y_axis_fitted;
 };
 
 void system_mem_chart_update(SystemMemChartState &my_state, const State &state, const StateSnapshot &old);

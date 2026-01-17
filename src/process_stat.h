@@ -169,6 +169,13 @@ struct MemInfo {
   ulong swap_free;
 };
 
+// From /proc/diskstats - aggregated system-wide I/O
+// Sector size is typically 512 bytes
+struct DiskIoStat {
+  ulonglong sectors_read;    // Cumulative sectors read
+  ulonglong sectors_written; // Cumulative sectors written
+};
+
 struct GatheringState {
   SteadyTimePoint last_update;
 };

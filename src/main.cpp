@@ -33,6 +33,7 @@
 #include "views/mem_chart.cpp"
 #include "views/system_cpu_chart.cpp"
 #include "views/system_mem_chart.cpp"
+#include "views/system_io_chart.cpp"
 #include "views/library_viewer.cpp"
 
 namespace {
@@ -190,12 +191,22 @@ Size=640,296
 Collapsed=0
 DockId=0x00000003,0
 
+[Window][System I/O]
+Pos=0,0
+Size=640,296
+Collapsed=0
+DockId=0x00000003,1
+
 [Docking][Data]
 DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,0 Size=1280,800 Split=Y
   DockNode    ID=0x00000001 Parent=0xF352448A SizeRef=1280,296 Split=X Selected=0x8286D95C
     DockNode  ID=0x00000003 Parent=0x00000001 SizeRef=640,397 Selected=0x8286D95C
     DockNode  ID=0x00000004 Parent=0x00000001 SizeRef=638,397 Selected=0x49AB4810
   DockNode    ID=0x00000002 Parent=0xF352448A SizeRef=1280,502 CentralNode=1 Selected=0x5DB0E023
+
+[ViewSettings][SystemCpuChart]
+ShowPerCore=0
+Stacked=0
 )";
 
 } // unnamed namespace

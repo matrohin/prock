@@ -179,6 +179,70 @@ Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
   return result;
 }
 
+// Reads /proc/diskstats for system-wide disk I/O stats
+// Aggregates all block devices (skips partitions by looking at device naming)
+DiskIoStat read_disk_io_stats() {
+  FILE *diskstats_file = fopen("/proc/diskstats", "r");
+  if (!diskstats_file) {
+    return {};
+  }
+
+  DiskIoStat result = {};
+  char line[256];
+  while (fgets(line, sizeof(line), diskstats_file)) {
+    int major, minor;
+    char device[64];
+    ulonglong reads_completed, reads_merged, sectors_read, ms_reading;
+    ulonglong writes_completed, writes_merged, sectors_written, ms_writing;
+
+    int parsed = sscanf(line, "%d %d %63s %llu %llu %llu %llu %llu %llu %llu %llu",
+                        &major, &minor, device,
+                        &reads_completed, &reads_merged, &sectors_read, &ms_reading,
+                        &writes_completed, &writes_merged, &sectors_written, &ms_writing);
+    if (parsed < 11) {
+      continue;
+    }
+
+    // Skip partitions (devices ending with a digit after letters like sda1, nvme0n1p1)
+    // Include: sda, sdb, nvme0n1, vda, etc.
+    // Skip: sda1, sda2, nvme0n1p1, loop0, ram0, etc.
+    size_t len = strlen(device);
+    if (len == 0) continue;
+
+    // Skip loop and ram devices
+    if (strncmp(device, "loop", 4) == 0 || strncmp(device, "ram", 3) == 0) {
+      continue;
+    }
+
+    // For nvme devices: include nvme0n1, skip nvme0n1p1
+    // For sd/vd devices: include sda, skip sda1
+    bool is_partition = false;
+    if (strncmp(device, "nvme", 4) == 0) {
+      // NVMe partitions have 'p' followed by digit
+      const char *p = strrchr(device, 'p');
+      if (p && p > device + 4 && p[1] >= '0' && p[1] <= '9') {
+        is_partition = true;
+      }
+    } else {
+      // Traditional devices: partitions end with digit
+      char last = device[len - 1];
+      if (last >= '0' && last <= '9') {
+        is_partition = true;
+      }
+    }
+
+    if (is_partition) {
+      continue;
+    }
+
+    result.sectors_read += sectors_read;
+    result.sectors_written += sectors_written;
+  }
+
+  fclose(diskstats_file);
+  return result;
+}
+
 // Reads /proc/meminfo for system-wide memory stats
 // Values are in kB (as reported by /proc/meminfo)
 MemInfo read_mem_info() {
@@ -223,6 +287,7 @@ void gather(GatheringState &state, Sync &sync) {
   const auto process_stats = read_all_processes(arena);
   const auto cpu_stats = read_cpu_stats(arena);
   const auto mem_info = read_mem_info();
+  const auto disk_io_stats = read_disk_io_stats();
 
   const Seconds period = Seconds{0.5};
   {
@@ -240,6 +305,7 @@ void gather(GatheringState &state, Sync &sync) {
       process_stats,
       cpu_stats,
       mem_info,
+      disk_io_stats,
       state.last_update,
       system_now
   });

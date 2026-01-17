@@ -5,6 +5,7 @@
 #include "views/mem_chart.h"
 #include "views/system_cpu_chart.h"
 #include "views/system_mem_chart.h"
+#include "views/system_io_chart.h"
 #include "views/library_viewer.h"
 
 #include "imgui_internal.h"
@@ -57,5 +58,6 @@ struct ViewState {
   MemChartState mem_chart_state;
   SystemCpuChartState system_cpu_chart_state;
   SystemMemChartState system_mem_chart_state;
+  SystemIoChartState system_io_chart_state;
   LibraryViewerState library_viewer_state;
 };
