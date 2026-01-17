@@ -29,4 +29,11 @@ struct RingBuffer {
     head.store(new_head);
     return true;
   }
+
+  bool peek(T &out) const {
+    size_t loaded_head = head.load();
+    if (loaded_head == tail.load()) return false;
+    out = data[loaded_head];
+    return true;
+  }
 };

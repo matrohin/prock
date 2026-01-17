@@ -26,12 +26,14 @@
 // UNITY BUILD:
 #include "state.cpp"
 #include "process_stat.cpp"
+#include "library_reader.cpp"
 #include "views/entry.cpp"
 #include "views/brief_table.cpp"
 #include "views/cpu_chart.cpp"
 #include "views/mem_chart.cpp"
 #include "views/system_cpu_chart.cpp"
 #include "views/system_mem_chart.cpp"
+#include "views/library_viewer.cpp"
 
 namespace {
 
@@ -293,6 +295,8 @@ int main(int, char **) {
   }
 
   Sync sync = {};
+  view_state.sync = &sync;
+
   std::thread gathering_thread{
     [&sync]() {
       GatheringState state = {};
@@ -300,6 +304,12 @@ int main(int, char **) {
         gather(state, sync);
         glfwPostEmptyEvent();
       }
+    }
+  };
+
+  std::thread library_thread{
+    [&sync]() {
+      library_reader_thread(sync);
     }
   };
 
@@ -320,7 +330,9 @@ int main(int, char **) {
   // Cleanup
   sync.quit.store(true);
   sync.quit_cv.notify_one();
+  sync.library_cv.notify_one();
   gathering_thread.join();
+  library_thread.join();
 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();

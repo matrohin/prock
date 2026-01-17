@@ -1,0 +1,108 @@
+#include "library_reader.h"
+
+#include "base.h"
+#include "sync.h"
+
+#include <GLFW/glfw3.h>
+
+#include <algorithm>
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
+#include <mutex>
+
+namespace {
+
+LibraryResponse read_process_libraries(int pid) {
+  LibraryResponse response = {};
+  response.pid = pid;
+  response.owner_arena = BumpArena::create();
+
+  char path[64];
+  snprintf(path, sizeof(path), "/proc/%d/maps", pid);
+
+  FILE *file = fopen(path, "r");
+  if (!file) {
+    response.error_code = errno;
+    return response;
+  }
+
+  // First pass: count unique .so files
+  GrowingArray<LibraryEntry> entries = {};
+  size_t wasted = 0;
+
+  char line[512];
+  while (fgets(line, sizeof(line), file)) {
+    // Parse line format: addr_start-addr_end perms offset dev inode pathname
+    unsigned long addr_start, addr_end;
+    char perms[8] = {};
+    unsigned long offset;
+    char dev[16] = {};
+    unsigned long inode;
+    char pathname[256] = {};
+
+    int n = sscanf(line, "%lx-%lx %7s %lx %15s %lu %255s",
+                   &addr_start, &addr_end, perms, &offset, dev, &inode, pathname);
+
+    if (n < 7 || pathname[0] == '\0') continue;
+
+    // Skip non-.so files and special entries
+    if (pathname[0] != '/') continue;
+    const char *ext = strstr(pathname, ".so");
+    if (!ext) continue;
+
+    // Check if already in list (deduplicate)
+    bool found = false;
+    for (size_t i = 0; i < entries.size(); ++i) {
+      if (strcmp(entries.data()[i].path, pathname) == 0) {
+        found = true;
+        break;
+      }
+    }
+    if (found) continue;
+
+    LibraryEntry *entry = entries.emplace_back(response.owner_arena, wasted);
+    strncpy(entry->path, pathname, sizeof(entry->path) - 1);
+    entry->path[sizeof(entry->path) - 1] = '\0';
+    entry->addr_start = addr_start;
+    entry->addr_end = addr_end;
+  }
+  fclose(file);
+
+  // Sort alphabetically by path
+  std::sort(entries.data(), entries.data() + entries.size(),
+            [](const LibraryEntry &a, const LibraryEntry &b) {
+              return strcmp(a.path, b.path) < 0;
+            });
+
+  // Copy to final array
+  response.libraries = Array<LibraryEntry>::create(response.owner_arena, entries.size());
+  memcpy(response.libraries.data, entries.data(), entries.size() * sizeof(LibraryEntry));
+
+  response.error_code = 0;
+  return response;
+}
+
+} // unnamed namespace
+
+
+void library_reader_thread(Sync &sync) {
+  while (!sync.quit.load()) {
+    LibraryRequest request;
+    {
+      std::unique_lock<std::mutex> lock(sync.quit_mutex);
+      sync.library_cv.wait(lock, [&] {
+        return sync.quit.load() || sync.library_request_queue.peek(request);
+      });
+    }
+    if (sync.quit.load()) break;
+
+    while (sync.library_request_queue.pop(request)) {
+      LibraryResponse response = read_process_libraries(request.pid);
+      if (!sync.library_response_queue.push(response)) {
+        response.owner_arena.destroy();
+      }
+      glfwPostEmptyEvent();
+    }
+  }
+}

@@ -3,6 +3,7 @@
 #include "views/common.h"
 #include "views/cpu_chart.h"
 #include "views/mem_chart.h"
+#include "views/library_viewer.h"
 
 #include "imgui_internal.h"
 
@@ -154,6 +155,10 @@ void brief_table_draw(ViewState &view_state, const State &state) {
           }
           if (ImGui::MenuItem("Memory Chart")) {
             mem_chart_add(view_state.mem_chart_state, line.pid, stat.comm);
+          }
+          if (ImGui::MenuItem("Show Loaded Libraries")) {
+            library_viewer_request(view_state.library_viewer_state,
+                                   *view_state.sync, line.pid, stat.comm);
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Kill Process", "Del") || ImGui::IsKeyPressed(ImGuiKey_Delete)) {
