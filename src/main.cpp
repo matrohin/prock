@@ -107,11 +107,14 @@ void state_update(State &state, ViewState &view_state, const UpdateSnapshot &sna
   old_arena.destroy();
 }
 
-void update(State &state, ViewState &view_state, Sync &sync) {
+bool update(State &state, ViewState &view_state, Sync &sync) {
   UpdateSnapshot snapshot = {};
+  bool updated = false;
   while (sync.update_queue.pop(snapshot)) {
     state_update(state, view_state, snapshot);
+    updated = true;
   }
+  return updated;
 }
 
 void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_state) {
@@ -321,7 +324,9 @@ int main(int, char **) {
       glfwWaitEvents();
     }
 
-    update(state, view_state, sync);
+    if (update(state, view_state, sync)) {
+      g_needs_updates = 2;
+    }
     draw(window, io, state, view_state);
 
     glfwSwapBuffers(window);
