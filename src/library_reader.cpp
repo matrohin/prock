@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <sys/stat.h>
 
 namespace {
 
@@ -66,6 +67,14 @@ LibraryResponse read_process_libraries(int pid) {
     entry->path[sizeof(entry->path) - 1] = '\0';
     entry->addr_start = addr_start;
     entry->addr_end = addr_end;
+
+    // Get file size
+    struct stat st;
+    if (stat(pathname, &st) == 0) {
+      entry->file_size = st.st_size;
+    } else {
+      entry->file_size = -1;
+    }
   }
   fclose(file);
 

@@ -19,6 +19,7 @@ struct LibraryEntry {
   char path[256];
   unsigned long addr_start;
   unsigned long addr_end;
+  long file_size;  // -1 if stat failed
 };
 
 struct LibraryRequest {

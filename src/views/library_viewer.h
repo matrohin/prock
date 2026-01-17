@@ -3,10 +3,19 @@
 #include "base.h"
 #include "sync.h"
 
+#include "imgui.h"
+
 enum LibraryViewerStatus {
   eLibraryViewerStatus_Loading,
   eLibraryViewerStatus_Ready,
   eLibraryViewerStatus_Error,
+};
+
+enum LibraryViewerColumnId {
+  eLibraryViewerColumnId_Path,
+  eLibraryViewerColumnId_MappedSize,
+  eLibraryViewerColumnId_FileSize,
+  eLibraryViewerColumnId_Count,
 };
 
 struct LibraryViewerWindow {
@@ -19,6 +28,11 @@ struct LibraryViewerWindow {
 
   // Data (owned by LibraryViewerState::cur_arena)
   Array<LibraryEntry> libraries;
+
+  // Sorting and selection
+  LibraryViewerColumnId sorted_by;
+  ImGuiSortDirection sorted_order;
+  int selected_index;  // -1 means no selection
 };
 
 struct LibraryViewerState {

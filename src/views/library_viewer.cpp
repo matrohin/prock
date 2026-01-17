@@ -5,9 +5,38 @@
 
 #include "imgui.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <unistd.h>
+
+namespace {
+
+void sort_libraries(LibraryViewerWindow &win) {
+  if (win.libraries.size == 0) return;
+
+  const auto compare = [&](const LibraryEntry &a, const LibraryEntry &b) {
+    switch (win.sorted_by) {
+      case eLibraryViewerColumnId_Path:
+        return strcmp(a.path, b.path) < 0;
+      case eLibraryViewerColumnId_MappedSize:
+        return (a.addr_end - a.addr_start) < (b.addr_end - b.addr_start);
+      case eLibraryViewerColumnId_FileSize:
+        return a.file_size < b.file_size;
+      default:
+        return false;
+    }
+  };
+
+  if (win.sorted_order == ImGuiSortDirection_Ascending) {
+    std::stable_sort(win.libraries.data, win.libraries.data + win.libraries.size, compare);
+  } else {
+    std::stable_sort(win.libraries.data, win.libraries.data + win.libraries.size,
+                     [&](const LibraryEntry &a, const LibraryEntry &b) { return compare(b, a); });
+  }
+}
+
+} // unnamed namespace
 
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid, const char *comm) {
@@ -29,6 +58,9 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid, cons
   win->libraries = {};
   win->error_code = 0;
   win->error_message[0] = '\0';
+  win->sorted_by = eLibraryViewerColumnId_Path;
+  win->sorted_order = ImGuiSortDirection_Ascending;
+  win->selected_index = -1;
 
   LibraryRequest req = {pid};
   sync.library_request_queue.push(req);
@@ -144,12 +176,69 @@ void library_viewer_draw(ViewState &view_state, const State &state) {
           }
         }
       } else if (win.libraries.size > 0) {
-        if (ImGui::BeginChild("List")) {
-          for (size_t j = 0; j < win.libraries.size; ++j) {
-            ImGui::Text("%s", win.libraries.data[j].path);
+        if (ImGui::BeginTable("Libraries", eLibraryViewerColumnId_Count,
+                              ImGuiTableFlags_Resizable |
+                              ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_Borders |
+                              ImGuiTableFlags_Sortable |
+                              ImGuiTableFlags_ScrollY)) {
+          ImGui::TableSetupScrollFreeze(0, 1);
+          ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_DefaultSort, 0.0f, eLibraryViewerColumnId_Path);
+          ImGui::TableSetupColumn("Mapped Size", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 100.0f, eLibraryViewerColumnId_MappedSize);
+          ImGui::TableSetupColumn("File Size", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 100.0f, eLibraryViewerColumnId_FileSize);
+          ImGui::TableHeadersRow();
+
+          // Handle sorting
+          if (ImGuiTableSortSpecs *sort_specs = ImGui::TableGetSortSpecs()) {
+            if (sort_specs->SpecsDirty) {
+              win.sorted_by = static_cast<LibraryViewerColumnId>(sort_specs->Specs->ColumnUserID);
+              win.sorted_order = sort_specs->Specs->SortDirection;
+              sort_libraries(win);
+              sort_specs->SpecsDirty = false;
+            }
           }
+
+          for (size_t j = 0; j < win.libraries.size; ++j) {
+            const LibraryEntry &lib = win.libraries.data[j];
+            const bool is_selected = (win.selected_index == (int)j);
+            ImGui::TableNextRow();
+
+            // Path with selection
+            ImGui::TableSetColumnIndex(eLibraryViewerColumnId_Path);
+            if (ImGui::Selectable(lib.path, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
+              win.selected_index = (int)j;
+            }
+
+            // Mapped Size (memory range)
+            ImGui::TableSetColumnIndex(eLibraryViewerColumnId_MappedSize);
+            unsigned long mapped_size = lib.addr_end - lib.addr_start;
+            if (mapped_size >= 1024 * 1024) {
+              ImGui::Text("%.1f MB", mapped_size / (1024.0 * 1024.0));
+            } else if (mapped_size >= 1024) {
+              ImGui::Text("%.1f KB", mapped_size / 1024.0);
+            } else {
+              ImGui::Text("%lu B", mapped_size);
+            }
+            if (ImGui::IsItemHovered()) {
+              ImGui::SetTooltip("0x%lx - 0x%lx", lib.addr_start, lib.addr_end);
+            }
+
+            // File Size
+            ImGui::TableSetColumnIndex(eLibraryViewerColumnId_FileSize);
+            if (lib.file_size >= 0) {
+              if (lib.file_size >= 1024 * 1024) {
+                ImGui::Text("%.1f MB", lib.file_size / (1024.0 * 1024.0));
+              } else if (lib.file_size >= 1024) {
+                ImGui::Text("%.1f KB", lib.file_size / 1024.0);
+              } else {
+                ImGui::Text("%ld B", lib.file_size);
+              }
+            } else {
+              ImGui::TextDisabled("N/A");
+            }
+          }
+          ImGui::EndTable();
         }
-        ImGui::EndChild();
       }
     }
     ImGui::End();
