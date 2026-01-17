@@ -14,3 +14,16 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/implot)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Test target (no GUI dependencies)
+option(BUILD_TESTS "Build tests" ON)
+if(BUILD_TESTS)
+  add_executable(prock_tests tests/test_main.cpp)
+  target_include_directories(prock_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+  target_compile_options(prock_tests PRIVATE -Wall)
+
+  enable_testing()
+  add_test(NAME prock_tests COMMAND prock_tests)
+endif()
+

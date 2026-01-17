@@ -51,7 +51,7 @@ struct BumpArena {
       return cur_slab->advance(size);
     }
 
-    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + sizeof(BumpArena)), cur_slab);
+    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + sizeof(ArenaSlab)), cur_slab);
     return cur_slab->advance(size);
   }
 
