@@ -12,6 +12,31 @@
 
 namespace {
 
+const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
+
+void copy_library_row(const LibraryEntry &lib) {
+  char buf[512];
+  unsigned long mapped_size = lib.addr_end - lib.addr_start;
+  snprintf(buf, sizeof(buf), "%s%s\t%lu\t%ld",
+           LIBRARY_COPY_HEADER, lib.path, mapped_size, lib.file_size);
+  ImGui::SetClipboardText(buf);
+}
+
+void copy_all_libraries(BumpArena &arena, const LibraryViewerWindow &win) {
+  size_t buf_size = 128 + win.libraries.size * 320;
+  char *buf = (char *)arena.alloc_raw(buf_size, 1);
+  char *ptr = buf;
+  ptr += snprintf(ptr, buf_size, "%s", LIBRARY_COPY_HEADER);
+
+  for (size_t i = 0; i < win.libraries.size; ++i) {
+    const LibraryEntry &lib = win.libraries.data[i];
+    unsigned long mapped_size = lib.addr_end - lib.addr_start;
+    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n",
+                    lib.path, mapped_size, lib.file_size);
+  }
+  ImGui::SetClipboardText(buf);
+}
+
 void sort_libraries(LibraryViewerWindow &win) {
   if (win.libraries.size == 0) return;
 
@@ -117,7 +142,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
 }
 
 
-void library_viewer_draw(ViewState &view_state, const State &state) {
+void library_viewer_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   LibraryViewerState &my_state = view_state.library_viewer_state;
   size_t last = 0;
 
@@ -208,6 +233,20 @@ void library_viewer_draw(ViewState &view_state, const State &state) {
             if (ImGui::Selectable(lib.path, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
               win.selected_index = (int)j;
             }
+            if (ImGui::IsItemHovered()) {
+              ImGui::SetTooltip("%s", lib.path);
+            }
+
+            if (ImGui::BeginPopupContextItem()) {
+              win.selected_index = (int)j;
+              if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+                copy_library_row(lib);
+              }
+              if (ImGui::MenuItem("Copy All")) {
+                copy_all_libraries(ctx.frame_arena, win);
+              }
+              ImGui::EndPopup();
+            }
 
             // Mapped Size (memory range)
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_MappedSize);
@@ -237,7 +276,13 @@ void library_viewer_draw(ViewState &view_state, const State &state) {
               ImGui::TextDisabled("N/A");
             }
           }
+
           ImGui::EndTable();
+        }
+
+        // Ctrl+C to copy selected row
+        if (win.selected_index >= 0 && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+          copy_library_row(win.libraries.data[win.selected_index]);
         }
       }
     }

@@ -2,6 +2,7 @@
 
 #include "base.h"
 
+struct FrameContext;
 struct State;
 struct StateSnapshot;
 
@@ -34,4 +35,4 @@ struct BriefTableState {
 void brief_table_update(
   BriefTableState &my_state, State &state, const StateSnapshot &old);
 
-void brief_table_draw(ViewState &view_state, const State &state);
+void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &state);

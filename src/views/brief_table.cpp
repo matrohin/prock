@@ -4,6 +4,7 @@
 #include "views/cpu_chart.h"
 #include "views/mem_chart.h"
 #include "views/library_viewer.h"
+#include "views/view_state.h"
 
 #include "imgui_internal.h"
 
@@ -13,6 +14,39 @@
 #include <signal.h>
 
 namespace {
+
+const char *PROCESS_COPY_HEADER = "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS (KB)\tVirt (KB)\n";
+
+void copy_process_row(const ProcessStat &stat, const ProcessDerivedStat &derived) {
+  char buf[512];
+  snprintf(buf, sizeof(buf), "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f",
+           PROCESS_COPY_HEADER,
+           stat.pid, stat.comm, stat.state, stat.num_threads,
+           derived.cpu_user_perc + derived.cpu_kernel_perc,
+           derived.cpu_user_perc, derived.cpu_kernel_perc,
+           derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0);
+  ImGui::SetClipboardText(buf);
+}
+
+void copy_all_processes(BumpArena &arena, const BriefTableState &my_state, const StateSnapshot &snapshot) {
+  // Header + all rows
+  size_t buf_size = 256 + my_state.lines.size * 256;
+  char *buf = (char *)arena.alloc_raw(buf_size, 1);
+  char *ptr = buf;
+  ptr += snprintf(ptr, buf_size, "%s", PROCESS_COPY_HEADER);
+
+  for (size_t i = 0; i < my_state.lines.size; ++i) {
+    const BriefTableLine &line = my_state.lines.data[i];
+    const ProcessStat &stat = snapshot.stats.data[line.state_index];
+    const ProcessDerivedStat &derived = snapshot.derived_stats.data[line.state_index];
+    ptr += snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\n",
+                    stat.pid, stat.comm, stat.state, stat.num_threads,
+                    derived.cpu_user_perc + derived.cpu_kernel_perc,
+                    derived.cpu_user_perc, derived.cpu_kernel_perc,
+                    derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0);
+  }
+  ImGui::SetClipboardText(buf);
+}
 
 void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
   const auto sort_ascending = [&state, sorted_by = my_state.sorted_by](const BriefTableLine &left, const BriefTableLine &right) {
@@ -101,7 +135,7 @@ void brief_table_update(
   sort_as_requested(my_state, new_snapshot);
 }
 
-void brief_table_draw(ViewState &view_state, const State &state) {
+void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   BriefTableState &my_state = view_state.brief_table_state;
 
   ImGui::Begin("Process Table", nullptr, COMMON_VIEW_FLAGS);
@@ -150,6 +184,13 @@ void brief_table_draw(ViewState &view_state, const State &state) {
         }
         if (ImGui::BeginPopupContextItem(label)) {
           my_state.selected_pid = line.pid;
+          if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+            copy_process_row(stat, derived_stat);
+          }
+          if (ImGui::MenuItem("Copy All")) {
+            copy_all_processes(ctx.frame_arena, my_state, state.snapshot);
+          }
+          ImGui::Separator();
           if (ImGui::MenuItem("CPU Chart")) {
             cpu_chart_add(view_state.cpu_chart_state, line.pid, stat.comm);
           }
@@ -204,8 +245,20 @@ void brief_table_draw(ViewState &view_state, const State &state) {
     ImGui::EndTable();
   }
 
+  // Ctrl+C to copy selected row
+  if (my_state.selected_pid > 0 && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+    for (size_t i = 0; i < my_state.lines.size; ++i) {
+      if (my_state.lines.data[i].pid == my_state.selected_pid) {
+        const ProcessStat &stat = state.snapshot.stats.data[my_state.lines.data[i].state_index];
+        const ProcessDerivedStat &derived = state.snapshot.derived_stats.data[my_state.lines.data[i].state_index];
+        copy_process_row(stat, derived);
+        break;
+      }
+    }
+  }
+
   // Del key to kill selected process
-  if (my_state.selected_pid > 0 && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
+  if (my_state.selected_pid > 0 && ImGui::Shortcut(ImGuiKey_Delete)) {
     if (kill(my_state.selected_pid, SIGTERM) != 0) {
       snprintf(my_state.kill_error, sizeof(my_state.kill_error), "Failed to kill %d: %s", my_state.selected_pid, strerror(errno));
     }

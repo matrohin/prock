@@ -41,9 +41,10 @@ struct LibraryViewerState {
   size_t wasted_bytes;
 };
 
+struct FrameContext;
 struct ViewState;
 struct State;
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid, const char *comm);
 void library_viewer_update(LibraryViewerState &state, Sync &sync);
-void library_viewer_draw(ViewState &view_state, const State &state);
+void library_viewer_draw(FrameContext &ctx, ViewState &view_state, const State &state);

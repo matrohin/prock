@@ -20,11 +20,11 @@ void views_update(ViewState &view_state, State &state, const StateSnapshot &old_
 
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
-  brief_table_draw(view_state, state);
+  brief_table_draw(ctx, view_state, state);
   cpu_chart_draw(view_state, state);
   mem_chart_draw(view_state, state);
   system_cpu_chart_draw(ctx, view_state, state);
   system_mem_chart_draw(ctx, view_state, state);
-  library_viewer_draw(view_state, state);
+  library_viewer_draw(ctx, view_state, state);
 }
 
