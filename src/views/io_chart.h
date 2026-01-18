@@ -15,7 +15,7 @@ struct IoChartState {
   size_t wasted_bytes;
 };
 
-void io_chart_update(IoChartState &my_state, const State &state, const StateSnapshot &old);
-void io_chart_draw(ViewState &view_state, const State &state);
+void io_chart_update(IoChartState &my_state, const State &state);
+void io_chart_draw(ViewState &view_state);
 
 void io_chart_add(IoChartState &my_state, int pid, const char *comm);

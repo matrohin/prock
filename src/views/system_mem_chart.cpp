@@ -12,7 +12,7 @@ namespace {
 constexpr double KB_TO_GB = 1.0 / (1024.0 * 1024.0);
 }
 
-void system_mem_chart_update(SystemMemChartState &my_state, const State &state, const StateSnapshot &old) {
+void system_mem_chart_update(SystemMemChartState &my_state, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   const MemInfo &mem = snapshot.mem_info;
   if (mem.mem_total == 0) {
@@ -39,7 +39,7 @@ void system_mem_chart_update(SystemMemChartState &my_state, const State &state, 
   }
 }
 
-void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+void system_mem_chart_draw(FrameContext &/*ctx*/, ViewState &view_state) {
   SystemMemChartState &my_state = view_state.system_mem_chart_state;
 
   ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));

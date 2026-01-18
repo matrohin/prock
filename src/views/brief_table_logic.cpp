@@ -109,7 +109,7 @@ void sort_brief_table_lines(BriefTableState &my_state, const StateSnapshot &stat
 
 // Rebuilds lines in previous display order (with new processes appended) for stable sorting.
 void brief_table_update(
-  BriefTableState &my_state, State &state, const StateSnapshot &old) {
+  BriefTableState &my_state, State &state) {
 
   const StateSnapshot &new_snapshot = state.snapshot;
   const Array<BriefTableLine> &old_lines = my_state.lines;

@@ -356,9 +356,7 @@ TEST_CASE("brief_table_update") {
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
 
-    StateSnapshot old_snapshot = {};
-
-    brief_table_update(my_state, state, old_snapshot);
+    brief_table_update(my_state, state);
 
     // All 3 processes should be in lines, sorted by PID
     REQUIRE(my_state.lines.size == 3);
@@ -388,9 +386,7 @@ TEST_CASE("brief_table_update") {
     my_state.lines.data[0] = {30, 0};  // was at index 0, will be at 2
     my_state.lines.data[1] = {10, 1};  // was at index 1, will be at 0
 
-    StateSnapshot old_snapshot = {};
-
-    brief_table_update(my_state, state, old_snapshot);
+    brief_table_update(my_state, state);
 
     // After update and sort: all 4 processes, sorted by PID ascending
     REQUIRE(my_state.lines.size == 4);
@@ -420,9 +416,7 @@ TEST_CASE("brief_table_update") {
     my_state.lines.data[1] = {20, 1};
     my_state.lines.data[2] = {30, 2};
 
-    StateSnapshot old_snapshot = {};
-
-    brief_table_update(my_state, state, old_snapshot);
+    brief_table_update(my_state, state);
 
     // Only PID 20 should remain
     REQUIRE(my_state.lines.size == 1);
@@ -446,9 +440,7 @@ TEST_CASE("brief_table_update") {
     my_state.sorted_by = eBriefTableColumnId_Name;
     my_state.sorted_order = ImGuiSortDirection_Descending;
 
-    StateSnapshot old_snapshot = {};
-
-    brief_table_update(my_state, state, old_snapshot);
+    brief_table_update(my_state, state);
 
     // Sorted by name descending: zzz (20), mmm (30), aaa (10)
     REQUIRE(my_state.lines.size == 3);

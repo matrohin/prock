@@ -7,12 +7,11 @@
 
 #include <cmath>
 
-void mem_chart_update(
-    MemChartState &my_state, const State &state, const StateSnapshot &old) {
+void mem_chart_update(MemChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
 
   common_charts_update(my_state.charts, state,
-    [&](MemChartData &chart, const ProcessStat &stat, const ProcessDerivedStat &derived) {
+    [&](MemChartData &chart, const ProcessStat &/*stat*/, const ProcessDerivedStat &derived) {
       // TODO: add reallocs
       *chart.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = update_at;
       *chart.mem_resident_kb.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = derived.mem_resident_bytes / 1024;
@@ -35,7 +34,7 @@ void mem_chart_update(
   }
 }
 
-void mem_chart_draw(ViewState &view_state, const State &state) {
+void mem_chart_draw(ViewState &view_state) {
   MemChartState &my_state = view_state.mem_chart_state;
   size_t last = 0;
 

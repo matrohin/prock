@@ -16,5 +16,5 @@ struct SystemCpuChartState {
   bool stacked;
 };
 
-void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, const StateSnapshot &old);
-void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state);
+void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state);
+void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state);

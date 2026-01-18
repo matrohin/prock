@@ -14,7 +14,7 @@ struct CpuChartState {
   size_t wasted_bytes = 0;
 };
 
-void cpu_chart_update(CpuChartState &my_state, const State &state, const StateSnapshot &old);
-void cpu_chart_draw(ViewState &view_state, const State &state);
+void cpu_chart_update(CpuChartState &my_state, const State &state);
+void cpu_chart_draw(ViewState &view_state);
 
 void cpu_chart_add(CpuChartState &my_state, int pid, const char *comm);

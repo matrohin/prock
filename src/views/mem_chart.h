@@ -14,7 +14,7 @@ struct MemChartState {
   size_t wasted_bytes;
 };
 
-void mem_chart_update(MemChartState &my_state, const State &state, const StateSnapshot &old);
-void mem_chart_draw(ViewState &view_state, const State &state);
+void mem_chart_update(MemChartState &my_state, const State &state);
+void mem_chart_draw(ViewState &view_state);
 
 void mem_chart_add(MemChartState &my_state, int pid, const char *comm);

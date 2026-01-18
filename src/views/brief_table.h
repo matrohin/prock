@@ -44,8 +44,7 @@ struct BriefTableState {
   bool tree_mode;  // Toggle: false = flat, true = tree
 };
 
-void brief_table_update(
-  BriefTableState &my_state, State &state, const StateSnapshot &old);
+void brief_table_update(BriefTableState &my_state, State &state);
 
 void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &state);
 

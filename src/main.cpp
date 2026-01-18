@@ -55,8 +55,8 @@ static void* view_settings_read_open(ImGuiContext*, ImGuiSettingsHandler* handle
   return nullptr;
 }
 
-static void view_settings_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) {
-  ViewState* view_state = static_cast<ViewState*>(entry);
+static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *, void *entry, const char *line) {
+  ViewState* view_state = static_cast<ViewState *>(entry);
   if (!view_state) return;
 
   int val = 0;
@@ -67,8 +67,8 @@ static void view_settings_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* 
   }
 }
 
-static void view_settings_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) {
-  ViewState* view_state = static_cast<ViewState*>(handler->UserData);
+static void view_settings_write_all(ImGuiContext */*ctx*/, ImGuiSettingsHandler *handler, ImGuiTextBuffer *buf) {
+  ViewState* view_state = static_cast<ViewState *>(handler->UserData);
   if (!view_state) return;
 
   buf->appendf("[%s][SystemCpuChart]\n", handler->TypeName);
@@ -77,11 +77,8 @@ static void view_settings_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* han
   buf->append("\n");
 }
 
-
-constexpr float MIN_DELTA_TIME = 1.0f / 60.0f; // 60fps
-
 void glfw_error_callback(int error, const char *description) {
-  fprintf(stderr, "GLFW Error: %s\n", description);
+  fprintf(stderr, "GLFW Error: %x: %s\n", error, description);
 }
 
 bool state_init(State &state) {
@@ -98,14 +95,13 @@ bool state_init(State &state) {
 
 void state_update(State &state, ViewState &view_state, const UpdateSnapshot &snapshot) {
   BumpArena old_arena = state.snapshot_arena;
-  StateSnapshot old_snapshot = state.snapshot;
 
   state.snapshot_arena = snapshot.owner_arena;
   state.snapshot = state_snapshot_update(state.snapshot_arena, state, snapshot);
   state.update_count += 1;
   state.update_system_time = snapshot.system_time;
 
-  views_update(view_state, state, old_snapshot);
+  views_update(view_state, state);
 
   old_arena.destroy();
 }
@@ -121,11 +117,6 @@ bool update(State &state, ViewState &view_state, Sync &sync) {
 }
 
 void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_state) {
-  /*if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) {
-    ImGui_ImplGlfw_Sleep(50);
-    return;
-  }*/
-
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();

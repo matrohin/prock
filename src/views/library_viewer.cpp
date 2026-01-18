@@ -142,7 +142,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
 }
 
 
-void library_viewer_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   LibraryViewerState &my_state = view_state.library_viewer_state;
   size_t last = 0;
 

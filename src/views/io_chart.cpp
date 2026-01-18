@@ -7,12 +7,11 @@
 
 #include <cmath>
 
-void io_chart_update(
-    IoChartState &my_state, const State &state, const StateSnapshot &old) {
+void io_chart_update(IoChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
 
   common_charts_update(my_state.charts, state,
-    [&](IoChartData &chart, const ProcessStat &stat, const ProcessDerivedStat &derived) {
+    [&](IoChartData &chart, const ProcessStat &/*stat*/, const ProcessDerivedStat &derived) {
       *chart.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = update_at;
       *chart.read_kb_per_sec.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = derived.io_read_kb_per_sec;
       *chart.write_kb_per_sec.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = derived.io_write_kb_per_sec;
@@ -36,7 +35,7 @@ void io_chart_update(
   }
 }
 
-void io_chart_draw(ViewState &view_state, const State &state) {
+void io_chart_draw(ViewState &view_state) {
   IoChartState &my_state = view_state.io_chart_state;
   size_t last = 0;
 

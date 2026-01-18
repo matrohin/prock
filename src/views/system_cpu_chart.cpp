@@ -9,7 +9,7 @@
 
 #include <cmath>
 
-void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, const StateSnapshot &old) {
+void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   if (snapshot.cpu_perc.total.size == 0) {
     return;
@@ -49,7 +49,7 @@ void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state, 
   }
 }
 
-void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
   SystemCpuChartState &my_state = view_state.system_cpu_chart_state;
   ImGui::Begin("System CPU Usage", nullptr, COMMON_VIEW_FLAGS);
 

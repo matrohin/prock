@@ -9,5 +9,5 @@ struct SystemIoChartState {
   bool y_axis_fitted;
 };
 
-void system_io_chart_update(SystemIoChartState &my_state, const State &state, const StateSnapshot &old);
-void system_io_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state);
+void system_io_chart_update(SystemIoChartState &my_state, const State &state);
+void system_io_chart_draw(FrameContext &ctx, ViewState &view_state);

@@ -7,12 +7,11 @@
 
 #include <cmath>
 
-void cpu_chart_update(
-    CpuChartState &my_state, const State &state, const StateSnapshot &old) {
+void cpu_chart_update(CpuChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
 
   common_charts_update(my_state.charts, state,
-    [&](CpuChartData &chart, const ProcessStat &stat, const ProcessDerivedStat &derived) {
+    [&](CpuChartData &chart, const ProcessStat &/*stat*/, const ProcessDerivedStat &derived) {
       // TODO: add reallocs
       *chart.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = update_at;
       *chart.cpu_kernel_perc.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = derived.cpu_kernel_perc;
@@ -37,7 +36,7 @@ void cpu_chart_update(
   }
 }
 
-void cpu_chart_draw(ViewState &view_state, const State &state) {
+void cpu_chart_draw(ViewState &view_state) {
   CpuChartState &my_state = view_state.cpu_chart_state;
 
   size_t last = 0;

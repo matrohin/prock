@@ -8,7 +8,7 @@
 
 #include <cmath>
 
-void system_io_chart_update(SystemIoChartState &my_state, const State &state, const StateSnapshot &old) {
+void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   const DiskIoRate &rate = snapshot.disk_io_rate;
 
@@ -32,7 +32,7 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state, co
   }
 }
 
-void system_io_chart_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+void system_io_chart_draw(FrameContext &/*ctx*/, ViewState &view_state) {
   SystemIoChartState &my_state = view_state.system_io_chart_state;
 
   ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
