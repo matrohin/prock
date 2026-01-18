@@ -16,6 +16,8 @@ enum BriefTableColumnId {
   eBriefTableColumnId_CpuKernelPerc,
   eBriefTableColumnId_MemRssBytes,
   eBriefTableColumnId_MemVirtBytes,
+  eBriefTableColumnId_IoReadKbPerSec,
+  eBriefTableColumnId_IoWriteKbPerSec,
   eBriefTableColumnId_Count,
 };
 

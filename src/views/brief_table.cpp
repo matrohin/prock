@@ -16,16 +16,17 @@
 
 namespace {
 
-const char *PROCESS_COPY_HEADER = "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS (KB)\tVirt (KB)\n";
+const char *PROCESS_COPY_HEADER = "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS (KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\n";
 
 void copy_process_row(const ProcessStat &stat, const ProcessDerivedStat &derived) {
   char buf[512];
-  snprintf(buf, sizeof(buf), "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f",
+  snprintf(buf, sizeof(buf), "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f",
            PROCESS_COPY_HEADER,
            stat.pid, stat.comm, stat.state, stat.num_threads,
            derived.cpu_user_perc + derived.cpu_kernel_perc,
            derived.cpu_user_perc, derived.cpu_kernel_perc,
-           derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0);
+           derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0,
+           derived.io_read_kb_per_sec, derived.io_write_kb_per_sec);
   ImGui::SetClipboardText(buf);
 }
 
@@ -40,11 +41,12 @@ void copy_all_processes(BumpArena &arena, const BriefTableState &my_state, const
     const BriefTableLine &line = my_state.lines.data[i];
     const ProcessStat &stat = snapshot.stats.data[line.state_index];
     const ProcessDerivedStat &derived = snapshot.derived_stats.data[line.state_index];
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\n",
+    ptr += snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\n",
                     stat.pid, stat.comm, stat.state, stat.num_threads,
                     derived.cpu_user_perc + derived.cpu_kernel_perc,
                     derived.cpu_user_perc, derived.cpu_kernel_perc,
-                    derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0);
+                    derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0,
+                    derived.io_read_kb_per_sec, derived.io_write_kb_per_sec);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -65,6 +67,8 @@ void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
       case eBriefTableColumnId_CpuKernelPerc: return state.derived_stats.data[left.state_index].cpu_kernel_perc < state.derived_stats.data[right.state_index].cpu_kernel_perc;
       case eBriefTableColumnId_MemRssBytes: return state.derived_stats.data[left.state_index].mem_resident_bytes < state.derived_stats.data[right.state_index].mem_resident_bytes;
       case eBriefTableColumnId_MemVirtBytes: return state.stats.data[left.state_index].vsize < state.stats.data[right.state_index].vsize;
+      case eBriefTableColumnId_IoReadKbPerSec: return state.derived_stats.data[left.state_index].io_read_kb_per_sec < state.derived_stats.data[right.state_index].io_read_kb_per_sec;
+      case eBriefTableColumnId_IoWriteKbPerSec: return state.derived_stats.data[left.state_index].io_write_kb_per_sec < state.derived_stats.data[right.state_index].io_write_kb_per_sec;
       case eBriefTableColumnId_Count: return false;
     }
     return false;
@@ -157,6 +161,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &sta
     ImGui::TableSetupColumn("CPU Kernel (%)", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_CpuKernelPerc);
     ImGui::TableSetupColumn("RSS (Bytes)", ImGuiTableColumnFlags_PreferSortDescending, 0.0f, eBriefTableColumnId_MemRssBytes);
     ImGui::TableSetupColumn("Virtual Size (Bytes)", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_DefaultHide, 0.0f, eBriefTableColumnId_MemVirtBytes);
+    ImGui::TableSetupColumn("I/O Read (KB/s)", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_DefaultHide, 0.0f, eBriefTableColumnId_IoReadKbPerSec);
+    ImGui::TableSetupColumn("I/O Write (KB/s)", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_DefaultHide, 0.0f, eBriefTableColumnId_IoWriteKbPerSec);
     ImGui::TableHeadersRow();
 
     if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
@@ -244,6 +250,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &sta
       if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f", derived_stat.cpu_kernel_perc);
       if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K", derived_stat.mem_resident_bytes / 1024);
       if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K", stat.vsize / 1024.0);
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoReadKbPerSec)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f", derived_stat.io_read_kb_per_sec);
+      if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec)) ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f", derived_stat.io_write_kb_per_sec);
     }
 
     ImGui::EndTable();
