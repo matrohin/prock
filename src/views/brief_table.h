@@ -1,10 +1,12 @@
 #pragma once
 
 #include "base.h"
+#include "process_stat.h"
 
 struct FrameContext;
 struct State;
 struct StateSnapshot;
+struct ViewState;
 
 enum BriefTableColumnId {
   eBriefTableColumnId_Pid,
@@ -46,3 +48,12 @@ void brief_table_update(
   BriefTableState &my_state, State &state, const StateSnapshot &old);
 
 void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &state);
+
+// Pure logic functions (exposed for testing)
+size_t binary_search_pid(const Array<ProcessStat> &stats, int pid);
+
+BriefTreeNode *build_process_tree(BumpArena &arena,
+                                  const Array<BriefTableLine> &lines,
+                                  const StateSnapshot &snapshot,
+                                  BriefTableColumnId sorted_by,
+                                  ImGuiSortDirection sorted_order);

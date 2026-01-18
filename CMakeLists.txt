@@ -14,13 +14,17 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/implot)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# Test target (no GUI dependencies)
+# Test target (no GUI dependencies, but needs imgui headers for types)
 option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
-  add_executable(prock_tests tests/test_main.cpp)
+  add_executable(prock_tests
+    tests/test_main.cpp
+    tests/test_views.cpp
+    src/views/brief_table_logic.cpp)
   target_include_directories(prock_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
   target_compile_options(prock_tests PRIVATE -Wall)
 
   enable_testing()

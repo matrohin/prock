@@ -2,6 +2,8 @@
 
 #include "base.h"
 
+#include <algorithm>
+
 static const ImPlotShadedFlags CHART_FLAGS = 0;
 
 template<class T>

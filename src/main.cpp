@@ -28,6 +28,7 @@
 #include "process_stat.cpp"
 #include "library_reader.cpp"
 #include "views/entry.cpp"
+#include "views/brief_table_logic.cpp"
 #include "views/brief_table.cpp"
 #include "views/cpu_chart.cpp"
 #include "views/mem_chart.cpp"
