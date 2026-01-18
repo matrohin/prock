@@ -49,6 +49,6 @@ if(BUILD_TESTS)
   target_link_libraries(${PROJECT_NAME} PRIVATE project_warnings)
 
   enable_testing()
-  add_test(NAME prock_tests COMMAND prock_tests)
+  add_test(NAME prock_tests COMMAND prock_tests WORKING_DIRECTORY ${UNIT_TEST_BIN_OUTPUT_DIR})
 endif()
 

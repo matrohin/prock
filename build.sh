@@ -1,4 +1,4 @@
 #!/usr/bin/sh
 
-# ctags -R .
 cmake --build build/Debug
+ctest --test-dir build/Debug
