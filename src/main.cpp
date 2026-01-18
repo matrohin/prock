@@ -1,7 +1,7 @@
 #include "base.h"
-#include "state.h"
 #include "process_stat.h"
 #include "ring_buffer.h"
+#include "state.h"
 #include "sync.h"
 
 #include "backends/imgui_impl_glfw.h"
@@ -24,19 +24,19 @@
 #include <unistd.h>
 
 // UNITY BUILD:
-#include "state.cpp"
-#include "process_stat.cpp"
 #include "library_reader.cpp"
-#include "views/entry.cpp"
-#include "views/brief_table_logic.cpp"
+#include "process_stat.cpp"
+#include "state.cpp"
 #include "views/brief_table.cpp"
+#include "views/brief_table_logic.cpp"
 #include "views/cpu_chart.cpp"
-#include "views/mem_chart.cpp"
+#include "views/entry.cpp"
 #include "views/io_chart.cpp"
-#include "views/system_cpu_chart.cpp"
-#include "views/system_mem_chart.cpp"
-#include "views/system_io_chart.cpp"
 #include "views/library_viewer.cpp"
+#include "views/mem_chart.cpp"
+#include "views/system_cpu_chart.cpp"
+#include "views/system_io_chart.cpp"
+#include "views/system_mem_chart.cpp"
 
 namespace {
 
@@ -44,19 +44,23 @@ namespace {
 // Sometimes imgui needs second frame update to handle some UI without delays.
 // Reproducible example: context menus
 static int g_needs_updates = 0;
-void maintaining_second_update(GLFWwindow* /*window*/, int /*button*/, int /*action*/, int /*mods*/) {
+void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
+                               int /*action*/, int /*mods*/) {
   g_needs_updates = 2;
 }
 
-static void* view_settings_read_open(ImGuiContext*, ImGuiSettingsHandler* handler, const char* name) {
+static void *view_settings_read_open(ImGuiContext *,
+                                     ImGuiSettingsHandler *handler,
+                                     const char *name) {
   if (strcmp(name, "SystemCpuChart") == 0) {
     return handler->UserData;
   }
   return nullptr;
 }
 
-static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *, void *entry, const char *line) {
-  ViewState* view_state = static_cast<ViewState *>(entry);
+static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
+                                    void *entry, const char *line) {
+  ViewState *view_state = static_cast<ViewState *>(entry);
   if (!view_state) return;
 
   int val = 0;
@@ -67,13 +71,16 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *, void
   }
 }
 
-static void view_settings_write_all(ImGuiContext */*ctx*/, ImGuiSettingsHandler *handler, ImGuiTextBuffer *buf) {
-  ViewState* view_state = static_cast<ViewState *>(handler->UserData);
+static void view_settings_write_all(ImGuiContext * /*ctx*/,
+                                    ImGuiSettingsHandler *handler,
+                                    ImGuiTextBuffer *buf) {
+  ViewState *view_state = static_cast<ViewState *>(handler->UserData);
   if (!view_state) return;
 
   buf->appendf("[%s][SystemCpuChart]\n", handler->TypeName);
-  buf->appendf("ShowPerCore=%d\n", (int) view_state->system_cpu_chart_state.show_per_core);
-  buf->appendf("Stacked=%d\n", (int) view_state->system_cpu_chart_state.stacked);
+  buf->appendf("ShowPerCore=%d\n",
+               (int)view_state->system_cpu_chart_state.show_per_core);
+  buf->appendf("Stacked=%d\n", (int)view_state->system_cpu_chart_state.stacked);
   buf->append("\n");
 }
 
@@ -93,7 +100,8 @@ bool state_init(State &state) {
   return true;
 }
 
-void state_update(State &state, ViewState &view_state, const UpdateSnapshot &snapshot) {
+void state_update(State &state, ViewState &view_state,
+                  const UpdateSnapshot &snapshot) {
   BumpArena old_arena = state.snapshot_arena;
 
   state.snapshot_arena = snapshot.owner_arena;
@@ -116,7 +124,8 @@ bool update(State &state, ViewState &view_state, Sync &sync) {
   return updated;
 }
 
-void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_state) {
+void draw(GLFWwindow *window, ImGuiIO &io, const State &state,
+          ViewState &view_state) {
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -125,10 +134,11 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_s
   ImGui::SetNextWindowSize(io.DisplaySize, ImGuiCond_Always);
   ImGui::SetNextWindowPos(ImVec2(0.0, 0.0), ImGuiCond_Always);
 
-  ImGuiWindowFlags main_window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
-      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-      ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
-      ImGuiWindowFlags_NoBackground;
+  ImGuiWindowFlags main_window_flags =
+      ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -155,7 +165,7 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state, ViewState &view_s
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-const char* DEFAULT_INI = R"(
+const char *DEFAULT_INI = R"(
 [Window][prock]
 Pos=0,0
 Size=1280,800
@@ -239,7 +249,7 @@ int main(int, char **) {
 
   // Set up config path in $HOME/.config/prock/
   static char ini_path[PATH_MAX] = {};
-  const char* home = getenv("HOME");
+  const char *home = getenv("HOME");
   if (home) {
     char dir_path[PATH_MAX] = {};
     int n = 0;
@@ -252,7 +262,8 @@ int main(int, char **) {
       if (n > 0 && (size_t)n < sizeof(dir_path)) {
         mkdir(dir_path, 0755);
         // Set the ini file path
-        n = snprintf(ini_path, sizeof(ini_path), "%s/.config/prock/settings.ini", home);
+        n = snprintf(ini_path, sizeof(ini_path),
+                     "%s/.config/prock/settings.ini", home);
         if (n > 0 && (size_t)n < sizeof(ini_path)) {
           io.IniFilename = ini_path;
         }
@@ -294,7 +305,6 @@ int main(int, char **) {
   ImGui_ImplGlfw_InitForOpenGL(window, install_callbacks);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
-
   // Setup state
   State state = {};
   if (!state_init(state)) {
@@ -304,21 +314,15 @@ int main(int, char **) {
   Sync sync = {};
   view_state.sync = &sync;
 
-  std::thread gathering_thread{
-    [&sync]() {
-      GatheringState state = {};
-      while (!sync.quit.load()) {
-        gather(state, sync);
-        glfwPostEmptyEvent();
-      }
+  std::thread gathering_thread{[&sync]() {
+    GatheringState state = {};
+    while (!sync.quit.load()) {
+      gather(state, sync);
+      glfwPostEmptyEvent();
     }
-  };
+  }};
 
-  std::thread library_thread{
-    [&sync]() {
-      library_reader_thread(sync);
-    }
-  };
+  std::thread library_thread{[&sync]() { library_reader_thread(sync); }};
 
   while (!glfwWindowShouldClose(window)) {
     if (g_needs_updates > 0) {

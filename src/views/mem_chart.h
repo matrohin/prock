@@ -9,7 +9,8 @@ struct MemChartData {
 };
 
 struct MemChartState {
-  BumpArena cur_arena; // TODO: gets changed every now and then via Array<T>::realloc
+  BumpArena
+      cur_arena; // TODO: gets changed every now and then via Array<T>::realloc
   GrowingArray<MemChartData> charts;
   size_t wasted_bytes;
 };

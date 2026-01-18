@@ -2,12 +2,12 @@
 
 #include "views/brief_table.h"
 #include "views/cpu_chart.h"
-#include "views/mem_chart.h"
 #include "views/io_chart.h"
-#include "views/system_cpu_chart.h"
-#include "views/system_mem_chart.h"
-#include "views/system_io_chart.h"
 #include "views/library_viewer.h"
+#include "views/mem_chart.h"
+#include "views/system_cpu_chart.h"
+#include "views/system_io_chart.h"
+#include "views/system_mem_chart.h"
 
 #include "imgui_internal.h"
 
@@ -39,7 +39,7 @@ struct CascadeLayout {
     pos.y += offset.y;
   }
 
-  void next_if_new(const char* window_name) {
+  void next_if_new(const char *window_name) {
     if (!ImGui::FindWindowByName(window_name)) {
       next();
     }

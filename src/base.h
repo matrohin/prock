@@ -32,7 +32,7 @@ struct ArenaSlab {
 
   void *advance(size_t size) {
     void *res = cur;
-    cur = ((uint8_t *) cur) + size;
+    cur = ((uint8_t *)cur) + size;
     left_size -= size;
     return res;
   }
@@ -46,17 +46,16 @@ struct BumpArena {
   void *alloc_raw(size_t size, size_t alignment) {
     if (cur_slab &&
         std::align(alignment, size, cur_slab->cur, cur_slab->left_size) &&
-        size <= cur_slab->left_size
-    ) {
+        size <= cur_slab->left_size) {
       return cur_slab->advance(size);
     }
 
-    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + sizeof(ArenaSlab)), cur_slab);
+    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + sizeof(ArenaSlab)),
+                                 cur_slab);
     return cur_slab->advance(size);
   }
 
-  template<class T>
-  T *alloc() {
+  template <class T> T *alloc() {
     return (T *)alloc_raw(sizeof(T), alignof(T));
   }
 
@@ -65,30 +64,27 @@ struct BumpArena {
     cur_slab = nullptr;
     while (it) {
       ArenaSlab *prev = it->prev;
-      free((void *) it);
+      free((void *)it);
       it = prev;
     }
   }
 };
-
 
 struct String {
   char *data;
   size_t length;
 };
 
-template<class T>
-struct LinkedNode {
+template <class T> struct LinkedNode {
   T value;
   LinkedNode *next = nullptr;
 };
 
-template<class T>
-struct LinkedList {
+template <class T> struct LinkedList {
   LinkedNode<T> *head = nullptr;
   size_t size = 0;
 
-  T* emplace_front(BumpArena &arena) {
+  T *emplace_front(BumpArena &arena) {
     LinkedNode<T> *node = arena.alloc<LinkedNode<T>>();
     node->next = head;
     head = node;
@@ -97,23 +93,21 @@ struct LinkedList {
   }
 };
 
-template<class T>
-struct Array {
+template <class T> struct Array {
   T *data;
   size_t size;
 
   static Array<T> create(BumpArena &arena, size_t with_size) {
-    T *result = (T*)arena.alloc_raw(with_size * sizeof(T), alignof(T));
+    T *result = (T *)arena.alloc_raw(with_size * sizeof(T), alignof(T));
     return Array<T>{result, with_size};
   }
 };
 
-template<class T>
-struct GrowingArray {
+template <class T> struct GrowingArray {
   Array<T> inner;
   size_t cur_size;
 
-  T* emplace_back(BumpArena &arena, size_t &wasted_bytes) {
+  T *emplace_back(BumpArena &arena, size_t &wasted_bytes) {
     if (cur_size >= inner.size) {
       wasted_bytes += inner.size * sizeof(T);
       realloc(arena);
@@ -122,7 +116,7 @@ struct GrowingArray {
   }
 
   void realloc(BumpArena &arena) {
-    size_t new_size = std::max((size_t) 4, cur_size * 2);
+    size_t new_size = std::max((size_t)4, cur_size * 2);
     Array<T> new_inner = Array<T>::create(arena, new_size);
     memcpy(new_inner.data, inner.data, cur_size * sizeof(T));
     inner = new_inner;
@@ -139,8 +133,6 @@ struct GrowingArray {
   size_t size() const { return cur_size; }
   size_t total_byte_size() const { return inner.size * sizeof(T); }
 };
-
-
 
 using Seconds = std::chrono::duration<double, std::chrono::seconds::period>;
 using SteadyClock = std::chrono::steady_clock;

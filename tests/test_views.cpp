@@ -2,14 +2,15 @@
 
 #include "imgui.h"
 
-// ImPlotShadedFlags is used in common_charts.h but we don't need the full implot
+// ImPlotShadedFlags is used in common_charts.h but we don't need the full
+// implot
 using ImPlotShadedFlags = int;
 
 #include "state.h"
 #include "sync.h"
+#include "test_helpers.h"
 #include "views/brief_table.h"
 #include "views/common_charts.h"
-#include "test_helpers.h"
 
 // ============================================================================
 // binary_search_pid Tests
@@ -87,8 +88,9 @@ TEST_CASE("build_process_tree") {
     StateSnapshot snapshot = builder.build();
     Array<BriefTableLine> lines = {};
 
-    BriefTreeNode *roots = build_process_tree(arena, lines, snapshot,
-        eBriefTableColumnId_Pid, ImGuiSortDirection_Ascending);
+    BriefTreeNode *roots =
+        build_process_tree(arena, lines, snapshot, eBriefTableColumnId_Pid,
+                           ImGuiSortDirection_Ascending);
 
     CHECK(roots == nullptr);
   }
@@ -101,8 +103,9 @@ TEST_CASE("build_process_tree") {
     Array<BriefTableLine> lines = Array<BriefTableLine>::create(arena, 1);
     lines.data[0] = {100, 0};
 
-    BriefTreeNode *roots = build_process_tree(arena, lines, snapshot,
-        eBriefTableColumnId_Pid, ImGuiSortDirection_Ascending);
+    BriefTreeNode *roots =
+        build_process_tree(arena, lines, snapshot, eBriefTableColumnId_Pid,
+                           ImGuiSortDirection_Ascending);
 
     REQUIRE(roots != nullptr);
     CHECK(roots->pid == 100);
@@ -122,21 +125,23 @@ TEST_CASE("build_process_tree") {
     lines.data[1] = {2, 1};
     lines.data[2] = {3, 2};
 
-    BriefTreeNode *roots = build_process_tree(arena, lines, snapshot,
-        eBriefTableColumnId_Pid, ImGuiSortDirection_Ascending);
+    BriefTreeNode *roots =
+        build_process_tree(arena, lines, snapshot, eBriefTableColumnId_Pid,
+                           ImGuiSortDirection_Ascending);
 
     REQUIRE(roots != nullptr);
     // Count roots
     size_t root_count = 0;
-    for (BriefTreeNode *n = roots; n; n = n->next_sibling) root_count++;
+    for (BriefTreeNode *n = roots; n; n = n->next_sibling)
+      root_count++;
     CHECK(root_count == 3);
   }
 
   SUBCASE("parent-child relationship") {
     SnapshotBuilder builder(arena);
-    builder.add(1, 0, "init");      // root
-    builder.add(100, 1, "child1");  // child of 1
-    builder.add(200, 1, "child2");  // child of 1
+    builder.add(1, 0, "init");     // root
+    builder.add(100, 1, "child1"); // child of 1
+    builder.add(200, 1, "child2"); // child of 1
     StateSnapshot snapshot = builder.build();
 
     Array<BriefTableLine> lines = Array<BriefTableLine>::create(arena, 3);
@@ -144,12 +149,13 @@ TEST_CASE("build_process_tree") {
     lines.data[1] = {100, 1};
     lines.data[2] = {200, 2};
 
-    BriefTreeNode *roots = build_process_tree(arena, lines, snapshot,
-        eBriefTableColumnId_Pid, ImGuiSortDirection_Ascending);
+    BriefTreeNode *roots =
+        build_process_tree(arena, lines, snapshot, eBriefTableColumnId_Pid,
+                           ImGuiSortDirection_Ascending);
 
     REQUIRE(roots != nullptr);
     CHECK(roots->pid == 1);
-    CHECK(roots->next_sibling == nullptr);  // only one root
+    CHECK(roots->next_sibling == nullptr); // only one root
 
     // Check children
     REQUIRE(roots->first_child != nullptr);
@@ -169,13 +175,15 @@ TEST_CASE("build_process_tree") {
     lines.data[0] = {100, 0};
     lines.data[1] = {200, 1};
 
-    BriefTreeNode *roots = build_process_tree(arena, lines, snapshot,
-        eBriefTableColumnId_Pid, ImGuiSortDirection_Ascending);
+    BriefTreeNode *roots =
+        build_process_tree(arena, lines, snapshot, eBriefTableColumnId_Pid,
+                           ImGuiSortDirection_Ascending);
 
     REQUIRE(roots != nullptr);
     // Both should be roots
     size_t root_count = 0;
-    for (BriefTreeNode *n = roots; n; n = n->next_sibling) root_count++;
+    for (BriefTreeNode *n = roots; n; n = n->next_sibling)
+      root_count++;
     CHECK(root_count == 2);
   }
 
@@ -193,8 +201,9 @@ TEST_CASE("build_process_tree") {
     lines.data[2] = {100, 2};
     lines.data[3] = {1000, 3};
 
-    BriefTreeNode *roots = build_process_tree(arena, lines, snapshot,
-        eBriefTableColumnId_Pid, ImGuiSortDirection_Ascending);
+    BriefTreeNode *roots =
+        build_process_tree(arena, lines, snapshot, eBriefTableColumnId_Pid,
+                           ImGuiSortDirection_Ascending);
 
     REQUIRE(roots != nullptr);
     CHECK(roots->pid == 1);
@@ -216,22 +225,23 @@ TEST_CASE("build_process_tree") {
     // After sorting by PID: init@0, aaa@1, mmm@2, zzz@3
 
     Array<BriefTableLine> lines = Array<BriefTableLine>::create(arena, 4);
-    lines.data[0] = {1, 0};    // init at index 0
-    lines.data[1] = {100, 1};  // aaa at index 1
-    lines.data[2] = {150, 2};  // mmm at index 2
-    lines.data[3] = {200, 3};  // zzz at index 3
+    lines.data[0] = {1, 0};   // init at index 0
+    lines.data[1] = {100, 1}; // aaa at index 1
+    lines.data[2] = {150, 2}; // mmm at index 2
+    lines.data[3] = {200, 3}; // zzz at index 3
 
-    BriefTreeNode *roots = build_process_tree(arena, lines, snapshot,
-        eBriefTableColumnId_Name, ImGuiSortDirection_Descending);
+    BriefTreeNode *roots =
+        build_process_tree(arena, lines, snapshot, eBriefTableColumnId_Name,
+                           ImGuiSortDirection_Descending);
 
     REQUIRE(roots != nullptr);
     REQUIRE(roots->first_child != nullptr);
     // Descending by name: zzz, mmm, aaa
-    CHECK(roots->first_child->pid == 200);  // zzz
+    CHECK(roots->first_child->pid == 200); // zzz
     REQUIRE(roots->first_child->next_sibling != nullptr);
-    CHECK(roots->first_child->next_sibling->pid == 150);  // mmm
+    CHECK(roots->first_child->next_sibling->pid == 150); // mmm
     REQUIRE(roots->first_child->next_sibling->next_sibling != nullptr);
-    CHECK(roots->first_child->next_sibling->next_sibling->pid == 100);  // aaa
+    CHECK(roots->first_child->next_sibling->next_sibling->pid == 100); // aaa
   }
 
   arena.destroy();
@@ -383,8 +393,8 @@ TEST_CASE("brief_table_update") {
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     my_state.lines = Array<BriefTableLine>::create(arena, 2);
-    my_state.lines.data[0] = {30, 0};  // was at index 0, will be at 2
-    my_state.lines.data[1] = {10, 1};  // was at index 1, will be at 0
+    my_state.lines.data[0] = {30, 0}; // was at index 0, will be at 2
+    my_state.lines.data[1] = {10, 1}; // was at index 1, will be at 0
 
     brief_table_update(my_state, state);
 
@@ -444,9 +454,9 @@ TEST_CASE("brief_table_update") {
 
     // Sorted by name descending: zzz (20), mmm (30), aaa (10)
     REQUIRE(my_state.lines.size == 3);
-    CHECK(my_state.lines.data[0].pid == 20);  // zzz
-    CHECK(my_state.lines.data[1].pid == 30);  // mmm
-    CHECK(my_state.lines.data[2].pid == 10);  // aaa
+    CHECK(my_state.lines.data[0].pid == 20); // zzz
+    CHECK(my_state.lines.data[1].pid == 30); // mmm
+    CHECK(my_state.lines.data[2].pid == 10); // aaa
 
     state.snapshot_arena.destroy();
   }
@@ -464,7 +474,7 @@ TEST_CASE("state_snapshot_update") {
   SUBCASE("CPU percentage calculation") {
     // Old state: process at 1000 user ticks, 500 kernel ticks
     State old_state = {};
-    old_state.system.ticks_in_second = 100;  // 100 ticks per second
+    old_state.system.ticks_in_second = 100; // 100 ticks per second
     old_state.system.mem_page_size = 4096;
 
     // Create old snapshot
@@ -485,9 +495,9 @@ TEST_CASE("state_snapshot_update") {
     UpdateSnapshot update = {};
     ProcessStat new_proc = {};
     new_proc.pid = 100;
-    new_proc.utime = 1100;  // +100 ticks
-    new_proc.stime = 550;   // +50 ticks
-    new_proc.statm_resident = 1000;  // 1000 pages
+    new_proc.utime = 1100;          // +100 ticks
+    new_proc.stime = 550;           // +50 ticks
+    new_proc.statm_resident = 1000; // 1000 pages
 
     update.stats.data = &new_proc;
     update.stats.size = 1;
@@ -499,7 +509,8 @@ TEST_CASE("state_snapshot_update") {
     // 100 ticks in 1 second = 100% user CPU (100 ticks / 100 ticks_in_second)
     CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(100.0));
     // 50 ticks in 1 second = 50% kernel CPU
-    CHECK(result.derived_stats.data[0].cpu_kernel_perc == doctest::Approx(50.0));
+    CHECK(result.derived_stats.data[0].cpu_kernel_perc ==
+          doctest::Approx(50.0));
   }
 
   SUBCASE("memory calculation") {
@@ -520,7 +531,7 @@ TEST_CASE("state_snapshot_update") {
     UpdateSnapshot update = {};
     ProcessStat new_proc = {};
     new_proc.pid = 100;
-    new_proc.statm_resident = 256;  // 256 pages
+    new_proc.statm_resident = 256; // 256 pages
 
     update.stats.data = &new_proc;
     update.stats.size = 1;
@@ -530,7 +541,8 @@ TEST_CASE("state_snapshot_update") {
 
     REQUIRE(result.derived_stats.size == 1);
     // 256 pages * 4096 bytes = 1048576 bytes
-    CHECK(result.derived_stats.data[0].mem_resident_bytes == doctest::Approx(256 * 4096));
+    CHECK(result.derived_stats.data[0].mem_resident_bytes ==
+          doctest::Approx(256 * 4096));
   }
 
   SUBCASE("I/O rate calculation") {
@@ -540,8 +552,8 @@ TEST_CASE("state_snapshot_update") {
 
     ProcessStat old_proc = {};
     old_proc.pid = 100;
-    old_proc.io_read_bytes = 1024 * 1024;   // 1 MB
-    old_proc.io_write_bytes = 512 * 1024;   // 512 KB
+    old_proc.io_read_bytes = 1024 * 1024; // 1 MB
+    old_proc.io_write_bytes = 512 * 1024; // 512 KB
 
     ProcessDerivedStat old_derived = {};
 
@@ -554,8 +566,8 @@ TEST_CASE("state_snapshot_update") {
     UpdateSnapshot update = {};
     ProcessStat new_proc = {};
     new_proc.pid = 100;
-    new_proc.io_read_bytes = 1024 * 1024 + 102400;   // +100 KB
-    new_proc.io_write_bytes = 512 * 1024 + 51200;    // +50 KB
+    new_proc.io_read_bytes = 1024 * 1024 + 102400; // +100 KB
+    new_proc.io_write_bytes = 512 * 1024 + 51200;  // +50 KB
 
     update.stats.data = &new_proc;
     update.stats.size = 1;
@@ -565,9 +577,11 @@ TEST_CASE("state_snapshot_update") {
 
     REQUIRE(result.derived_stats.size == 1);
     // 102400 bytes in 1 second = 100 KB/s
-    CHECK(result.derived_stats.data[0].io_read_kb_per_sec == doctest::Approx(100.0));
+    CHECK(result.derived_stats.data[0].io_read_kb_per_sec ==
+          doctest::Approx(100.0));
     // 51200 bytes in 1 second = 50 KB/s
-    CHECK(result.derived_stats.data[0].io_write_kb_per_sec == doctest::Approx(50.0));
+    CHECK(result.derived_stats.data[0].io_write_kb_per_sec ==
+          doctest::Approx(50.0));
   }
 
   SUBCASE("new process (not in old snapshot) gets zero CPU") {
@@ -668,8 +682,10 @@ TEST_CASE("state_snapshot_update") {
     // In 1 second = ~0.976 MB/s
     double expected_read = (2000.0 * 512.0) / (1024.0 * 1024.0);
     double expected_write = (1000.0 * 512.0) / (1024.0 * 1024.0);
-    CHECK(result.disk_io_rate.read_mb_per_sec == doctest::Approx(expected_read));
-    CHECK(result.disk_io_rate.write_mb_per_sec == doctest::Approx(expected_write));
+    CHECK(result.disk_io_rate.read_mb_per_sec ==
+          doctest::Approx(expected_read));
+    CHECK(result.disk_io_rate.write_mb_per_sec ==
+          doctest::Approx(expected_write));
   }
 
   arena.destroy();

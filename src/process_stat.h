@@ -2,9 +2,9 @@
 
 #include "base.h"
 
+#include <climits>
 #include <cstdio>
 #include <cstring>
-#include <climits>
 #include <dirent.h>
 #include <sys/types.h>
 
@@ -67,10 +67,9 @@ man proc_pid_stat
 statm:
 size       (1) total program size (same as VmSize in /proc/[pid]/status)
 resident   (2) resident set size (same as VmRSS in /proc/[pid]/status)
-shared     (3) number of resident shared pages (i.e., backed by a file) (same as RssFile+RssShmem in /proc/[pid]/status)
-text       (4) text (code)
-lib        (5) library (unused since Linux 2.6; always 0)
-data       (6) data + stack
+shared     (3) number of resident shared pages (i.e., backed by a file) (same as
+RssFile+RssShmem in /proc/[pid]/status) text       (4) text (code) lib (5)
+library (unused since Linux 2.6; always 0) data       (6) data + stack
 */
 
 struct ProcessStat {
@@ -134,8 +133,8 @@ struct ProcessStat {
   ulong statm_data;
 
   // From /proc/[pid]/io
-  ulonglong io_read_bytes;   // Actual bytes read from storage
-  ulonglong io_write_bytes;  // Actual bytes written to storage
+  ulonglong io_read_bytes;  // Actual bytes read from storage
+  ulonglong io_write_bytes; // Actual bytes written to storage
 };
 
 // From /proc/stat - all values are cumulative ticks
@@ -151,15 +150,9 @@ struct CpuCoreStat {
   ulong total() const {
     return user + nice + system + idle + iowait + irq + softirq;
   }
-  ulong busy() const {
-    return user + nice + system + irq + softirq;
-  }
-  ulong kernel() const {
-    return system + irq + softirq;
-  }
-  ulong interrupts() const {
-    return irq + softirq;
-  }
+  ulong busy() const { return user + nice + system + irq + softirq; }
+  ulong kernel() const { return system + irq + softirq; }
+  ulong interrupts() const { return irq + softirq; }
 };
 
 // From /proc/meminfo - values in kB
@@ -186,4 +179,3 @@ struct GatheringState {
 
 struct Sync;
 void gather(GatheringState &state, Sync &sync);
-

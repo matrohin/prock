@@ -10,7 +10,7 @@
 struct UpdateSnapshot {
   BumpArena owner_arena;
   Array<ProcessStat> stats;
-  Array<CpuCoreStat> cpu_stats;  // [0]=total, [1..n]=per-core
+  Array<CpuCoreStat> cpu_stats; // [0]=total, [1..n]=per-core
   MemInfo mem_info;
   DiskIoStat disk_io_stats;
   SteadyTimePoint at;
@@ -21,7 +21,7 @@ struct LibraryEntry {
   char path[256];
   unsigned long addr_start;
   unsigned long addr_end;
-  long file_size;  // -1 if stat failed
+  long file_size; // -1 if stat failed
 };
 
 struct LibraryRequest {
@@ -30,7 +30,7 @@ struct LibraryRequest {
 
 struct LibraryResponse {
   int pid;
-  int error_code;  // 0=success, errno otherwise
+  int error_code; // 0=success, errno otherwise
   BumpArena owner_arena;
   Array<LibraryEntry> libraries;
 };

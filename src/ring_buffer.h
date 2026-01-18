@@ -4,9 +4,7 @@
 
 #include <atomic>
 
-
-template<class T, size_t N>
-struct RingBuffer {
+template <class T, size_t N> struct RingBuffer {
   static constexpr size_t MASK = N - 1;
   std::atomic<size_t> head;
   std::atomic<size_t> tail;

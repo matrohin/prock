@@ -17,8 +17,8 @@ const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 void copy_library_row(const LibraryEntry &lib) {
   char buf[512];
   unsigned long mapped_size = lib.addr_end - lib.addr_start;
-  snprintf(buf, sizeof(buf), "%s%s\t%lu\t%ld",
-           LIBRARY_COPY_HEADER, lib.path, mapped_size, lib.file_size);
+  snprintf(buf, sizeof(buf), "%s%s\t%lu\t%ld", LIBRARY_COPY_HEADER, lib.path,
+           mapped_size, lib.file_size);
   ImGui::SetClipboardText(buf);
 }
 
@@ -31,8 +31,8 @@ void copy_all_libraries(BumpArena &arena, const LibraryViewerWindow &win) {
   for (size_t i = 0; i < win.libraries.size; ++i) {
     const LibraryEntry &lib = win.libraries.data[i];
     unsigned long mapped_size = lib.addr_end - lib.addr_start;
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n",
-                    lib.path, mapped_size, lib.file_size);
+    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n", lib.path,
+                    mapped_size, lib.file_size);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -42,29 +42,33 @@ void sort_libraries(LibraryViewerWindow &win) {
 
   const auto compare = [&](const LibraryEntry &a, const LibraryEntry &b) {
     switch (win.sorted_by) {
-      case eLibraryViewerColumnId_Path:
-        return strcmp(a.path, b.path) < 0;
-      case eLibraryViewerColumnId_MappedSize:
-        return (a.addr_end - a.addr_start) < (b.addr_end - b.addr_start);
-      case eLibraryViewerColumnId_FileSize:
-        return a.file_size < b.file_size;
-      default:
-        return false;
+    case eLibraryViewerColumnId_Path:
+      return strcmp(a.path, b.path) < 0;
+    case eLibraryViewerColumnId_MappedSize:
+      return (a.addr_end - a.addr_start) < (b.addr_end - b.addr_start);
+    case eLibraryViewerColumnId_FileSize:
+      return a.file_size < b.file_size;
+    default:
+      return false;
     }
   };
 
   if (win.sorted_order == ImGuiSortDirection_Ascending) {
-    std::stable_sort(win.libraries.data, win.libraries.data + win.libraries.size, compare);
+    std::stable_sort(win.libraries.data,
+                     win.libraries.data + win.libraries.size, compare);
   } else {
-    std::stable_sort(win.libraries.data, win.libraries.data + win.libraries.size,
-                     [&](const LibraryEntry &a, const LibraryEntry &b) { return compare(b, a); });
+    std::stable_sort(win.libraries.data,
+                     win.libraries.data + win.libraries.size,
+                     [&](const LibraryEntry &a, const LibraryEntry &b) {
+                       return compare(b, a);
+                     });
   }
 }
 
 } // unnamed namespace
 
-
-void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid, const char *comm) {
+void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid,
+                            const char *comm) {
   // Check if window exists for pid - reopen if found
   for (size_t i = 0; i < state.windows.size(); ++i) {
     if (state.windows.data()[i].pid == pid) {
@@ -74,7 +78,8 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid, cons
   }
 
   // Create new window
-  LibraryViewerWindow *win = state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
+  LibraryViewerWindow *win =
+      state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
   win->open = true;
   win->status = eLibraryViewerStatus_Loading;
   win->pid = pid;
@@ -92,7 +97,6 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid, cons
   sync.library_cv.notify_one();
 }
 
-
 void library_viewer_update(LibraryViewerState &state, Sync &sync) {
   // Process responses
   LibraryResponse response;
@@ -103,14 +107,15 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
         if (response.error_code == 0) {
           win.status = eLibraryViewerStatus_Ready;
           // Copy libraries to our arena
-          win.libraries = Array<LibraryEntry>::create(state.cur_arena, response.libraries.size);
+          win.libraries = Array<LibraryEntry>::create(state.cur_arena,
+                                                      response.libraries.size);
           memcpy(win.libraries.data, response.libraries.data,
                  response.libraries.size * sizeof(LibraryEntry));
         } else {
           win.status = eLibraryViewerStatus_Error;
           win.error_code = response.error_code;
-          snprintf(win.error_message, sizeof(win.error_message),
-                   "Error: %s", strerror(response.error_code));
+          snprintf(win.error_message, sizeof(win.error_message), "Error: %s",
+                   strerror(response.error_code));
         }
         response.owner_arena.destroy();
         break;
@@ -127,8 +132,8 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
       LibraryViewerWindow &win = state.windows.data()[i];
       if (win.libraries.size > 0) {
-        Array<LibraryEntry> new_libs = Array<LibraryEntry>::create(
-            new_arena, win.libraries.size);
+        Array<LibraryEntry> new_libs =
+            Array<LibraryEntry>::create(new_arena, win.libraries.size);
         memcpy(new_libs.data, win.libraries.data,
                win.libraries.size * sizeof(LibraryEntry));
         win.libraries = new_libs;
@@ -140,7 +145,6 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
     old_arena.destroy();
   }
 }
-
 
 void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   LibraryViewerState &my_state = view_state.library_viewer_state;
@@ -158,7 +162,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     }
 
     char title[128];
-    snprintf(title, sizeof(title), "Libraries: %s (%d)", win.process_name, win.pid);
+    snprintf(title, sizeof(title), "Libraries: %s (%d)", win.process_name,
+             win.pid);
     view_state.cascade.next_if_new(title);
 
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
@@ -201,22 +206,29 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           }
         }
       } else if (win.libraries.size > 0) {
-        if (ImGui::BeginTable("Libraries", eLibraryViewerColumnId_Count,
-                              ImGuiTableFlags_Resizable |
-                              ImGuiTableFlags_RowBg |
-                              ImGuiTableFlags_Borders |
-                              ImGuiTableFlags_Sortable |
-                              ImGuiTableFlags_ScrollY)) {
+        if (ImGui::BeginTable(
+                "Libraries", eLibraryViewerColumnId_Count,
+                ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
+                    ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |
+                    ImGuiTableFlags_ScrollY)) {
           ImGui::TableSetupScrollFreeze(0, 1);
-          ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_DefaultSort, 0.0f, eLibraryViewerColumnId_Path);
-          ImGui::TableSetupColumn("Mapped Size", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 100.0f, eLibraryViewerColumnId_MappedSize);
-          ImGui::TableSetupColumn("File Size", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 100.0f, eLibraryViewerColumnId_FileSize);
+          ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_DefaultSort,
+                                  0.0f, eLibraryViewerColumnId_Path);
+          ImGui::TableSetupColumn("Mapped Size",
+                                  ImGuiTableColumnFlags_PreferSortDescending |
+                                      ImGuiTableColumnFlags_WidthFixed,
+                                  100.0f, eLibraryViewerColumnId_MappedSize);
+          ImGui::TableSetupColumn("File Size",
+                                  ImGuiTableColumnFlags_PreferSortDescending |
+                                      ImGuiTableColumnFlags_WidthFixed,
+                                  100.0f, eLibraryViewerColumnId_FileSize);
           ImGui::TableHeadersRow();
 
           // Handle sorting
           if (ImGuiTableSortSpecs *sort_specs = ImGui::TableGetSortSpecs()) {
             if (sort_specs->SpecsDirty) {
-              win.sorted_by = static_cast<LibraryViewerColumnId>(sort_specs->Specs->ColumnUserID);
+              win.sorted_by = static_cast<LibraryViewerColumnId>(
+                  sort_specs->Specs->ColumnUserID);
               win.sorted_order = sort_specs->Specs->SortDirection;
               sort_libraries(win);
               sort_specs->SpecsDirty = false;
@@ -230,7 +242,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             // Path with selection
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_Path);
-            if (ImGui::Selectable(lib.path, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
+            if (ImGui::Selectable(lib.path, is_selected,
+                                  ImGuiSelectableFlags_SpanAllColumns)) {
               win.selected_index = (int)j;
             }
             if (ImGui::IsItemHovered()) {
@@ -281,7 +294,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
 
         // Ctrl+C to copy selected row
-        if (win.selected_index >= 0 && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+        if (win.selected_index >= 0 &&
+            ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
           copy_library_row(win.libraries.data[win.selected_index]);
         }
       }

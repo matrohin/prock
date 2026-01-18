@@ -42,8 +42,8 @@ LibraryResponse read_process_libraries(int pid) {
     unsigned long inode;
     char pathname[256] = {};
 
-    int n = sscanf(line, "%lx-%lx %7s %lx %15s %lu %255s",
-                   &addr_start, &addr_end, perms, &offset, dev, &inode, pathname);
+    int n = sscanf(line, "%lx-%lx %7s %lx %15s %lu %255s", &addr_start,
+                   &addr_end, perms, &offset, dev, &inode, pathname);
 
     if (n < 7 || pathname[0] == '\0') continue;
 
@@ -85,15 +85,16 @@ LibraryResponse read_process_libraries(int pid) {
             });
 
   // Copy to final array
-  response.libraries = Array<LibraryEntry>::create(response.owner_arena, entries.size());
-  memcpy(response.libraries.data, entries.data(), entries.size() * sizeof(LibraryEntry));
+  response.libraries =
+      Array<LibraryEntry>::create(response.owner_arena, entries.size());
+  memcpy(response.libraries.data, entries.data(),
+         entries.size() * sizeof(LibraryEntry));
 
   response.error_code = 0;
   return response;
 }
 
 } // unnamed namespace
-
 
 void library_reader_thread(Sync &sync) {
   while (!sync.quit.load()) {

@@ -9,7 +9,8 @@ struct CpuChartData {
 };
 
 struct CpuChartState {
-  BumpArena cur_arena; // TODO: gets changed every now and then via Array<T>::realloc
+  BumpArena
+      cur_arena; // TODO: gets changed every now and then via Array<T>::realloc
   GrowingArray<CpuChartData> charts;
   size_t wasted_bytes = 0;
 };

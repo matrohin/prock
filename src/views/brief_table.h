@@ -39,19 +39,21 @@ struct BriefTableState {
   Array<BriefTableLine> lines;
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
-  int selected_pid;  // -1 means no selection
+  int selected_pid; // -1 means no selection
   char kill_error[128];
-  bool tree_mode;  // Toggle: false = flat, true = tree
+  bool tree_mode; // Toggle: false = flat, true = tree
 };
 
 void brief_table_update(BriefTableState &my_state, State &state);
 
-void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &state);
+void brief_table_draw(FrameContext &ctx, ViewState &view_state,
+                      const State &state);
 
 // Pure logic functions (exposed for testing)
 size_t binary_search_pid(const Array<ProcessStat> &stats, int pid);
 
-void sort_brief_table_lines(BriefTableState &my_state, const StateSnapshot &state);
+void sort_brief_table_lines(BriefTableState &my_state,
+                            const StateSnapshot &state);
 
 BriefTreeNode *build_process_tree(BumpArena &arena,
                                   const Array<BriefTableLine> &lines,

@@ -6,7 +6,8 @@
 #include <cstring>
 
 // Helper to create a ProcessStat with minimal required fields
-inline ProcessStat make_process_stat(int pid, int ppid, const char *comm, char state = 'S') {
+inline ProcessStat make_process_stat(int pid, int ppid, const char *comm,
+                                     char state = 'S') {
   ProcessStat stat = {};
   stat.pid = pid;
   stat.ppid = ppid;
@@ -16,9 +17,11 @@ inline ProcessStat make_process_stat(int pid, int ppid, const char *comm, char s
 }
 
 // Helper to create a ProcessDerivedStat with specified values
-inline ProcessDerivedStat make_derived_stat(double cpu_user = 0.0, double cpu_kernel = 0.0,
+inline ProcessDerivedStat make_derived_stat(double cpu_user = 0.0,
+                                            double cpu_kernel = 0.0,
                                             double mem_bytes = 0.0,
-                                            double io_read = 0.0, double io_write = 0.0) {
+                                            double io_read = 0.0,
+                                            double io_write = 0.0) {
   ProcessDerivedStat derived = {};
   derived.cpu_user_perc = cpu_user;
   derived.cpu_kernel_perc = cpu_kernel;
@@ -40,8 +43,10 @@ struct SnapshotBuilder {
   SnapshotBuilder &add(int pid, int ppid, const char *comm, char state = 'S',
                        double cpu_user = 0.0, double cpu_kernel = 0.0,
                        double mem_bytes = 0.0) {
-    *stats.emplace_back(arena, wasted) = make_process_stat(pid, ppid, comm, state);
-    *derived.emplace_back(arena, wasted) = make_derived_stat(cpu_user, cpu_kernel, mem_bytes);
+    *stats.emplace_back(arena, wasted) =
+        make_process_stat(pid, ppid, comm, state);
+    *derived.emplace_back(arena, wasted) =
+        make_derived_stat(cpu_user, cpu_kernel, mem_bytes);
     return *this;
   }
 
@@ -49,13 +54,14 @@ struct SnapshotBuilder {
   StateSnapshot build() {
     // Sort by PID (required by binary_search_pid)
     for (size_t i = 1; i < stats.size(); ++i) {
-      for (size_t j = i; j > 0 && stats.data()[j].pid < stats.data()[j-1].pid; --j) {
+      for (size_t j = i; j > 0 && stats.data()[j].pid < stats.data()[j - 1].pid;
+           --j) {
         ProcessStat tmp_s = stats.data()[j];
-        stats.data()[j] = stats.data()[j-1];
-        stats.data()[j-1] = tmp_s;
+        stats.data()[j] = stats.data()[j - 1];
+        stats.data()[j - 1] = tmp_s;
         ProcessDerivedStat tmp_d = derived.data()[j];
-        derived.data()[j] = derived.data()[j-1];
-        derived.data()[j-1] = tmp_d;
+        derived.data()[j] = derived.data()[j - 1];
+        derived.data()[j - 1] = tmp_d;
       }
     }
 

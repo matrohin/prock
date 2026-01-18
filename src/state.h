@@ -35,7 +35,7 @@ struct DiskIoRate {
 struct StateSnapshot {
   Array<ProcessStat> stats;
   Array<ProcessDerivedStat> derived_stats;
-  Array<CpuCoreStat> cpu_stats;  // Raw ticks from /proc/stat
+  Array<CpuCoreStat> cpu_stats; // Raw ticks from /proc/stat
   SystemCpuPerc cpu_perc;
   MemInfo mem_info;
   DiskIoStat disk_io_stats;
@@ -53,5 +53,5 @@ struct State {
   SystemTimePoint update_system_time;
 };
 
-StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state, const UpdateSnapshot &snapshot);
-
+StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
+                                    const UpdateSnapshot &snapshot);

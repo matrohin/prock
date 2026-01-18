@@ -32,7 +32,7 @@ struct LibraryViewerWindow {
   // Sorting and selection
   LibraryViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
-  int selected_index;  // -1 means no selection
+  int selected_index; // -1 means no selection
 };
 
 struct LibraryViewerState {
@@ -45,6 +45,7 @@ struct FrameContext;
 struct ViewState;
 struct State;
 
-void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid, const char *comm);
+void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid,
+                            const char *comm);
 void library_viewer_update(LibraryViewerState &state, Sync &sync);
 void library_viewer_draw(FrameContext &ctx, ViewState &view_state);

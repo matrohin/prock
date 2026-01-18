@@ -12,11 +12,16 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   const DiskIoRate &rate = snapshot.disk_io_rate;
 
-  const double update_at = std::chrono::duration_cast<Seconds>(state.update_system_time.time_since_epoch()).count();
+  const double update_at = std::chrono::duration_cast<Seconds>(
+                               state.update_system_time.time_since_epoch())
+                               .count();
 
-  *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = update_at;
-  *my_state.read_mb_per_sec.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = rate.read_mb_per_sec;
-  *my_state.write_mb_per_sec.emplace_back(my_state.cur_arena, my_state.wasted_bytes) = rate.write_mb_per_sec;
+  *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
+      update_at;
+  *my_state.read_mb_per_sec.emplace_back(
+      my_state.cur_arena, my_state.wasted_bytes) = rate.read_mb_per_sec;
+  *my_state.write_mb_per_sec.emplace_back(
+      my_state.cur_arena, my_state.wasted_bytes) = rate.write_mb_per_sec;
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -32,7 +37,7 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
   }
 }
 
-void system_io_chart_draw(FrameContext &/*ctx*/, ViewState &view_state) {
+void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   SystemIoChartState &my_state = view_state.system_io_chart_state;
 
   ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
@@ -50,11 +55,19 @@ void system_io_chart_draw(FrameContext &/*ctx*/, ViewState &view_state) {
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-    ImPlot::PlotShaded("Read", my_state.times.data(), my_state.read_mb_per_sec.data(), my_state.read_mb_per_sec.size(), 0, CHART_FLAGS);
-    ImPlot::PlotShaded("Write", my_state.times.data(), my_state.write_mb_per_sec.data(), my_state.write_mb_per_sec.size(), 0, CHART_FLAGS);
+    ImPlot::PlotShaded("Read", my_state.times.data(),
+                       my_state.read_mb_per_sec.data(),
+                       my_state.read_mb_per_sec.size(), 0, CHART_FLAGS);
+    ImPlot::PlotShaded("Write", my_state.times.data(),
+                       my_state.write_mb_per_sec.data(),
+                       my_state.write_mb_per_sec.size(), 0, CHART_FLAGS);
     ImPlot::PopStyleVar();
-    ImPlot::PlotLine("Read", my_state.times.data(), my_state.read_mb_per_sec.data(), my_state.read_mb_per_sec.size());
-    ImPlot::PlotLine("Write", my_state.times.data(), my_state.write_mb_per_sec.data(), my_state.write_mb_per_sec.size());
+    ImPlot::PlotLine("Read", my_state.times.data(),
+                     my_state.read_mb_per_sec.data(),
+                     my_state.read_mb_per_sec.size());
+    ImPlot::PlotLine("Write", my_state.times.data(),
+                     my_state.write_mb_per_sec.data(),
+                     my_state.write_mb_per_sec.size());
 
     ImPlot::EndPlot();
   }

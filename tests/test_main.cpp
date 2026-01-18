@@ -289,7 +289,7 @@ TEST_CASE("RingBuffer basic operations") {
     for (int i = 0; i < 7; ++i) {
       CHECK(rb.push(i));
     }
-    CHECK_FALSE(rb.push(999));  // Should fail
+    CHECK_FALSE(rb.push(999)); // Should fail
   }
 
   SUBCASE("empty after draining") {
@@ -300,7 +300,7 @@ TEST_CASE("RingBuffer basic operations") {
     rb.pop(out);
     rb.pop(out);
 
-    CHECK_FALSE(rb.pop(out));  // Empty now
+    CHECK_FALSE(rb.pop(out)); // Empty now
   }
 
   SUBCASE("wrap around works") {
