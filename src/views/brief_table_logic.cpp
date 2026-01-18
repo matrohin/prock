@@ -235,6 +235,7 @@ BriefTreeNode *build_process_tree(BumpArena &arena,
 
   // Build tree by linking children to parents
   for (size_t i = 0; i < lines.size; ++i) {
+    // NOLINTNEXTLINE
     const ProcessStat &stat = snapshot.stats.data[lines.data[i].state_index];
     int ppid = stat.ppid;
 

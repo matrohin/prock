@@ -118,7 +118,7 @@ template <class T> struct GrowingArray {
   void realloc(BumpArena &arena) {
     size_t new_size = std::max((size_t)4, cur_size * 2);
     Array<T> new_inner = Array<T>::create(arena, new_size);
-    memcpy(new_inner.data, inner.data, cur_size * sizeof(T));
+    if (inner.data) memcpy(new_inner.data, inner.data, cur_size * sizeof(T));
     inner = new_inner;
   }
 

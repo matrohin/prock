@@ -279,6 +279,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         ImGui::TableNextRow();
 
         BriefTableLine &line = my_state.lines.data[i];
+        // NOLINTNEXTLINE
         const ProcessStat &stat = state.snapshot.stats.data[line.state_index];
         const ProcessDerivedStat &derived_stat =
             state.snapshot.derived_stats.data[line.state_index];
@@ -404,6 +405,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
     for (size_t i = 0; i < my_state.lines.size; ++i) {
       if (my_state.lines.data[i].pid == my_state.selected_pid) {
+        // NOLINTNEXTLINE
         const ProcessStat &stat =
             state.snapshot.stats.data[my_state.lines.data[i].state_index];
         const ProcessDerivedStat &derived =
