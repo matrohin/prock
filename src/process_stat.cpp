@@ -18,9 +18,14 @@ bool read_process(int pid, ProcessStat *out) {
   char comm_filename[PATH_BUF_SIZE];
   snprintf(comm_filename, PATH_BUF_SIZE, "/proc/%d/comm", pid);
 
+  char io_filename[PATH_BUF_SIZE];
+  snprintf(io_filename, PATH_BUF_SIZE, "/proc/%d/io", pid);
+
   ProcessStat &stat = *out;
   stat.pid = pid;
   stat.comm[0] = '\0';
+  stat.io_read_bytes = 0;
+  stat.io_write_bytes = 0;
 
   FILE *stat_file = fopen(stat_filename, "r");
   FILE *statm_file = fopen(statm_filename, "r");
@@ -89,6 +94,24 @@ bool read_process(int pid, ProcessStat *out) {
          "%lu %lu %lu %lu %lu %lu",
          &stat.statm_size, &stat.statm_resident, &stat.statm_shared,
          &stat.statm_text, &unused_lib, &stat.statm_data);
+
+  // Read /proc/[pid]/io (may fail due to permissions, that's OK)
+  FILE *io_file = fopen(io_filename, "r");
+  if (io_file) {
+    char io_line[128];
+    while (fgets(io_line, sizeof(io_line), io_file)) {
+      char key[32];
+      ulonglong value;
+      if (sscanf(io_line, "%31[^:]: %llu", key, &value) == 2) {
+        if (strcmp(key, "read_bytes") == 0) {
+          stat.io_read_bytes = value;
+        } else if (strcmp(key, "write_bytes") == 0) {
+          stat.io_write_bytes = value;
+        }
+      }
+    }
+    fclose(io_file);
+  }
 
   return true;
 }

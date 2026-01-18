@@ -132,6 +132,10 @@ struct ProcessStat {
   ulong statm_shared;
   ulong statm_text;
   ulong statm_data;
+
+  // From /proc/[pid]/io
+  ulonglong io_read_bytes;   // Actual bytes read from storage
+  ulonglong io_write_bytes;  // Actual bytes written to storage
 };
 
 // From /proc/stat - all values are cumulative ticks

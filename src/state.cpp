@@ -8,6 +8,7 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state, co
 
   const double ticks_passed = old_state.system.ticks_in_second *
     std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
+  const double time_delta_secs = std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
 
   size_t old_state_idx = 0;
   for (size_t i = 0; i < derived_stats.size; ++i) {
@@ -27,6 +28,16 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state, co
         result.cpu_kernel_perc = (new_stat.stime - old_stat.stime) / ticks_passed * 100;
       }
       result.mem_resident_bytes = new_stat.statm_resident * old_state.system.mem_page_size;
+
+      // Compute I/O rates in KB/s
+      if (time_delta_secs > 0) {
+        if (new_stat.io_read_bytes >= old_stat.io_read_bytes) {
+          result.io_read_kb_per_sec = (new_stat.io_read_bytes - old_stat.io_read_bytes) / 1024.0 / time_delta_secs;
+        }
+        if (new_stat.io_write_bytes >= old_stat.io_write_bytes) {
+          result.io_write_kb_per_sec = (new_stat.io_write_bytes - old_stat.io_write_bytes) / 1024.0 / time_delta_secs;
+        }
+      }
     }
   }
 

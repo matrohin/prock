@@ -3,6 +3,7 @@
 #include "views/common.h"
 #include "views/cpu_chart.h"
 #include "views/mem_chart.h"
+#include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/view_state.h"
 
@@ -196,6 +197,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &sta
           }
           if (ImGui::MenuItem("Memory Chart")) {
             mem_chart_add(view_state.mem_chart_state, line.pid, stat.comm);
+          }
+          if (ImGui::MenuItem("I/O Chart")) {
+            io_chart_add(view_state.io_chart_state, line.pid, stat.comm);
           }
           if (ImGui::MenuItem("Show Loaded Libraries")) {
             library_viewer_request(view_state.library_viewer_state,
