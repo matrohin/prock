@@ -26,12 +26,20 @@ struct BriefTableLine {
   size_t state_index;
 };
 
+struct BriefTreeNode {
+  int pid;
+  size_t state_index;
+  BriefTreeNode *first_child;
+  BriefTreeNode *next_sibling;
+};
+
 struct BriefTableState {
   Array<BriefTableLine> lines;
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
   int selected_pid;  // -1 means no selection
   char kill_error[128];
+  bool tree_mode;  // Toggle: false = flat, true = tree
 };
 
 void brief_table_update(
