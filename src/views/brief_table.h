@@ -52,6 +52,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &sta
 // Pure logic functions (exposed for testing)
 size_t binary_search_pid(const Array<ProcessStat> &stats, int pid);
 
+void sort_brief_table_lines(BriefTableState &my_state, const StateSnapshot &state);
+
 BriefTreeNode *build_process_tree(BumpArena &arena,
                                   const Array<BriefTableLine> &lines,
                                   const StateSnapshot &snapshot,

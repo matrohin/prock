@@ -20,7 +20,8 @@ if(BUILD_TESTS)
   add_executable(prock_tests
     tests/test_main.cpp
     tests/test_views.cpp
-    src/views/brief_table_logic.cpp)
+    src/views/brief_table_logic.cpp
+    src/state.cpp)
   target_include_directories(prock_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/tests

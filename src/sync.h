@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include "process_stat.h"
+#include "ring_buffer.h"
 
 #include <condition_variable>
 #include <mutex>

@@ -51,78 +51,7 @@ void copy_all_processes(BumpArena &arena, const BriefTableState &my_state, const
   ImGui::SetClipboardText(buf);
 }
 
-void sort_as_requested(BriefTableState &my_state, const StateSnapshot &state) {
-  const auto sort_ascending = [&state, sorted_by = my_state.sorted_by](const BriefTableLine &left, const BriefTableLine &right) {
-    switch (sorted_by) {
-      case eBriefTableColumnId_Pid: return left.pid < right.pid;
-      case eBriefTableColumnId_Name: return strcmp(state.stats.data[left.state_index].comm, state.stats.data[right.state_index].comm) < 0;
-      case eBriefTableColumnId_State: return state.stats.data[left.state_index].state < state.stats.data[right.state_index].state;
-      case eBriefTableColumnId_Threads: return state.stats.data[left.state_index].num_threads < state.stats.data[right.state_index].num_threads;
-      case eBriefTableColumnId_CpuTotalPerc: {
-        const double left_val = state.derived_stats.data[left.state_index].cpu_user_perc + state.derived_stats.data[left.state_index].cpu_kernel_perc;
-        const double right_val = state.derived_stats.data[right.state_index].cpu_user_perc + state.derived_stats.data[right.state_index].cpu_kernel_perc;
-        return left_val < right_val;
-      }
-      case eBriefTableColumnId_CpuUserPerc: return state.derived_stats.data[left.state_index].cpu_user_perc < state.derived_stats.data[right.state_index].cpu_user_perc;
-      case eBriefTableColumnId_CpuKernelPerc: return state.derived_stats.data[left.state_index].cpu_kernel_perc < state.derived_stats.data[right.state_index].cpu_kernel_perc;
-      case eBriefTableColumnId_MemRssBytes: return state.derived_stats.data[left.state_index].mem_resident_bytes < state.derived_stats.data[right.state_index].mem_resident_bytes;
-      case eBriefTableColumnId_MemVirtBytes: return state.stats.data[left.state_index].vsize < state.stats.data[right.state_index].vsize;
-      case eBriefTableColumnId_IoReadKbPerSec: return state.derived_stats.data[left.state_index].io_read_kb_per_sec < state.derived_stats.data[right.state_index].io_read_kb_per_sec;
-      case eBriefTableColumnId_IoWriteKbPerSec: return state.derived_stats.data[left.state_index].io_write_kb_per_sec < state.derived_stats.data[right.state_index].io_write_kb_per_sec;
-      case eBriefTableColumnId_Count: return false;
-    }
-    return false;
-  };
-
-  if (my_state.sorted_order != ImGuiSortDirection_Descending) {
-    std::stable_sort(my_state.lines.data, my_state.lines.data + my_state.lines.size, sort_ascending);
-  } else {
-    std::stable_sort(my_state.lines.data, my_state.lines.data + my_state.lines.size, [&](const auto& left, const auto& right) { return sort_ascending(right, left); });
-  }
-}
-
 } // unnamed namespace
-
-
-// Rebuilds lines in previous display order (with new processes appended) for stable sorting.
-void brief_table_update(
-  BriefTableState &my_state, State &state, const StateSnapshot &old) {
-
-  const StateSnapshot &new_snapshot = state.snapshot;
-  const Array<BriefTableLine> &old_lines = my_state.lines;
-
-  Array<bool> added = Array<bool>::create(state.snapshot_arena, new_snapshot.stats.size);
-  for (size_t i = 0; i < added.size; ++i) {
-    added.data[i] = false;
-  }
-
-  Array<BriefTableLine> new_lines = Array<BriefTableLine>::create(state.snapshot_arena, new_snapshot.stats.size);
-  size_t new_lines_count = 0;
-
-  for (size_t i = 0; i < old_lines.size; ++i) {
-    const BriefTableLine &old_line = old_lines.data[i];
-    size_t state_index = binary_search_pid(new_snapshot.stats, old_line.pid);
-
-    if (state_index != SIZE_MAX) {
-      BriefTableLine &new_line = new_lines.data[new_lines_count++];
-      new_line.pid = old_line.pid;
-      new_line.state_index = state_index;
-      added.data[state_index] = true;
-    }
-  }
-
-  for (size_t i = 0; i < new_snapshot.stats.size; ++i) {
-    if (!added.data[i]) {
-      BriefTableLine &new_line = new_lines.data[new_lines_count++];
-      new_line.pid = new_snapshot.stats.data[i].pid;
-      new_line.state_index = i;
-    }
-  }
-
-  new_lines.size = new_lines_count;
-  my_state.lines = new_lines;
-  sort_as_requested(my_state, new_snapshot);
-}
 
 static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
                             const State &state, BriefTreeNode *node,
@@ -261,7 +190,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state, const State &sta
       if (sort_specs->SpecsDirty) {
         my_state.sorted_by = static_cast<BriefTableColumnId>(sort_specs->Specs->ColumnUserID);
         my_state.sorted_order = sort_specs->Specs->SortDirection;
-        sort_as_requested(my_state, state.snapshot);
+        sort_brief_table_lines(my_state, state.snapshot);
         sort_specs->SpecsDirty = false;
       }
     }
