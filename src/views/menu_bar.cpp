@@ -1,5 +1,6 @@
 #include "views/menu_bar.h"
 
+#include "views/library_viewer.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -109,6 +110,25 @@ void menu_bar_draw(ViewState &view_state) {
                ImGui::BeginMenu("View")) {
       if (ImGui::MenuItem("Auto-Fit Once")) {
         view_state.io_chart_state.auto_fit = true;
+      }
+      ImGui::EndMenu();
+    } else if (view_state.focused_view == eFocusedView_LibraryViewer &&
+               ImGui::BeginMenu("View")) {
+      LibraryViewerState &lib_state = view_state.library_viewer_state;
+      bool can_refresh = false;
+      LibraryViewerWindow *focused_win = nullptr;
+      for (size_t i = 0; i < lib_state.windows.size(); ++i) {
+        if (lib_state.windows.data()[i].pid == lib_state.focused_window_pid) {
+          focused_win = &lib_state.windows.data()[i];
+          can_refresh = (focused_win->status != eLibraryViewerStatus_Loading);
+          break;
+        }
+      }
+      if (ImGui::MenuItem("Refresh", nullptr, false, can_refresh) && focused_win) {
+        focused_win->status = eLibraryViewerStatus_Loading;
+        LibraryRequest req = {focused_win->pid};
+        view_state.sync->library_request_queue.push(req);
+        view_state.sync->library_cv.notify_one();
       }
       ImGui::EndMenu();
     }

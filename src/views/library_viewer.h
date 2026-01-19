@@ -39,6 +39,7 @@ struct LibraryViewerState {
   GrowingArray<LibraryViewerWindow> windows;
   BumpArena cur_arena;
   size_t wasted_bytes;
+  int focused_window_pid = -1; // Track which window is focused for menu actions
 };
 
 struct FrameContext;

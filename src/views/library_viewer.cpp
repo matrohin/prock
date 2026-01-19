@@ -179,20 +179,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
       if (ImGui::IsWindowFocused()) {
         view_state.focused_view = eFocusedView_LibraryViewer;
-      }
-      bool loading = (win.status == eLibraryViewerStatus_Loading);
-
-      if (loading) {
-        ImGui::BeginDisabled();
-      }
-      if (ImGui::Button("Refresh")) {
-        win.status = eLibraryViewerStatus_Loading;
-        LibraryRequest req = {win.pid};
-        view_state.sync->library_request_queue.push(req);
-        view_state.sync->library_cv.notify_one();
-      }
-      if (loading) {
-        ImGui::EndDisabled();
+        my_state.focused_window_pid = win.pid;
       }
 
       // Content area - show previous data while loading, or error message
