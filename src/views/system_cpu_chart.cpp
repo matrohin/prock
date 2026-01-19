@@ -64,14 +64,14 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
 void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
   SystemCpuChartState &my_state = view_state.system_cpu_chart_state;
   ImGui::Begin("System CPU Usage", nullptr, COMMON_VIEW_FLAGS);
-
-  // UI controls
-  ImGui::Checkbox("Per-core", &my_state.show_per_core);
-  if (my_state.show_per_core) {
-    ImGui::SameLine();
-    ImGui::Checkbox("Stacked", &my_state.stacked);
+  if (ImGui::IsWindowFocused()) {
+    view_state.focused_view = eFocusedView_SystemCpuChart;
   }
 
+  if (my_state.auto_fit) {
+    ImPlot::SetNextAxesToFit();
+    my_state.auto_fit = false;
+  }
   if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1),
                         ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "%", ImPlotAxisFlags_AutoFit);

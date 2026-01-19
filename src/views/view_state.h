@@ -51,7 +51,20 @@ struct FrameContext {
   BumpArena frame_arena;
 };
 
+enum FocusedView {
+  eFocusedView_None,
+  eFocusedView_BriefTable,
+  eFocusedView_SystemCpuChart,
+  eFocusedView_SystemMemChart,
+  eFocusedView_SystemIoChart,
+  eFocusedView_CpuChart,
+  eFocusedView_MemChart,
+  eFocusedView_IoChart,
+  eFocusedView_LibraryViewer,
+};
+
 struct ViewState {
+  FocusedView focused_view;
   Sync *sync;
   CascadeLayout cascade;
 

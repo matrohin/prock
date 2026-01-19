@@ -49,6 +49,69 @@ static void draw_preferences_modal(PreferencesState &prefs) {
 
 void menu_bar_draw(ViewState &view_state) {
   if (ImGui::BeginMenuBar()) {
+    if (view_state.focused_view == eFocusedView_BriefTable &&
+        ImGui::BeginMenu("View")) {
+
+      ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
+      if (ImGui::MenuItem("Tree View", nullptr,
+                          view_state.brief_table_state.tree_mode)) {
+        view_state.brief_table_state.tree_mode =
+            !view_state.brief_table_state.tree_mode;
+      }
+      ImGui::PopItemFlag();
+
+      ImGui::EndMenu();
+    } else if (view_state.focused_view == eFocusedView_SystemCpuChart &&
+               ImGui::BeginMenu("View")) {
+      ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
+      if (ImGui::MenuItem("Per-core", nullptr,
+                          view_state.system_cpu_chart_state.show_per_core)) {
+        view_state.system_cpu_chart_state.show_per_core =
+            !view_state.system_cpu_chart_state.show_per_core;
+      }
+      if (ImGui::MenuItem("Stacked", nullptr,
+                          view_state.system_cpu_chart_state.stacked,
+                          view_state.system_cpu_chart_state.show_per_core)) {
+        view_state.system_cpu_chart_state.stacked =
+            !view_state.system_cpu_chart_state.stacked;
+      }
+      ImGui::PopItemFlag();
+      ImGui::Separator();
+      if (ImGui::MenuItem("Auto-Fit Once")) {
+        view_state.system_cpu_chart_state.auto_fit = true;
+      }
+      ImGui::EndMenu();
+    } else if (view_state.focused_view == eFocusedView_SystemMemChart &&
+               ImGui::BeginMenu("View")) {
+      if (ImGui::MenuItem("Auto-Fit Once")) {
+        view_state.system_mem_chart_state.auto_fit = true;
+      }
+      ImGui::EndMenu();
+    } else if (view_state.focused_view == eFocusedView_SystemIoChart &&
+               ImGui::BeginMenu("View")) {
+      if (ImGui::MenuItem("Auto-Fit Once")) {
+        view_state.system_io_chart_state.auto_fit = true;
+      }
+      ImGui::EndMenu();
+    } else if (view_state.focused_view == eFocusedView_CpuChart &&
+               ImGui::BeginMenu("View")) {
+      if (ImGui::MenuItem("Auto-Fit Once")) {
+        view_state.cpu_chart_state.auto_fit = true;
+      }
+      ImGui::EndMenu();
+    } else if (view_state.focused_view == eFocusedView_MemChart &&
+               ImGui::BeginMenu("View")) {
+      if (ImGui::MenuItem("Auto-Fit Once")) {
+        view_state.mem_chart_state.auto_fit = true;
+      }
+      ImGui::EndMenu();
+    } else if (view_state.focused_view == eFocusedView_IoChart &&
+               ImGui::BeginMenu("View")) {
+      if (ImGui::MenuItem("Auto-Fit Once")) {
+        view_state.io_chart_state.auto_fit = true;
+      }
+      ImGui::EndMenu();
+    }
     if (ImGui::BeginMenu("Edit")) {
       if (ImGui::MenuItem("Preferences...")) {
         view_state.preferences_state.show_preferences_modal = true;

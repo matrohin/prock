@@ -41,12 +41,18 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   SystemIoChartState &my_state = view_state.system_io_chart_state;
 
   ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-  if (!my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2) {
+  if (my_state.auto_fit) {
+    ImPlot::SetNextAxesToFit();
+    my_state.auto_fit = false;
+  } else if (!my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2) {
     ImPlot::SetNextAxisToFit(ImAxis_Y1);
     my_state.y_axis_fitted = true;
   }
 
   ImGui::Begin("System I/O", nullptr, COMMON_VIEW_FLAGS);
+  if (ImGui::IsWindowFocused()) {
+    view_state.focused_view = eFocusedView_SystemIoChart;
+  }
 
   if (ImPlot::BeginPlot("##SystemIO", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "MB/s", ImPlotAxisFlags_AutoFit);

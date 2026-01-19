@@ -53,8 +53,7 @@ void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
 static void *view_settings_read_open(ImGuiContext *,
                                      ImGuiSettingsHandler *handler,
                                      const char *name) {
-  if (strcmp(name, "SystemCpuChart") == 0 ||
-      strcmp(name, "Preferences") == 0) {
+  if (strcmp(name, "SystemCpuChart") == 0 || strcmp(name, "Preferences") == 0) {
     return handler->UserData;
   }
   return nullptr;

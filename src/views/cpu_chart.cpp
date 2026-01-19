@@ -16,7 +16,6 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
       my_state.charts, state,
       [&](CpuChartData &chart, const ProcessStat & /*stat*/,
           const ProcessDerivedStat &derived) {
-        // TODO: add reallocs
         *chart.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
             update_at;
         *chart.cpu_kernel_perc.emplace_back(my_state.cur_arena,
@@ -58,6 +57,14 @@ void cpu_chart_draw(ViewState &view_state) {
     bool should_be_opened = true;
     view_state.cascade.next_if_new(chart.label);
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
+    if (ImGui::IsWindowFocused()) {
+      view_state.focused_view = eFocusedView_CpuChart;
+    }
+
+    ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
+    if (my_state.auto_fit) {
+      ImPlot::SetNextAxesToFit();
+    }
     if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time", "%", ImPlotAxisFlags_AutoFit);
@@ -85,6 +92,7 @@ void cpu_chart_draw(ViewState &view_state) {
       ImPlot::EndPlot();
     }
     ImGui::End();
+    ImPlot::PopStyleVar();
 
     if (should_be_opened) {
       ++last;
@@ -95,6 +103,7 @@ void cpu_chart_draw(ViewState &view_state) {
     }
   }
   my_state.charts.shrink_to(last);
+  my_state.auto_fit = false;
 }
 
 void cpu_chart_add(CpuChartState &my_state, int pid, const char *comm) {

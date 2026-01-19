@@ -54,12 +54,17 @@ void mem_chart_draw(ViewState &view_state) {
     view_state.cascade.next_if_new(chart.label);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-    if (!chart.y_axis_fitted && chart.mem_resident_kb.size() >= 1) {
+    if (my_state.auto_fit) {
+      ImPlot::SetNextAxesToFit();
+    } else if (!chart.y_axis_fitted && chart.mem_resident_kb.size() >= 1) {
       ImPlot::SetNextAxisToFit(ImAxis_Y1);
       chart.y_axis_fitted = true;
     }
 
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
+    if (ImGui::IsWindowFocused()) {
+      view_state.focused_view = eFocusedView_MemChart;
+    }
     if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time", "KB", ImPlotAxisFlags_AutoFit);
@@ -92,6 +97,7 @@ void mem_chart_draw(ViewState &view_state) {
     }
   }
   my_state.charts.shrink_to(last);
+  my_state.auto_fit = false;
 }
 
 void mem_chart_add(MemChartState &my_state, int pid, const char *comm) {

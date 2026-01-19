@@ -167,8 +167,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                win.process_name, win.pid, win.pid);
     } else if (win.status == eLibraryViewerStatus_Loading) {
       snprintf(title, sizeof(title),
-               "Libraries: %s (%d) - Loading...###Libraries%d", win.process_name,
-               win.pid, win.pid);
+               "Libraries: %s (%d) - Loading...###Libraries%d",
+               win.process_name, win.pid, win.pid);
     } else {
       snprintf(title, sizeof(title),
                "Libraries: %s (%d) - %zu libraries###Libraries%d",
@@ -177,6 +177,9 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     view_state.cascade.next_if_new(title);
 
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
+      if (ImGui::IsWindowFocused()) {
+        view_state.focused_view = eFocusedView_LibraryViewer;
+      }
       bool loading = (win.status == eLibraryViewerStatus_Loading);
 
       if (loading) {

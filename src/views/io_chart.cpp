@@ -57,12 +57,17 @@ void io_chart_draw(ViewState &view_state) {
     view_state.cascade.next_if_new(chart.label);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-    if (!chart.y_axis_fitted && chart.read_kb_per_sec.size() >= 2) {
+    if (my_state.auto_fit) {
+      ImPlot::SetNextAxesToFit();
+    } else if (!chart.y_axis_fitted && chart.read_kb_per_sec.size() >= 2) {
       ImPlot::SetNextAxisToFit(ImAxis_Y1);
       chart.y_axis_fitted = true;
     }
 
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
+    if (ImGui::IsWindowFocused()) {
+      view_state.focused_view = eFocusedView_IoChart;
+    }
     if (ImPlot::BeginPlot("I/O Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time", "KB/s", ImPlotAxisFlags_AutoFit);
@@ -100,6 +105,7 @@ void io_chart_draw(ViewState &view_state) {
     }
   }
   my_state.charts.shrink_to(last);
+  my_state.auto_fit = false;
 }
 
 void io_chart_add(IoChartState &my_state, int pid, const char *comm) {

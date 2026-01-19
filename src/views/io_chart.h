@@ -13,6 +13,7 @@ struct IoChartState {
   BumpArena cur_arena;
   GrowingArray<IoChartData> charts;
   size_t wasted_bytes;
+  bool auto_fit;
 };
 
 void io_chart_update(IoChartState &my_state, const State &state);

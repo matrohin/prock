@@ -13,6 +13,7 @@ struct MemChartState {
       cur_arena; // TODO: gets changed every now and then via Array<T>::realloc
   GrowingArray<MemChartData> charts;
   size_t wasted_bytes;
+  bool auto_fit;
 };
 
 void mem_chart_update(MemChartState &my_state, const State &state);
