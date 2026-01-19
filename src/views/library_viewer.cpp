@@ -162,12 +162,21 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     }
 
     char title[128];
-    snprintf(title, sizeof(title), "Libraries: %s (%d)", win.process_name,
-             win.pid);
+    if (win.status == eLibraryViewerStatus_Error) {
+      snprintf(title, sizeof(title), "Libraries: %s (%d) - Error###Libraries%d",
+               win.process_name, win.pid, win.pid);
+    } else if (win.status == eLibraryViewerStatus_Loading) {
+      snprintf(title, sizeof(title),
+               "Libraries: %s (%d) - Loading...###Libraries%d", win.process_name,
+               win.pid, win.pid);
+    } else {
+      snprintf(title, sizeof(title),
+               "Libraries: %s (%d) - %zu libraries###Libraries%d",
+               win.process_name, win.pid, win.libraries.size, win.pid);
+    }
     view_state.cascade.next_if_new(title);
 
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
-      // Title line: status/count + refresh controls
       bool loading = (win.status == eLibraryViewerStatus_Loading);
 
       if (loading) {
@@ -182,20 +191,6 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       if (loading) {
         ImGui::EndDisabled();
       }
-
-      // Status/count text
-      ImGui::SameLine();
-      if (win.status == eLibraryViewerStatus_Error) {
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Error");
-      } else if (loading && win.libraries.size > 0) {
-        ImGui::Text("%zu libraries (updating...)", win.libraries.size);
-      } else if (loading) {
-        ImGui::Text("Loading...");
-      } else {
-        ImGui::Text("%zu libraries", win.libraries.size);
-      }
-
-      ImGui::Separator();
 
       // Content area - show previous data while loading, or error message
       if (win.status == eLibraryViewerStatus_Error) {

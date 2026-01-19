@@ -177,7 +177,7 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state,
 const char *DEFAULT_INI = R"(
 [Window][prock]
 Pos=0,0
-Size=1280,800
+Size=1280,692
 Collapsed=0
 
 [Window][Debug##Default]
@@ -192,29 +192,35 @@ Collapsed=0
 DockId=0x00000002,0
 
 [Window][System CPU Usage]
-Pos=642,0
+Pos=642,19
 Size=638,296
 Collapsed=0
 DockId=0x00000004,0
 
 [Window][System Memory Usage]
-Pos=0,0
+Pos=0,19
 Size=640,296
 Collapsed=0
 DockId=0x00000003,0
 
 [Window][System I/O]
-Pos=0,0
+Pos=0,19
 Size=640,296
 Collapsed=0
 DockId=0x00000003,1
 
+[Window][###ProcessTable]
+Pos=0,317
+Size=1280,375
+Collapsed=0
+DockId=0x00000002,0
+
 [Docking][Data]
-DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,0 Size=1280,800 Split=Y
+DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,19 Size=1280,673 Split=Y
   DockNode    ID=0x00000001 Parent=0xF352448A SizeRef=1280,296 Split=X Selected=0x8286D95C
     DockNode  ID=0x00000003 Parent=0x00000001 SizeRef=640,397 Selected=0x8286D95C
     DockNode  ID=0x00000004 Parent=0x00000001 SizeRef=638,397 Selected=0x49AB4810
-  DockNode    ID=0x00000002 Parent=0xF352448A SizeRef=1280,502 CentralNode=1 Selected=0x5DB0E023
+  DockNode    ID=0x00000002 Parent=0xF352448A SizeRef=1280,502 CentralNode=1 Selected=0x67CD0030
 
 [ViewSettings][SystemCpuChart]
 ShowPerCore=0

@@ -204,10 +204,11 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state) {
   BriefTableState &my_state = view_state.brief_table_state;
 
-  ImGui::Begin("Process Table", nullptr, COMMON_VIEW_FLAGS);
+  char title[64];
+  snprintf(title, sizeof(title), "Process Table (%zu processes)###ProcessTable",
+           my_state.lines.size);
+  ImGui::Begin(title, nullptr, COMMON_VIEW_FLAGS);
   ImGui::Checkbox("Tree View", &my_state.tree_mode);
-  ImGui::SameLine();
-  ImGui::TextDisabled("(%zu processes)", my_state.lines.size);
 
   if (ImGui::BeginTable(
           "Processes", eBriefTableColumnId_Count,
