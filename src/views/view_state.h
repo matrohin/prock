@@ -5,6 +5,7 @@
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
+#include "views/menu_bar.h"
 #include "views/system_cpu_chart.h"
 #include "views/system_io_chart.h"
 #include "views/system_mem_chart.h"
@@ -54,6 +55,7 @@ struct ViewState {
   Sync *sync;
   CascadeLayout cascade;
 
+  PreferencesState preferences_state;
   BriefTableState brief_table_state;
   CpuChartState cpu_chart_state;
   MemChartState mem_chart_state;

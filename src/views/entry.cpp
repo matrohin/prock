@@ -22,6 +22,7 @@ void views_update(ViewState &view_state, State &state) {
 }
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+  menu_bar_draw(view_state);
   brief_table_draw(ctx, view_state, state);
   cpu_chart_draw(view_state);
   mem_chart_draw(view_state);

@@ -34,6 +34,7 @@
 #include "views/io_chart.cpp"
 #include "views/library_viewer.cpp"
 #include "views/mem_chart.cpp"
+#include "views/menu_bar.cpp"
 #include "views/system_cpu_chart.cpp"
 #include "views/system_io_chart.cpp"
 #include "views/system_mem_chart.cpp"
@@ -52,7 +53,8 @@ void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
 static void *view_settings_read_open(ImGuiContext *,
                                      ImGuiSettingsHandler *handler,
                                      const char *name) {
-  if (strcmp(name, "SystemCpuChart") == 0) {
+  if (strcmp(name, "SystemCpuChart") == 0 ||
+      strcmp(name, "Preferences") == 0) {
     return handler->UserData;
   }
   return nullptr;
@@ -68,6 +70,8 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     view_state->system_cpu_chart_state.show_per_core = (val != 0);
   } else if (sscanf(line, "Stacked=%d", &val) == 1) {
     view_state->system_cpu_chart_state.stacked = (val != 0);
+  } else if (sscanf(line, "DarkMode=%d", &val) == 1) {
+    view_state->preferences_state.dark_mode = (val != 0);
   }
 }
 
@@ -81,6 +85,10 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   buf->appendf("ShowPerCore=%d\n",
                (int)view_state->system_cpu_chart_state.show_per_core);
   buf->appendf("Stacked=%d\n", (int)view_state->system_cpu_chart_state.stacked);
+  buf->append("\n");
+
+  buf->appendf("[%s][Preferences]\n", handler->TypeName);
+  buf->appendf("DarkMode=%d\n", (int)view_state->preferences_state.dark_mode);
   buf->append("\n");
 }
 
@@ -138,7 +146,8 @@ void draw(GLFWwindow *window, ImGuiIO &io, const State &state,
       ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
-      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground |
+      ImGuiWindowFlags_MenuBar;
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -285,9 +294,15 @@ int main(int, char **) {
 
   if (access(io.IniFilename, F_OK) != 0) {
     ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
+  } else {
+    ImGui::LoadIniSettingsFromDisk(io.IniFilename);
   }
 
-  ImGui::StyleColorsLight();
+  if (view_state.preferences_state.dark_mode) {
+    ImGui::StyleColorsDark();
+  } else {
+    ImGui::StyleColorsLight();
+  }
 
   ImGuiStyle &style = ImGui::GetStyle();
   style.ScaleAllSizes(main_scale);
