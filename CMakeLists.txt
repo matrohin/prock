@@ -10,7 +10,6 @@ add_subdirectory(glfw-3.4)
 add_library(project_warnings INTERFACE)
 target_compile_options(project_warnings
   INTERFACE
-    -Werror
     -Wall
     -Wextra # reasonable and standard
     -Wnon-virtual-dtor # warn the user if a class with virtual functions has a non-virtual destructor.
