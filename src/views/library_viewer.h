@@ -33,6 +33,7 @@ struct LibraryViewerWindow {
   LibraryViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
   int selected_index; // -1 means no selection
+  char filter_text[256];
 };
 
 struct LibraryViewerState {

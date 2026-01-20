@@ -60,15 +60,52 @@ void copy_all_processes(BumpArena &arena, const BriefTableState &my_state,
 
 } // unnamed namespace
 
+// Returns true if this node, any sibling, or any descendant matches the filter
+static bool tree_node_has_match(const BriefTreeNode *node,
+                                const ImGuiTextFilter &filter,
+                                const StateSnapshot &snapshot) {
+  for (const BriefTreeNode *n = node; n; n = n->next_sibling) {
+    const ProcessStat &stat = snapshot.stats.data[n->state_index];
+    if (filter.PassFilter(stat.comm)) return true;
+
+    // Check children
+    if (n->first_child &&
+        tree_node_has_match(n->first_child, filter, snapshot)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
                             const State &state, BriefTreeNode *node,
-                            BriefTableState &my_state) {
+                            BriefTableState &my_state,
+                            const ImGuiTextFilter &filter) {
+  const bool filter_active = filter.IsActive();
+
   for (BriefTreeNode *n = node; n; n = n->next_sibling) {
     const ProcessStat &stat = state.snapshot.stats.data[n->state_index];
     const ProcessDerivedStat &derived_stat =
         state.snapshot.derived_stats.data[n->state_index];
     bool has_children = (n->first_child != nullptr);
     bool is_selected = (my_state.selected_pid == n->pid);
+
+    // Filter logic: skip if no match and no matching descendants
+    bool node_matches = filter.PassFilter(stat.comm);
+    bool has_matching_descendant = false;
+    if (filter_active && !node_matches && has_children) {
+      has_matching_descendant =
+          tree_node_has_match(n->first_child, filter, state.snapshot);
+    }
+    if (filter_active && !node_matches && !has_matching_descendant) {
+      continue;
+    }
+
+    // Gray out non-matching parents that have matching descendants
+    bool should_gray = filter_active && !node_matches && has_matching_descendant;
+    if (should_gray) {
+      ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+    }
 
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
@@ -192,9 +229,14 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
       ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
                          derived_stat.io_write_kb_per_sec);
 
+    // Pop gray style before recursing so children aren't affected
+    if (should_gray) {
+      ImGui::PopStyleColor();
+    }
+
     // Recurse for children
     if (open && has_children) {
-      draw_tree_nodes(ctx, view_state, state, n->first_child, my_state);
+      draw_tree_nodes(ctx, view_state, state, n->first_child, my_state, filter);
       ImGui::TreePop();
     }
   }
@@ -210,6 +252,15 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   ImGui::Begin(title, nullptr, COMMON_VIEW_FLAGS);
   if (ImGui::IsWindowFocused()) {
     view_state.focused_view = eFocusedView_BriefTable;
+  }
+
+  ImGui::InputTextWithHint("##ProcessFilter", "Filter", my_state.filter_text,
+                           sizeof(my_state.filter_text));
+  ImGuiTextFilter filter;
+  if (my_state.filter_text[0] != '\0') {
+    strncpy(filter.InputBuf, my_state.filter_text, sizeof(filter.InputBuf));
+    filter.InputBuf[sizeof(filter.InputBuf) - 1] = '\0';
+    filter.Build();
   }
 
   if (ImGui::BeginTable(
@@ -275,15 +326,18 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
     if (my_state.tree_mode && tree_roots) {
       // Tree mode rendering
-      draw_tree_nodes(ctx, view_state, state, tree_roots, my_state);
+      draw_tree_nodes(ctx, view_state, state, tree_roots, my_state, filter);
     } else {
       // Flat mode rendering
       for (size_t i = 0; i < my_state.lines.size; ++i) {
-        ImGui::TableNextRow();
-
         BriefTableLine &line = my_state.lines.data[i];
         // NOLINTNEXTLINE
         const ProcessStat &stat = state.snapshot.stats.data[line.state_index];
+
+        // Skip non-matching processes when filter is active
+        if (!filter.PassFilter(stat.comm)) continue;
+
+        ImGui::TableNextRow();
         const ProcessDerivedStat &derived_stat =
             state.snapshot.derived_stats.data[line.state_index];
         const bool is_selected = (my_state.selected_pid == line.pid);

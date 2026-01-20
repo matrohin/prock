@@ -91,6 +91,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid,
   win->sorted_by = eLibraryViewerColumnId_Path;
   win->sorted_order = ImGuiSortDirection_Ascending;
   win->selected_index = -1;
+  win->filter_text[0] = '\0';
 
   LibraryRequest req = {pid};
   sync.library_request_queue.push(req);
@@ -191,6 +192,14 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           }
         }
       } else if (win.libraries.size > 0) {
+        ImGui::InputTextWithHint("##LibFilter", "Filter", win.filter_text,
+                                 sizeof(win.filter_text));
+        ImGuiTextFilter filter;
+        if (win.filter_text[0] != '\0') {
+          strncpy(filter.InputBuf, win.filter_text, sizeof(filter.InputBuf));
+          filter.InputBuf[sizeof(filter.InputBuf) - 1] = '\0';
+          filter.Build();
+        }
         if (ImGui::BeginTable(
                 "Libraries", eLibraryViewerColumnId_Count,
                 ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
@@ -222,6 +231,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           for (size_t j = 0; j < win.libraries.size; ++j) {
             const LibraryEntry &lib = win.libraries.data[j];
+            if (!filter.PassFilter(lib.path)) continue;
             const bool is_selected = (win.selected_index == (int)j);
             ImGui::TableNextRow();
 

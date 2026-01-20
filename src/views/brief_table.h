@@ -3,6 +3,8 @@
 #include "base.h"
 #include "process_stat.h"
 
+#include "imgui.h"
+
 struct FrameContext;
 struct State;
 struct StateSnapshot;
@@ -42,6 +44,7 @@ struct BriefTableState {
   int selected_pid; // -1 means no selection
   char kill_error[128];
   bool tree_mode; // Toggle: false = flat, true = tree
+  char filter_text[256];
 };
 
 void brief_table_update(BriefTableState &my_state, State &state);
