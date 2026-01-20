@@ -254,6 +254,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     view_state.focused_view = eFocusedView_BriefTable;
   }
 
+  if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
+    ImGui::SetKeyboardFocusHere();
+  }
   ImGui::InputTextWithHint("##ProcessFilter", "Filter", my_state.filter_text,
                            sizeof(my_state.filter_text));
   ImGuiTextFilter filter;

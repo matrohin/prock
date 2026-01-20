@@ -192,6 +192,9 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           }
         }
       } else if (win.libraries.size > 0) {
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
+          ImGui::SetKeyboardFocusHere();
+        }
         ImGui::InputTextWithHint("##LibFilter", "Filter", win.filter_text,
                                  sizeof(win.filter_text));
         ImGuiTextFilter filter;
