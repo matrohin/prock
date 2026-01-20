@@ -313,10 +313,17 @@ void gather(GatheringState &state, Sync &sync) {
   const auto mem_info = read_mem_info();
   const auto disk_io_stats = read_disk_io_stats();
 
-  const Seconds period = Seconds{0.5};
+  const float period_secs = sync.update_period.load();
   {
     std::unique_lock<std::mutex> lock(sync.quit_mutex);
-    sync.quit_cv.wait_until(lock, state.last_update + period);
+    if (period_secs <= 0.0f) {
+      // Paused: wait until quit or period changes
+      sync.quit_cv.wait(lock, [&sync] {
+        return sync.quit.load() || sync.update_period.load() > 0.0f;
+      });
+    } else {
+      sync.quit_cv.wait_until(lock, state.last_update + Seconds{period_secs});
+    }
   }
   if (sync.quit.load()) {
     arena.destroy();

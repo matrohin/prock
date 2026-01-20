@@ -37,6 +37,7 @@ struct LibraryResponse {
 
 struct Sync {
   std::atomic<bool> quit;
+  std::atomic<float> update_period{0.5f};  // seconds, 0 = paused
   std::mutex quit_mutex;
   std::condition_variable quit_cv;
   RingBuffer<UpdateSnapshot, 256> update_queue;

@@ -36,6 +36,27 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     }
 
     ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::Text("Updates");
+    ImGui::Separator();
+
+    static const float periods[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
+    static const char *labels[] = {"Paused", "0.25s", "0.5s", "1s", "2s", "5s"};
+    int current_idx = 2;  // default to 0.5s
+    for (int i = 0; i < 6; i++) {
+      if (prefs.update_period == periods[i]) {
+        current_idx = i;
+        break;
+      }
+    }
+
+    ImGui::SetNextItemWidth(100);
+    if (ImGui::Combo("Update Period", &current_idx, labels, 6)) {
+      prefs.update_period = periods[current_idx];
+    }
+
+    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 

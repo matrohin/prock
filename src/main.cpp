@@ -67,12 +67,15 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
   if (!view_state) return;
 
   int val = 0;
+  float fval = 0.0f;
   if (sscanf(line, "ShowPerCore=%d", &val) == 1) {
     view_state->system_cpu_chart_state.show_per_core = (val != 0);
   } else if (sscanf(line, "Stacked=%d", &val) == 1) {
     view_state->system_cpu_chart_state.stacked = (val != 0);
   } else if (sscanf(line, "DarkMode=%d", &val) == 1) {
     view_state->preferences_state.dark_mode = (val != 0);
+  } else if (sscanf(line, "UpdatePeriod=%f", &fval) == 1) {
+    view_state->preferences_state.update_period = fval;
   } else if (sscanf(line, "TreeMode=%d", &val) == 1) {
     view_state->brief_table_state.tree_mode = (val != 0);
   }
@@ -92,6 +95,7 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
 
   buf->appendf("[%s][Preferences]\n", handler->TypeName);
   buf->appendf("DarkMode=%d\n", (int)view_state->preferences_state.dark_mode);
+  buf->appendf("UpdatePeriod=%.2f\n", view_state->preferences_state.update_period);
   buf->append("\n");
 
   buf->appendf("[%s][ProcessTable]\n", handler->TypeName);
@@ -341,6 +345,7 @@ int main(int, char **) {
 
   Sync sync = {};
   view_state.sync = &sync;
+  sync.update_period.store(view_state.preferences_state.update_period);
 
   std::thread gathering_thread{[&sync]() {
     GatheringState state = {};
@@ -363,6 +368,14 @@ int main(int, char **) {
     if (update(state, view_state, sync)) {
       g_needs_updates = 2;
     }
+
+    // Sync update period to gathering thread
+    const float new_period = view_state.preferences_state.update_period;
+    if (sync.update_period.load() != new_period) {
+      sync.update_period.store(new_period);
+      sync.quit_cv.notify_one();
+    }
+
     draw(window, io, state, view_state);
 
     glfwSwapBuffers(window);

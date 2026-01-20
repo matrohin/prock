@@ -3,6 +3,7 @@
 struct PreferencesState {
   bool dark_mode = false;
   bool show_preferences_modal = false;
+  float update_period = 0.5f;  // seconds, 0 = paused
 };
 
 struct ViewState;
