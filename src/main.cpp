@@ -53,7 +53,9 @@ void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
 static void *view_settings_read_open(ImGuiContext *,
                                      ImGuiSettingsHandler *handler,
                                      const char *name) {
-  if (strcmp(name, "SystemCpuChart") == 0 || strcmp(name, "Preferences") == 0) {
+  if (strcmp(name, "SystemCpuChart") == 0 ||
+      strcmp(name, "Preferences") == 0 ||
+      strcmp(name, "ProcessTable") == 0) {
     return handler->UserData;
   }
   return nullptr;
@@ -71,6 +73,8 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     view_state->system_cpu_chart_state.stacked = (val != 0);
   } else if (sscanf(line, "DarkMode=%d", &val) == 1) {
     view_state->preferences_state.dark_mode = (val != 0);
+  } else if (sscanf(line, "TreeMode=%d", &val) == 1) {
+    view_state->brief_table_state.tree_mode = (val != 0);
   }
 }
 
@@ -88,6 +92,10 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
 
   buf->appendf("[%s][Preferences]\n", handler->TypeName);
   buf->appendf("DarkMode=%d\n", (int)view_state->preferences_state.dark_mode);
+  buf->append("\n");
+
+  buf->appendf("[%s][ProcessTable]\n", handler->TypeName);
+  buf->appendf("TreeMode=%d\n", (int)view_state->brief_table_state.tree_mode);
   buf->append("\n");
 }
 
