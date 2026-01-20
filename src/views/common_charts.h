@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-static const ImPlotShadedFlags CHART_FLAGS = 0;
+static constexpr ImPlotShadedFlags CHART_FLAGS = 0;
 
 template <class T>
 bool common_charts_contains_pid(const GrowingArray<T> &charts, int pid) {

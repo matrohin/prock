@@ -14,7 +14,7 @@
 
 namespace {
 
-LibraryResponse read_process_libraries(int pid) {
+LibraryResponse read_process_libraries(const int pid) {
   LibraryResponse response = {};
   response.pid = pid;
   response.owner_arena = BumpArena::create();

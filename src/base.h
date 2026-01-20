@@ -20,19 +20,19 @@ struct ArenaSlab {
   size_t left_size;
   ArenaSlab *prev;
 
-  static ArenaSlab *create(size_t size, ArenaSlab *prev = nullptr) {
-    void *slab = (void *)calloc(size, 1);
-    void *cur = (void *)((uint8_t *)(slab) + sizeof(ArenaSlab));
-    ArenaSlab *res = (ArenaSlab *)slab;
+  static ArenaSlab *create(const size_t size, ArenaSlab *prev = nullptr) {
+    void *slab = calloc(size, 1);
+    void *cur = static_cast<uint8_t *>(slab) + sizeof(ArenaSlab);
+    ArenaSlab *res = static_cast<ArenaSlab *>(slab);
     res->cur = cur;
     res->left_size = size - sizeof(ArenaSlab);
     res->prev = prev;
     return res;
   }
 
-  void *advance(size_t size) {
+  void *advance(const size_t size) {
     void *res = cur;
-    cur = ((uint8_t *)cur) + size;
+    cur = static_cast<uint8_t *>(cur) + size;
     left_size -= size;
     return res;
   }
@@ -43,7 +43,7 @@ struct BumpArena {
 
   static BumpArena create() { return BumpArena{}; }
 
-  void *alloc_raw(size_t size, size_t alignment) {
+  void *alloc_raw(const size_t size, const size_t alignment) {
     if (cur_slab &&
         std::align(alignment, size, cur_slab->cur, cur_slab->left_size) &&
         size <= cur_slab->left_size) {
@@ -55,8 +55,17 @@ struct BumpArena {
     return cur_slab->advance(size);
   }
 
+  template <class T> T *alloc_array_of(const size_t size) {
+    return static_cast<T *>(alloc_raw(size * sizeof(T), alignof(T)));
+  }
+
+  char *alloc_string(const size_t size) {
+    return static_cast<char *>(alloc_raw(size, 1));
+  }
+
+
   template <class T> T *alloc() {
-    return (T *)alloc_raw(sizeof(T), alignof(T));
+    return static_cast<T *>(alloc_raw(sizeof(T), alignof(T)));
   }
 
   void destroy() {
@@ -64,7 +73,7 @@ struct BumpArena {
     cur_slab = nullptr;
     while (it) {
       ArenaSlab *prev = it->prev;
-      free((void *)it);
+      free(it);
       it = prev;
     }
   }
@@ -98,7 +107,7 @@ template <class T> struct Array {
   size_t size;
 
   static Array<T> create(BumpArena &arena, size_t with_size) {
-    T *result = (T *)arena.alloc_raw(with_size * sizeof(T), alignof(T));
+    T *result = static_cast<T *>(arena.alloc_raw(with_size * sizeof(T), alignof(T)));
     return Array<T>{result, with_size};
   }
 };
@@ -116,7 +125,7 @@ template <class T> struct GrowingArray {
   }
 
   void realloc(BumpArena &arena) {
-    size_t new_size = std::max((size_t)4, cur_size * 2);
+    size_t new_size = std::max(static_cast<size_t>(4), cur_size * 2);
     Array<T> new_inner = Array<T>::create(arena, new_size);
     if (inner.data) memcpy(new_inner.data, inner.data, cur_size * sizeof(T));
     inner = new_inner;

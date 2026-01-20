@@ -24,7 +24,7 @@ void copy_library_row(const LibraryEntry &lib) {
 
 void copy_all_libraries(BumpArena &arena, const LibraryViewerWindow &win) {
   size_t buf_size = 128 + win.libraries.size * 320;
-  char *buf = (char *)arena.alloc_raw(buf_size, 1);
+  char *buf = static_cast<char *>(arena.alloc_raw(buf_size, 1));
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", LIBRARY_COPY_HEADER);
 
@@ -67,8 +67,8 @@ void sort_libraries(LibraryViewerWindow &win) {
 
 } // unnamed namespace
 
-void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid,
-                            const char *comm) {
+void library_viewer_request(LibraryViewerState &state, Sync &sync,
+                            const int pid, const char *comm) {
   // Check if window exists for pid - reopen if found
   for (size_t i = 0; i < state.windows.size(); ++i) {
     if (state.windows.data()[i].pid == pid) {
@@ -235,21 +235,21 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           for (size_t j = 0; j < win.libraries.size; ++j) {
             const LibraryEntry &lib = win.libraries.data[j];
             if (!filter.PassFilter(lib.path)) continue;
-            const bool is_selected = (win.selected_index == (int)j);
+            const bool is_selected = (win.selected_index == static_cast<int>(j));
             ImGui::TableNextRow();
 
             // Path with selection
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_Path);
             if (ImGui::Selectable(lib.path, is_selected,
                                   ImGuiSelectableFlags_SpanAllColumns)) {
-              win.selected_index = (int)j;
+              win.selected_index = static_cast<int>(j);
             }
             if (ImGui::IsItemHovered()) {
               ImGui::SetTooltip("%s", lib.path);
             }
 
             if (ImGui::BeginPopupContextItem()) {
-              win.selected_index = (int)j;
+              win.selected_index = static_cast<int>(j);
               if (ImGui::MenuItem("Copy", "Ctrl+C")) {
                 copy_library_row(lib);
               }

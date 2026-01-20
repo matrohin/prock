@@ -12,12 +12,9 @@
 #include <GLES2/gl2.h>
 #include <GLFW/glfw3.h>
 
-#include <cstddef>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <dirent.h>
-#include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -39,8 +36,6 @@
 #include "views/system_io_chart.cpp"
 #include "views/system_mem_chart.cpp"
 
-namespace {
-
 // See https://github.com/ocornut/imgui/issues/1206
 // Sometimes imgui needs second frame update to handle some UI without delays.
 // Reproducible example: context menus
@@ -53,8 +48,7 @@ void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
 static void *view_settings_read_open(ImGuiContext *,
                                      ImGuiSettingsHandler *handler,
                                      const char *name) {
-  if (strcmp(name, "SystemCpuChart") == 0 ||
-      strcmp(name, "Preferences") == 0 ||
+  if (strcmp(name, "SystemCpuChart") == 0 || strcmp(name, "Preferences") == 0 ||
       strcmp(name, "ProcessTable") == 0) {
     return handler->UserData;
   }
@@ -88,26 +82,31 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   if (!view_state) return;
 
   buf->appendf("[%s][SystemCpuChart]\n", handler->TypeName);
-  buf->appendf("ShowPerCore=%d\n",
-               (int)view_state->system_cpu_chart_state.show_per_core);
-  buf->appendf("Stacked=%d\n", (int)view_state->system_cpu_chart_state.stacked);
+  buf->appendf(
+      "ShowPerCore=%d\n",
+      static_cast<int>(view_state->system_cpu_chart_state.show_per_core));
+  buf->appendf("Stacked=%d\n",
+               static_cast<int>(view_state->system_cpu_chart_state.stacked));
   buf->append("\n");
 
   buf->appendf("[%s][Preferences]\n", handler->TypeName);
-  buf->appendf("DarkMode=%d\n", (int)view_state->preferences_state.dark_mode);
-  buf->appendf("UpdatePeriod=%.2f\n", view_state->preferences_state.update_period);
+  buf->appendf("DarkMode=%d\n",
+               static_cast<int>(view_state->preferences_state.dark_mode));
+  buf->appendf("UpdatePeriod=%.2f\n",
+               view_state->preferences_state.update_period);
   buf->append("\n");
 
   buf->appendf("[%s][ProcessTable]\n", handler->TypeName);
-  buf->appendf("TreeMode=%d\n", (int)view_state->brief_table_state.tree_mode);
+  buf->appendf("TreeMode=%d\n",
+               static_cast<int>(view_state->brief_table_state.tree_mode));
   buf->append("\n");
 }
 
-void glfw_error_callback(int error, const char *description) {
+static void glfw_error_callback(const int error, const char *description) {
   fprintf(stderr, "GLFW Error: %x: %s\n", error, description);
 }
 
-bool state_init(State &state) {
+static bool state_init(State &state) {
   const long ticks = sysconf(_SC_CLK_TCK);
   const long page_size = sysconf(_SC_PAGESIZE);
   if (ticks <= 0 || page_size <= 0) {
@@ -119,8 +118,8 @@ bool state_init(State &state) {
   return true;
 }
 
-void state_update(State &state, ViewState &view_state,
-                  const UpdateSnapshot &snapshot) {
+static void state_update(State &state, ViewState &view_state,
+                         const UpdateSnapshot &snapshot) {
   BumpArena old_arena = state.snapshot_arena;
 
   state.snapshot_arena = snapshot.owner_arena;
@@ -133,7 +132,7 @@ void state_update(State &state, ViewState &view_state,
   old_arena.destroy();
 }
 
-bool update(State &state, ViewState &view_state, Sync &sync) {
+static bool update(State &state, ViewState &view_state, Sync &sync) {
   UpdateSnapshot snapshot = {};
   bool updated = false;
   while (sync.update_queue.pop(snapshot)) {
@@ -143,8 +142,8 @@ bool update(State &state, ViewState &view_state, Sync &sync) {
   return updated;
 }
 
-void draw(GLFWwindow *window, ImGuiIO &io, const State &state,
-          ViewState &view_state) {
+static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
+                 ViewState &view_state) {
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -238,8 +237,6 @@ ShowPerCore=0
 Stacked=0
 )";
 
-} // unnamed namespace
-
 int main(int, char **) {
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) {
@@ -255,9 +252,9 @@ int main(int, char **) {
   // Create window with graphics context
   float main_scale =
       ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
-  GLFWwindow *window =
-      glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale),
-                       "Prock", nullptr, nullptr);
+  GLFWwindow *window = glfwCreateWindow(static_cast<int>(1280 * main_scale),
+                                        static_cast<int>(800 * main_scale),
+                                        "Prock", nullptr, nullptr);
   if (window == nullptr) {
     return 1;
   }
@@ -281,16 +278,16 @@ int main(int, char **) {
     int n = 0;
     // Ensure .config directory exists
     n = snprintf(dir_path, sizeof(dir_path), "%s/.config", home);
-    if (n > 0 && (size_t)n < sizeof(dir_path)) {
+    if (n > 0 && static_cast<size_t>(n) < sizeof(dir_path)) {
       mkdir(dir_path, 0755);
       // Ensure .config/prock directory exists
       n = snprintf(dir_path, sizeof(dir_path), "%s/.config/prock", home);
-      if (n > 0 && (size_t)n < sizeof(dir_path)) {
+      if (n > 0 && static_cast<size_t>(n) < sizeof(dir_path)) {
         mkdir(dir_path, 0755);
         // Set the ini file path
         n = snprintf(ini_path, sizeof(ini_path),
                      "%s/.config/prock/settings.ini", home);
-        if (n > 0 && (size_t)n < sizeof(ini_path)) {
+        if (n > 0 && static_cast<size_t>(n) < sizeof(ini_path)) {
           io.IniFilename = ini_path;
         }
       }
@@ -333,7 +330,7 @@ int main(int, char **) {
 
   // Setup Platform/Renderer backends
   glfwSetMouseButtonCallback(window, maintaining_second_update);
-  const bool install_callbacks = true;
+  constexpr bool install_callbacks = true;
   ImGui_ImplGlfw_InitForOpenGL(window, install_callbacks);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
@@ -347,15 +344,15 @@ int main(int, char **) {
   view_state.sync = &sync;
   sync.update_period.store(view_state.preferences_state.update_period);
 
-  std::thread gathering_thread{[&sync]() {
-    GatheringState state = {};
+  std::thread gathering_thread{[&sync] {
+    GatheringState gathering_state = {};
     while (!sync.quit.load()) {
-      gather(state, sync);
+      gather(gathering_state, sync);
       glfwPostEmptyEvent();
     }
   }};
 
-  std::thread library_thread{[&sync]() { library_reader_thread(sync); }};
+  std::thread library_thread{[&sync] { library_reader_thread(sync); }};
 
   while (!glfwWindowShouldClose(window)) {
     if (g_needs_updates > 0) {

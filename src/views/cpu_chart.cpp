@@ -2,6 +2,9 @@
 
 #include "views/common.h"
 #include "views/common_charts.h"
+#include "views/view_state.h"
+
+#include "state.h"
 
 #include "implot.h"
 
@@ -106,7 +109,7 @@ void cpu_chart_draw(ViewState &view_state) {
   my_state.auto_fit = false;
 }
 
-void cpu_chart_add(CpuChartState &my_state, int pid, const char *comm) {
+void cpu_chart_add(CpuChartState &my_state, const int pid, const char *comm) {
   if (common_charts_contains_pid(my_state.charts, pid)) {
     return;
   }

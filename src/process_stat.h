@@ -3,9 +3,6 @@
 #include "base.h"
 
 #include <climits>
-#include <cstdio>
-#include <cstring>
-#include <dirent.h>
 #include <sys/types.h>
 
 /*

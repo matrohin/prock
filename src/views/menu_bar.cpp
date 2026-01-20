@@ -1,17 +1,19 @@
 #include "views/menu_bar.h"
 
-#include "views/library_viewer.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
 
-static void apply_theme(bool dark_mode) {
+static void apply_theme(const bool dark_mode) {
   if (dark_mode) {
     ImGui::StyleColorsDark();
   } else {
     ImGui::StyleColorsLight();
   }
 }
+
+static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
+static const char *LABELS[] = {"Paused", "0.25s", "0.5s", "1s", "2s", "5s"};
 
 static void draw_preferences_modal(PreferencesState &prefs) {
   if (prefs.show_preferences_modal) {
@@ -41,19 +43,17 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Text("Updates");
     ImGui::Separator();
 
-    static const float periods[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
-    static const char *labels[] = {"Paused", "0.25s", "0.5s", "1s", "2s", "5s"};
     int current_idx = 2;  // default to 0.5s
     for (int i = 0; i < 6; i++) {
-      if (prefs.update_period == periods[i]) {
+      if (prefs.update_period == PERIODS[i]) {
         current_idx = i;
         break;
       }
     }
 
     ImGui::SetNextItemWidth(100);
-    if (ImGui::Combo("Update Period", &current_idx, labels, 6)) {
-      prefs.update_period = periods[current_idx];
+    if (ImGui::Combo("Update Period", &current_idx, LABELS, 6)) {
+      prefs.update_period = PERIODS[current_idx];
     }
 
     ImGui::Spacing();

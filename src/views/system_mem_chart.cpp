@@ -2,6 +2,9 @@
 
 #include "views/common.h"
 #include "views/common_charts.h"
+#include "views/view_state.h"
+
+#include "state.h"
 
 #include "imgui.h"
 #include "implot.h"

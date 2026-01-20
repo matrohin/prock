@@ -4,9 +4,7 @@
 
 #include <algorithm>
 
-namespace {
-
-bool read_process(int pid, ProcessStat *out) {
+static bool read_process(const int pid, ProcessStat *out) {
   constexpr size_t PATH_BUF_SIZE = 64;
 
   char stat_filename[PATH_BUF_SIZE];
@@ -114,7 +112,7 @@ bool read_process(int pid, ProcessStat *out) {
   return true;
 }
 
-Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
+static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
   DIR *proc_dir = opendir("/proc");
   if (!proc_dir) {
     printf("Couldn't get a process list");
@@ -161,7 +159,7 @@ Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
 
 // Reads /proc/stat for system-wide CPU stats
 // Returns array where [0] = total, [1..n] = per-core
-Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
+static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
   FILE *stat_file = fopen("/proc/stat", "r");
   if (!stat_file) {
     return {};
@@ -204,7 +202,7 @@ Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
 
 // Reads /proc/diskstats for system-wide disk I/O stats
 // Aggregates all block devices (skips partitions by looking at device naming)
-DiskIoStat read_disk_io_stats() {
+static DiskIoStat read_disk_io_stats() {
   FILE *diskstats_file = fopen("/proc/diskstats", "r");
   if (!diskstats_file) {
     return {};
@@ -269,7 +267,7 @@ DiskIoStat read_disk_io_stats() {
 
 // Reads /proc/meminfo for system-wide memory stats
 // Values are in kB (as reported by /proc/meminfo)
-MemInfo read_mem_info() {
+static MemInfo read_mem_info() {
   FILE *meminfo_file = fopen("/proc/meminfo", "r");
   if (!meminfo_file) {
     return {};
@@ -303,8 +301,6 @@ MemInfo read_mem_info() {
   fclose(meminfo_file);
   return result;
 }
-
-} // unnamed namespace
 
 void gather(GatheringState &state, Sync &sync) {
   BumpArena arena = BumpArena::create();

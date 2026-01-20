@@ -7,6 +7,8 @@
 #include "views/mem_chart.h"
 #include "views/view_state.h"
 
+#include "state.h"
+
 #include "imgui_internal.h"
 
 #include <cerrno>
@@ -14,13 +16,11 @@
 #include <cstring>
 #include <signal.h>
 
-namespace {
-
 const char *PROCESS_COPY_HEADER =
     "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
     "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\n";
 
-void copy_process_row(const ProcessStat &stat,
+static void copy_process_row(const ProcessStat &stat,
                       const ProcessDerivedStat &derived) {
   char buf[512];
   snprintf(buf, sizeof(buf),
@@ -33,11 +33,11 @@ void copy_process_row(const ProcessStat &stat,
   ImGui::SetClipboardText(buf);
 }
 
-void copy_all_processes(BumpArena &arena, const BriefTableState &my_state,
+static void copy_all_processes(BumpArena &arena, const BriefTableState &my_state,
                         const StateSnapshot &snapshot) {
   // Header + all rows
   size_t buf_size = 256 + my_state.lines.size * 256;
-  char *buf = (char *)arena.alloc_raw(buf_size, 1);
+  char *buf = arena.alloc_string(buf_size);
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", PROCESS_COPY_HEADER);
 
@@ -57,8 +57,6 @@ void copy_all_processes(BumpArena &arena, const BriefTableState &my_state,
   }
   ImGui::SetClipboardText(buf);
 }
-
-} // unnamed namespace
 
 // Returns true if this node, any sibling, or any descendant matches the filter
 static bool tree_node_has_match(const BriefTreeNode *node,

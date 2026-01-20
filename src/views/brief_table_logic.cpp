@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cstring>
 
-size_t binary_search_pid(const Array<ProcessStat> &stats, int pid) {
+size_t binary_search_pid(const Array<ProcessStat> &stats, const int pid) {
   size_t left = 0;
   size_t right = stats.size;
   while (left < right) {
@@ -21,13 +21,11 @@ size_t binary_search_pid(const Array<ProcessStat> &stats, int pid) {
   return SIZE_MAX;
 }
 
-namespace {
-
 // Sort siblings linked list using provided comparison
-BriefTreeNode *sort_siblings(BumpArena &arena, BriefTreeNode *head,
+static BriefTreeNode *sort_siblings(BumpArena &arena, BriefTreeNode *head,
                              const StateSnapshot &snapshot,
-                             BriefTableColumnId sorted_by,
-                             ImGuiSortDirection sorted_order) {
+                             const BriefTableColumnId sorted_by,
+                             const ImGuiSortDirection sorted_order) {
   if (!head || !head->next_sibling) return head;
 
   // Count siblings
@@ -36,14 +34,13 @@ BriefTreeNode *sort_siblings(BumpArena &arena, BriefTreeNode *head,
     count++;
 
   // Copy to array for sorting
-  BriefTreeNode **arr = (BriefTreeNode **)arena.alloc_raw(
-      count * sizeof(BriefTreeNode *), alignof(BriefTreeNode *));
+  BriefTreeNode **arr = arena.alloc_array_of<BriefTreeNode *>(count);
   size_t i = 0;
   for (BriefTreeNode *n = head; n; n = n->next_sibling)
     arr[i++] = n;
 
   // Sort using same logic as flat mode
-  auto compare = [&](BriefTreeNode *left, BriefTreeNode *right) {
+  auto compare = [&](const BriefTreeNode *left, const BriefTreeNode *right) {
     const ProcessStat &ls = snapshot.stats.data[left->state_index];
     const ProcessStat &rs = snapshot.stats.data[right->state_index];
     const ProcessDerivedStat &ld =
@@ -105,8 +102,6 @@ BriefTreeNode *sort_siblings(BumpArena &arena, BriefTreeNode *head,
 
   return arr[0];
 }
-
-} // unnamed namespace
 
 void sort_brief_table_lines(BriefTableState &my_state,
                             const StateSnapshot &state) {

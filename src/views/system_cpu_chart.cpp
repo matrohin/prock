@@ -2,6 +2,9 @@
 
 #include "views/common.h"
 #include "views/common_charts.h"
+#include "views/view_state.h"
+
+#include "state.h"
 
 #include "imgui.h"
 #include "implot.h"
@@ -33,7 +36,7 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
       snapshot.cpu_perc.interrupts.data[0];
 
   // Per-core data (skip index 0 which is aggregate)
-  int num_cores = (int)snapshot.cpu_perc.total.size - 1;
+  int num_cores = static_cast<int>(snapshot.cpu_perc.total.size) - 1;
   if (num_cores > MAX_CORES) num_cores = MAX_CORES;
   my_state.num_cores = num_cores;
 

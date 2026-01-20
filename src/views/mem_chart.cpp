@@ -2,6 +2,9 @@
 
 #include "views/common.h"
 #include "views/common_charts.h"
+#include "views/view_state.h"
+
+#include "state.h"
 
 #include "implot.h"
 
@@ -15,7 +18,6 @@ void mem_chart_update(MemChartState &my_state, const State &state) {
   common_charts_update(my_state.charts, state,
                        [&](MemChartData &chart, const ProcessStat & /*stat*/,
                            const ProcessDerivedStat &derived) {
-                         // TODO: add reallocs
                          *chart.times.emplace_back(my_state.cur_arena,
                                                    my_state.wasted_bytes) =
                              update_at;
@@ -100,7 +102,7 @@ void mem_chart_draw(ViewState &view_state) {
   my_state.auto_fit = false;
 }
 
-void mem_chart_add(MemChartState &my_state, int pid, const char *comm) {
+void mem_chart_add(MemChartState &my_state, const int pid, const char *comm) {
   if (common_charts_contains_pid(my_state.charts, pid)) {
     return;
   }
