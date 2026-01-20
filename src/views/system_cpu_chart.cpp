@@ -68,6 +68,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
     view_state.focused_view = eFocusedView_SystemCpuChart;
   }
 
+  ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
   if (my_state.auto_fit) {
     ImPlot::SetNextAxesToFit();
     my_state.auto_fit = false;
@@ -151,5 +152,6 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
     ImPlot::EndPlot();
   }
 
+  ImPlot::PopStyleVar();
   ImGui::End();
 }
