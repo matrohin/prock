@@ -121,8 +121,9 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
     snprintf(label, sizeof(label), "%d", n->pid);
     bool open = ImGui::TreeNodeEx(label, flags);
 
-    // Handle selection on click
-    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+    // Handle selection on click or keyboard navigation
+    if ((ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) ||
+        ImGui::IsItemFocused()) {
       my_state.selected_pid = n->pid;
     }
 
@@ -350,7 +351,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           char label[32];
           snprintf(label, sizeof(label), "%d", line.pid);
           if (ImGui::Selectable(label, is_selected,
-                                ImGuiSelectableFlags_SpanAllColumns)) {
+                                ImGuiSelectableFlags_SpanAllColumns) ||
+              ImGui::IsItemFocused()) {
             my_state.selected_pid = line.pid;
           }
           if (ImGui::BeginPopupContextItem(label)) {
