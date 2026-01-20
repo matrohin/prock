@@ -50,86 +50,36 @@ static void draw_preferences_modal(PreferencesState &prefs) {
 
 void menu_bar_draw(ViewState &view_state) {
   if (ImGui::BeginMenuBar()) {
-    if (view_state.focused_view == eFocusedView_BriefTable &&
-        ImGui::BeginMenu("View")) {
-
+    if (ImGui::BeginMenu("View")) {
       ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
-      if (ImGui::MenuItem("Tree View", nullptr,
-                          view_state.brief_table_state.tree_mode)) {
-        view_state.brief_table_state.tree_mode =
-            !view_state.brief_table_state.tree_mode;
-      }
-      ImGui::PopItemFlag();
 
-      ImGui::EndMenu();
-    } else if (view_state.focused_view == eFocusedView_SystemCpuChart &&
-               ImGui::BeginMenu("View")) {
-      ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
-      if (ImGui::MenuItem("Per-core", nullptr,
-                          view_state.system_cpu_chart_state.show_per_core)) {
-        view_state.system_cpu_chart_state.show_per_core =
-            !view_state.system_cpu_chart_state.show_per_core;
-      }
-      if (ImGui::MenuItem("Stacked", nullptr,
-                          view_state.system_cpu_chart_state.stacked,
-                          view_state.system_cpu_chart_state.show_per_core)) {
-        view_state.system_cpu_chart_state.stacked =
-            !view_state.system_cpu_chart_state.stacked;
-      }
-      ImGui::PopItemFlag();
-      ImGui::Separator();
-      if (ImGui::MenuItem("Auto-Fit Once")) {
-        view_state.system_cpu_chart_state.auto_fit = true;
-      }
-      ImGui::EndMenu();
-    } else if (view_state.focused_view == eFocusedView_SystemMemChart &&
-               ImGui::BeginMenu("View")) {
-      if (ImGui::MenuItem("Auto-Fit Once")) {
-        view_state.system_mem_chart_state.auto_fit = true;
-      }
-      ImGui::EndMenu();
-    } else if (view_state.focused_view == eFocusedView_SystemIoChart &&
-               ImGui::BeginMenu("View")) {
-      if (ImGui::MenuItem("Auto-Fit Once")) {
-        view_state.system_io_chart_state.auto_fit = true;
-      }
-      ImGui::EndMenu();
-    } else if (view_state.focused_view == eFocusedView_CpuChart &&
-               ImGui::BeginMenu("View")) {
-      if (ImGui::MenuItem("Auto-Fit Once")) {
-        view_state.cpu_chart_state.auto_fit = true;
-      }
-      ImGui::EndMenu();
-    } else if (view_state.focused_view == eFocusedView_MemChart &&
-               ImGui::BeginMenu("View")) {
-      if (ImGui::MenuItem("Auto-Fit Once")) {
-        view_state.mem_chart_state.auto_fit = true;
-      }
-      ImGui::EndMenu();
-    } else if (view_state.focused_view == eFocusedView_IoChart &&
-               ImGui::BeginMenu("View")) {
-      if (ImGui::MenuItem("Auto-Fit Once")) {
-        view_state.io_chart_state.auto_fit = true;
-      }
-      ImGui::EndMenu();
-    } else if (view_state.focused_view == eFocusedView_LibraryViewer &&
-               ImGui::BeginMenu("View")) {
-      LibraryViewerState &lib_state = view_state.library_viewer_state;
-      bool can_refresh = false;
-      LibraryViewerWindow *focused_win = nullptr;
-      for (size_t i = 0; i < lib_state.windows.size(); ++i) {
-        if (lib_state.windows.data()[i].pid == lib_state.focused_window_pid) {
-          focused_win = &lib_state.windows.data()[i];
-          can_refresh = (focused_win->status != eLibraryViewerStatus_Loading);
-          break;
+      // Process Table options
+      if (ImGui::BeginMenu("Process Table")) {
+        if (ImGui::MenuItem("Tree View", nullptr,
+                            view_state.brief_table_state.tree_mode)) {
+          view_state.brief_table_state.tree_mode =
+              !view_state.brief_table_state.tree_mode;
         }
+        ImGui::EndMenu();
       }
-      if (ImGui::MenuItem("Refresh", nullptr, false, can_refresh) && focused_win) {
-        focused_win->status = eLibraryViewerStatus_Loading;
-        LibraryRequest req = {focused_win->pid};
-        view_state.sync->library_request_queue.push(req);
-        view_state.sync->library_cv.notify_one();
+
+      // System CPU Chart options
+      if (ImGui::BeginMenu("System CPU")) {
+        if (ImGui::MenuItem("Per-core", nullptr,
+                            view_state.system_cpu_chart_state.show_per_core)) {
+          view_state.system_cpu_chart_state.show_per_core =
+              !view_state.system_cpu_chart_state.show_per_core;
+        }
+        if (ImGui::MenuItem("Stacked", nullptr,
+                            view_state.system_cpu_chart_state.stacked,
+                            view_state.system_cpu_chart_state.show_per_core)) {
+          view_state.system_cpu_chart_state.stacked =
+              !view_state.system_cpu_chart_state.stacked;
+        }
+        ImGui::EndMenu();
       }
+
+      ImGui::PopItemFlag();
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Edit")) {
