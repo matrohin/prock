@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base.h"
-#include "process_stat.h"
+#include "sources/process_stat.h"
 
 struct State;
 struct UpdateSnapshot;

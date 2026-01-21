@@ -1,5 +1,5 @@
 #include "state.h"
-#include "sync.h"
+#include "sources/sync.h"
 
 StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
                                     const UpdateSnapshot &snapshot) {

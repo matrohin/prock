@@ -24,7 +24,7 @@ void copy_library_row(const LibraryEntry &lib) {
 
 void copy_all_libraries(BumpArena &arena, const LibraryViewerWindow &win) {
   size_t buf_size = 128 + win.libraries.size * 320;
-  char *buf = static_cast<char *>(arena.alloc_raw(buf_size, 1));
+  char *buf = arena.alloc_string(buf_size);
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", LIBRARY_COPY_HEADER);
 

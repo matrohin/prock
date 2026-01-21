@@ -23,9 +23,9 @@ size_t binary_search_pid(const Array<ProcessStat> &stats, const int pid) {
 
 // Sort siblings linked list using provided comparison
 static BriefTreeNode *sort_siblings(BumpArena &arena, BriefTreeNode *head,
-                             const StateSnapshot &snapshot,
-                             const BriefTableColumnId sorted_by,
-                             const ImGuiSortDirection sorted_order) {
+                                    const StateSnapshot &snapshot,
+                                    const BriefTableColumnId sorted_by,
+                                    const ImGuiSortDirection sorted_order) {
   if (!head || !head->next_sibling) return head;
 
   // Count siblings
@@ -210,13 +210,12 @@ void brief_table_update(BriefTableState &my_state, State &state) {
 BriefTreeNode *build_process_tree(BumpArena &arena,
                                   const Array<BriefTableLine> &lines,
                                   const StateSnapshot &snapshot,
-                                  BriefTableColumnId sorted_by,
-                                  ImGuiSortDirection sorted_order) {
+                                  const BriefTableColumnId sorted_by,
+                                  const ImGuiSortDirection sorted_order) {
   if (lines.size == 0) return nullptr;
 
   // Create nodes for all processes
-  BriefTreeNode *nodes = (BriefTreeNode *)arena.alloc_raw(
-      lines.size * sizeof(BriefTreeNode), alignof(BriefTreeNode));
+  BriefTreeNode *nodes = arena.alloc_array_of<BriefTreeNode>(lines.size);
 
   // Map from pid to node index (use snapshot stats for binary search)
   for (size_t i = 0; i < lines.size; ++i) {

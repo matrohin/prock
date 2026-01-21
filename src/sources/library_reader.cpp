@@ -12,9 +12,7 @@
 #include <mutex>
 #include <sys/stat.h>
 
-namespace {
-
-LibraryResponse read_process_libraries(const int pid) {
+static LibraryResponse read_process_libraries(const int pid) {
   LibraryResponse response = {};
   response.pid = pid;
   response.owner_arena = BumpArena::create();
@@ -93,8 +91,6 @@ LibraryResponse read_process_libraries(const int pid) {
   response.error_code = 0;
   return response;
 }
-
-} // unnamed namespace
 
 void library_reader_thread(Sync &sync) {
   while (!sync.quit.load()) {

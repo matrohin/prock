@@ -21,7 +21,7 @@ const char *PROCESS_COPY_HEADER =
     "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\n";
 
 static void copy_process_row(const ProcessStat &stat,
-                      const ProcessDerivedStat &derived) {
+                             const ProcessDerivedStat &derived) {
   char buf[512];
   snprintf(buf, sizeof(buf),
            "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f",
@@ -33,8 +33,9 @@ static void copy_process_row(const ProcessStat &stat,
   ImGui::SetClipboardText(buf);
 }
 
-static void copy_all_processes(BumpArena &arena, const BriefTableState &my_state,
-                        const StateSnapshot &snapshot) {
+static void copy_all_processes(BumpArena &arena,
+                               const BriefTableState &my_state,
+                               const StateSnapshot &snapshot) {
   // Header + all rows
   size_t buf_size = 256 + my_state.lines.size * 256;
   char *buf = arena.alloc_string(buf_size);
@@ -75,6 +76,114 @@ static bool tree_node_has_match(const BriefTreeNode *node,
   return false;
 }
 
+static const char *get_state_tooltip(const ProcessStat &stat) {
+  switch (stat.state) {
+  case 'R':
+    return "Running";
+  case 'S':
+    return "Sleeping (interruptible)";
+  case 'D':
+    return "Disk sleep (uninterruptible)";
+  case 'Z':
+    return "Zombie";
+  case 'T':
+    return "Stopped (signal)";
+  case 't':
+    return "Tracing stop";
+  case 'X':
+  case 'x':
+    return "Dead";
+  case 'I':
+    return "Idle";
+  default:
+    return nullptr;
+  }
+}
+
+static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
+                                    const State &state,
+                                    BriefTableState &my_state, const int pid,
+                                    const ProcessStat &stat,
+                                    const ProcessDerivedStat &derived_stat,
+                                    const char *label) {
+  if (ImGui::BeginPopupContextItem(label)) {
+    my_state.selected_pid = pid;
+    if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+      copy_process_row(stat, derived_stat);
+    }
+    if (ImGui::MenuItem("Copy All")) {
+      copy_all_processes(ctx.frame_arena, my_state, state.snapshot);
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("CPU Chart")) {
+      cpu_chart_add(view_state.cpu_chart_state, pid, stat.comm);
+    }
+    if (ImGui::MenuItem("Memory Chart")) {
+      mem_chart_add(view_state.mem_chart_state, pid, stat.comm);
+    }
+    if (ImGui::MenuItem("I/O Chart")) {
+      io_chart_add(view_state.io_chart_state, pid, stat.comm);
+    }
+    if (ImGui::MenuItem("Show Loaded Libraries")) {
+      library_viewer_request(view_state.library_viewer_state, *view_state.sync,
+                             pid, stat.comm);
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Kill Process", "Del") ||
+        ImGui::IsKeyPressed(ImGuiKey_Delete)) {
+      if (kill(pid, SIGTERM) != 0) {
+        snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                 "Failed to kill %d: %s", pid, strerror(errno));
+      }
+      ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::MenuItem("Force Kill")) {
+      if (kill(pid, SIGKILL) != 0) {
+        snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                 "Failed to kill %d: %s", pid, strerror(errno));
+      }
+    }
+    ImGui::EndPopup();
+  }
+}
+
+static void data_columns_draw(const ProcessStat &stat,
+                              const ProcessDerivedStat &derived_stat) {
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Name))
+    ImGui::Text("%s", stat.comm);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_State)) {
+    ImGui::Text("%c", stat.state);
+    if (ImGui::IsItemHovered()) {
+      const char *desc = get_state_tooltip(stat);
+      if (desc) ImGui::SetTooltip("%s", desc);
+    }
+  }
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%ld", stat.num_threads);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
+                       derived_stat.cpu_user_perc +
+                           derived_stat.cpu_kernel_perc);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
+                       derived_stat.cpu_user_perc);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
+                       derived_stat.cpu_kernel_perc);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
+                       derived_stat.mem_resident_bytes / 1024);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
+                       stat.vsize / 1024.0);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoReadKbPerSec))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
+                       derived_stat.io_read_kb_per_sec);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
+                       derived_stat.io_write_kb_per_sec);
+}
+
 static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
                             const State &state, BriefTreeNode *node,
                             BriefTableState &my_state,
@@ -85,8 +194,8 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
     const ProcessStat &stat = state.snapshot.stats.data[n->state_index];
     const ProcessDerivedStat &derived_stat =
         state.snapshot.derived_stats.data[n->state_index];
-    bool has_children = (n->first_child != nullptr);
-    bool is_selected = (my_state.selected_pid == n->pid);
+    const bool has_children = n->first_child != nullptr;
+    const bool is_selected = my_state.selected_pid == n->pid;
 
     // Filter logic: skip if no match and no matching descendants
     bool node_matches = filter.PassFilter(stat.comm);
@@ -100,9 +209,11 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
     }
 
     // Gray out non-matching parents that have matching descendants
-    bool should_gray = filter_active && !node_matches && has_matching_descendant;
+    bool should_gray =
+        filter_active && !node_matches && has_matching_descendant;
     if (should_gray) {
-      ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+      ImGui::PushStyleColor(ImGuiCol_Text,
+                            ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
     }
 
     ImGui::TableNextRow();
@@ -117,7 +228,7 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
 
     char label[32];
     snprintf(label, sizeof(label), "%d", n->pid);
-    bool open = ImGui::TreeNodeEx(label, flags);
+    const bool open = ImGui::TreeNodeEx(label, flags);
 
     // Handle selection on click or keyboard navigation
     if ((ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) ||
@@ -125,108 +236,10 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
       my_state.selected_pid = n->pid;
     }
 
-    // Context menu (same as flat mode)
-    if (ImGui::BeginPopupContextItem(label)) {
-      my_state.selected_pid = n->pid;
-      if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-        copy_process_row(stat, derived_stat);
-      }
-      if (ImGui::MenuItem("Copy All")) {
-        copy_all_processes(ctx.frame_arena, my_state, state.snapshot);
-      }
-      ImGui::Separator();
-      if (ImGui::MenuItem("CPU Chart")) {
-        cpu_chart_add(view_state.cpu_chart_state, n->pid, stat.comm);
-      }
-      if (ImGui::MenuItem("Memory Chart")) {
-        mem_chart_add(view_state.mem_chart_state, n->pid, stat.comm);
-      }
-      if (ImGui::MenuItem("I/O Chart")) {
-        io_chart_add(view_state.io_chart_state, n->pid, stat.comm);
-      }
-      if (ImGui::MenuItem("Show Loaded Libraries")) {
-        library_viewer_request(view_state.library_viewer_state,
-                               *view_state.sync, n->pid, stat.comm);
-      }
-      ImGui::Separator();
-      if (ImGui::MenuItem("Kill Process", "Del")) {
-        if (kill(n->pid, SIGTERM) != 0) {
-          snprintf(my_state.kill_error, sizeof(my_state.kill_error),
-                   "Failed to kill %d: %s", n->pid, strerror(errno));
-        }
-        ImGui::CloseCurrentPopup();
-      }
-      if (ImGui::MenuItem("Force Kill")) {
-        if (kill(n->pid, SIGKILL) != 0) {
-          snprintf(my_state.kill_error, sizeof(my_state.kill_error),
-                   "Failed to kill %d: %s", n->pid, strerror(errno));
-        }
-      }
-      ImGui::EndPopup();
-    }
+    table_context_menu_draw(ctx, view_state, state, my_state, n->pid, stat,
+                            derived_stat, label);
 
-    // Render other columns
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Name))
-      ImGui::Text("%s", stat.comm);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_State)) {
-      ImGui::Text("%c", stat.state);
-      if (ImGui::IsItemHovered()) {
-        const char *desc = nullptr;
-        switch (stat.state) {
-        case 'R':
-          desc = "Running";
-          break;
-        case 'S':
-          desc = "Sleeping (interruptible)";
-          break;
-        case 'D':
-          desc = "Disk sleep (uninterruptible)";
-          break;
-        case 'Z':
-          desc = "Zombie";
-          break;
-        case 'T':
-          desc = "Stopped (signal)";
-          break;
-        case 't':
-          desc = "Tracing stop";
-          break;
-        case 'X':
-        case 'x':
-          desc = "Dead";
-          break;
-        case 'I':
-          desc = "Idle";
-          break;
-        }
-        if (desc) ImGui::SetTooltip("%s", desc);
-      }
-    }
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%ld",
-                         stat.num_threads);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                         derived_stat.cpu_user_perc +
-                             derived_stat.cpu_kernel_perc);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                         derived_stat.cpu_user_perc);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                         derived_stat.cpu_kernel_perc);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
-                         derived_stat.mem_resident_bytes / 1024);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
-                         stat.vsize / 1024.0);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoReadKbPerSec))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                         derived_stat.io_read_kb_per_sec);
-    if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec))
-      ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                         derived_stat.io_write_kb_per_sec);
+    data_columns_draw(stat, derived_stat);
 
     // Pop gray style before recursing so children aren't affected
     if (should_gray) {
@@ -342,10 +355,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         ImGui::TableNextRow();
         const ProcessDerivedStat &derived_stat =
             state.snapshot.derived_stats.data[line.state_index];
-        const bool is_selected = (my_state.selected_pid == line.pid);
 
-        ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
         {
+          const bool is_selected = (my_state.selected_pid == line.pid);
+          ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
           char label[32];
           snprintf(label, sizeof(label), "%d", line.pid);
           if (ImGui::Selectable(label, is_selected,
@@ -353,107 +366,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
               ImGui::IsItemFocused()) {
             my_state.selected_pid = line.pid;
           }
-          if (ImGui::BeginPopupContextItem(label)) {
-            my_state.selected_pid = line.pid;
-            if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-              copy_process_row(stat, derived_stat);
-            }
-            if (ImGui::MenuItem("Copy All")) {
-              copy_all_processes(ctx.frame_arena, my_state, state.snapshot);
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("CPU Chart")) {
-              cpu_chart_add(view_state.cpu_chart_state, line.pid, stat.comm);
-            }
-            if (ImGui::MenuItem("Memory Chart")) {
-              mem_chart_add(view_state.mem_chart_state, line.pid, stat.comm);
-            }
-            if (ImGui::MenuItem("I/O Chart")) {
-              io_chart_add(view_state.io_chart_state, line.pid, stat.comm);
-            }
-            if (ImGui::MenuItem("Show Loaded Libraries")) {
-              library_viewer_request(view_state.library_viewer_state,
-                                     *view_state.sync, line.pid, stat.comm);
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Kill Process", "Del") ||
-                ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-              if (kill(line.pid, SIGTERM) != 0) {
-                snprintf(my_state.kill_error, sizeof(my_state.kill_error),
-                         "Failed to kill %d: %s", line.pid, strerror(errno));
-              }
-              ImGui::CloseCurrentPopup();
-            }
-            if (ImGui::MenuItem("Force Kill")) {
-              if (kill(line.pid, SIGKILL) != 0) {
-                snprintf(my_state.kill_error, sizeof(my_state.kill_error),
-                         "Failed to kill %d: %s", line.pid, strerror(errno));
-              }
-            }
-            ImGui::EndPopup();
-          }
+          table_context_menu_draw(ctx, view_state, state, my_state, line.pid,
+                                  stat, derived_stat, label);
         }
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Name))
-          ImGui::Text("%s", stat.comm);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_State)) {
-          ImGui::Text("%c", stat.state);
-          if (ImGui::IsItemHovered()) {
-            const char *desc = nullptr;
-            switch (stat.state) {
-            case 'R':
-              desc = "Running";
-              break;
-            case 'S':
-              desc = "Sleeping (interruptible)";
-              break;
-            case 'D':
-              desc = "Disk sleep (uninterruptible)";
-              break;
-            case 'Z':
-              desc = "Zombie";
-              break;
-            case 'T':
-              desc = "Stopped (signal)";
-              break;
-            case 't':
-              desc = "Tracing stop";
-              break;
-            case 'X':
-            case 'x':
-              desc = "Dead";
-              break;
-            case 'I':
-              desc = "Idle";
-              break;
-            }
-            if (desc) ImGui::SetTooltip("%s", desc);
-          }
-        }
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%ld",
-                             stat.num_threads);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                             derived_stat.cpu_user_perc +
-                                 derived_stat.cpu_kernel_perc);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                             derived_stat.cpu_user_perc);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                             derived_stat.cpu_kernel_perc);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
-                             derived_stat.mem_resident_bytes / 1024);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
-                             stat.vsize / 1024.0);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoReadKbPerSec))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                             derived_stat.io_read_kb_per_sec);
-        if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec))
-          ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                             derived_stat.io_write_kb_per_sec);
+        data_columns_draw(stat, derived_stat);
       }
     }
 

@@ -6,8 +6,8 @@
 // implot
 using ImPlotShadedFlags = int;
 
+#include "../src/sources/sync.h"
 #include "state.h"
-#include "sync.h"
 #include "test_helpers.h"
 #include "views/brief_table.h"
 #include "views/common_charts.h"

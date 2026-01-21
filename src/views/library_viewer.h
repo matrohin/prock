@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../sources/sync.h"
 #include "base.h"
-#include "sync.h"
 
 #include "imgui.h"
 

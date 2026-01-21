@@ -1,8 +1,8 @@
 #include "base.h"
-#include "process_stat.h"
 #include "ring_buffer.h"
+#include "sources/process_stat.h"
+#include "sources/sync.h"
 #include "state.h"
-#include "sync.h"
 
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
@@ -21,8 +21,8 @@
 #include <unistd.h>
 
 // UNITY BUILD:
-#include "library_reader.cpp"
-#include "process_stat.cpp"
+#include "sources/library_reader.cpp"
+#include "sources/process_stat.cpp"
 #include "state.cpp"
 #include "views/brief_table.cpp"
 #include "views/brief_table_logic.cpp"
@@ -237,6 +237,9 @@ ShowPerCore=0
 Stacked=0
 )";
 
+constexpr std::chrono::microseconds TARGET_FRAME_TIME =
+    std::chrono::microseconds(16666);
+
 int main(int, char **) {
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) {
@@ -248,6 +251,8 @@ int main(int, char **) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
   glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+
+  glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
   // Create window with graphics context
   float main_scale =
@@ -355,6 +360,8 @@ int main(int, char **) {
   std::thread library_thread{[&sync] { library_reader_thread(sync); }};
 
   while (!glfwWindowShouldClose(window)) {
+    auto frame_start = SteadyClock::now();
+
     if (g_needs_updates > 0) {
       glfwPollEvents();
       --g_needs_updates;
@@ -376,6 +383,8 @@ int main(int, char **) {
     draw(window, io, state, view_state);
 
     glfwSwapBuffers(window);
+
+    std::this_thread::sleep_until(frame_start + TARGET_FRAME_TIME);
   }
 
   // Cleanup

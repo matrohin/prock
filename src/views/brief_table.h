@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../sources/process_stat.h"
 #include "base.h"
-#include "process_stat.h"
 
 #include "imgui.h"
 
