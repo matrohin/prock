@@ -271,6 +271,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   }
   ImGui::InputTextWithHint("##ProcessFilter", "Filter", my_state.filter_text,
                            sizeof(my_state.filter_text));
+  ImGui::SameLine();
+  ImGui::Checkbox("Tree", &my_state.tree_mode);
   ImGuiTextFilter filter;
   if (my_state.filter_text[0] != '\0') {
     strncpy(filter.InputBuf, my_state.filter_text, sizeof(filter.InputBuf));

@@ -83,16 +83,6 @@ void menu_bar_draw(ViewState &view_state) {
     if (ImGui::BeginMenu("View")) {
       ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
 
-      // Process Table options
-      if (ImGui::BeginMenu("Process Table")) {
-        if (ImGui::MenuItem("Tree View", nullptr,
-                            view_state.brief_table_state.tree_mode)) {
-          view_state.brief_table_state.tree_mode =
-              !view_state.brief_table_state.tree_mode;
-        }
-        ImGui::EndMenu();
-      }
-
       // System CPU Chart options
       if (ImGui::BeginMenu("System CPU")) {
         if (ImGui::MenuItem("Per-core", nullptr,
