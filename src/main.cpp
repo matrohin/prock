@@ -70,6 +70,8 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     view_state->preferences_state.dark_mode = (val != 0);
   } else if (sscanf(line, "UpdatePeriod=%f", &fval) == 1) {
     view_state->preferences_state.update_period = fval;
+  } else if (sscanf(line, "TargetFPS=%d", &val) == 1) {
+    view_state->preferences_state.target_fps = val;
   } else if (sscanf(line, "TreeMode=%d", &val) == 1) {
     view_state->brief_table_state.tree_mode = (val != 0);
   }
@@ -94,6 +96,7 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
                static_cast<int>(view_state->preferences_state.dark_mode));
   buf->appendf("UpdatePeriod=%.2f\n",
                view_state->preferences_state.update_period);
+  buf->appendf("TargetFPS=%d\n", view_state->preferences_state.target_fps);
   buf->append("\n");
 
   buf->appendf("[%s][ProcessTable]\n", handler->TypeName);
@@ -237,8 +240,6 @@ ShowPerCore=0
 Stacked=0
 )";
 
-constexpr std::chrono::microseconds TARGET_FRAME_TIME =
-    std::chrono::microseconds(16666);
 
 int main(int, char **) {
   glfwSetErrorCallback(glfw_error_callback);
@@ -384,7 +385,10 @@ int main(int, char **) {
 
     glfwSwapBuffers(window);
 
-    std::this_thread::sleep_until(frame_start + TARGET_FRAME_TIME);
+    const int target_fps = view_state.preferences_state.target_fps;
+    const auto target_frame_time =
+        std::chrono::microseconds(1'000'000 / target_fps);
+    std::this_thread::sleep_until(frame_start + target_frame_time);
   }
 
   // Cleanup

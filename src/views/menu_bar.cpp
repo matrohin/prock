@@ -57,6 +57,15 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     }
 
     ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::Text("Rendering");
+    ImGui::Separator();
+
+    ImGui::SetNextItemWidth(100);
+    ImGui::SliderInt("Target FPS", &prefs.target_fps, 15, 144);
+
+    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 
