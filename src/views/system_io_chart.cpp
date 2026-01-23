@@ -50,11 +50,14 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   }
 
   push_fit_with_padding();
-  if (!my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2) {
+  bool should_fit_y = !my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2;
+  if (should_fit_y) {
     ImPlot::SetNextAxisToFit(ImAxis_Y1);
-    my_state.y_axis_fitted = true;
   }
   if (ImPlot::BeginPlot("##SystemIO", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
+    if (should_fit_y) {
+      my_state.y_axis_fitted = true;
+    }
     ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisFormat(ImAxis_Y1, format_io_rate_mb);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);

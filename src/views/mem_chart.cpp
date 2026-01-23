@@ -62,12 +62,15 @@ void mem_chart_draw(ViewState &view_state) {
     }
 
     push_fit_with_padding();
-    if (!chart.y_axis_fitted && chart.mem_resident_kb.size() >= 2) {
+    bool should_fit_y = !chart.y_axis_fitted && chart.mem_resident_kb.size() >= 2;
+    if (should_fit_y) {
       ImPlot::SetNextAxisToFit(ImAxis_Y1);
-      chart.y_axis_fitted = true;
     }
     if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
+      if (should_fit_y) {
+        chart.y_axis_fitted = true;
+      }
       ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisFormat(ImAxis_Y1, format_memory_kb);
       ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
