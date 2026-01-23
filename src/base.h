@@ -193,6 +193,10 @@ template <class T> struct GrowingArray {
   const T *data() const { return inner.data; }
   size_t size() const { return cur_size; }
   size_t total_byte_size() const { return inner.size * sizeof(T); }
+
+  T last_or(T def) const {
+    return cur_size > 0 ? inner.data[cur_size - 1] : def;
+  }
 };
 
 using Seconds = std::chrono::duration<double, std::chrono::seconds::period>;

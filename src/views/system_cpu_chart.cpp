@@ -1,5 +1,6 @@
 #include "system_cpu_chart.h"
 
+#include "common_implot.h"
 #include "views/common.h"
 #include "views/common_charts.h"
 #include "views/view_state.h"
@@ -71,18 +72,15 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
     view_state.focused_view = eFocusedView_SystemCpuChart;
   }
 
-  ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-  if (my_state.auto_fit) {
-    ImPlot::SetNextAxesToFit();
-    my_state.auto_fit = false;
-  }
+  push_fit_with_padding(my_state.auto_fit);
   if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1),
                         ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", "%", ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-    ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
+
+    setup_time_scale(my_state.times);
 
     if (!my_state.show_per_core) {
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
@@ -155,6 +153,6 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
     ImPlot::EndPlot();
   }
 
-  ImPlot::PopStyleVar();
+  pop_fit_with_padding();
   ImGui::End();
 }

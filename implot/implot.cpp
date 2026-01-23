@@ -1433,7 +1433,11 @@ void ShowAxisContextMenu(ImPlotAxis& axis, ImPlotAxis* equal_axis, bool /*time_a
 
     ImGui::Separator();
 
-    ImGui::CheckboxFlags("Auto-Fit",(unsigned int*)&axis.Flags, ImPlotAxisFlags_AutoFit);
+    if (axis.Scale == ImPlotScale_Time) {
+        ImGui::CheckboxFlags("Auto-Follow",(unsigned int*)&axis.Flags, ImPlotAxisFlags_AutoFit);
+    } else {
+        ImGui::CheckboxFlags("Auto-Fit",(unsigned int*)&axis.Flags, ImPlotAxisFlags_AutoFit);
+    }
     // TODO
     // BeginDisabledControls(axis.IsTime() && time_allowed);
     // ImGui::CheckboxFlags("Log Scale",(unsigned int*)&axis.Flags, ImPlotAxisFlags_LogScale);
@@ -2233,6 +2237,7 @@ void SetupAxisScale(ImAxis idx, ImPlotScale scale) {
         axis.TransformData    = nullptr;
         axis.Locator          = Locator_Time;
         axis.ConstraintRange  = ImPlotRange(IMPLOT_MIN_TIME, IMPLOT_MAX_TIME);
+        axis.ConstraintFit    = ImPlotRange(IMPLOT_MIN_TIME, IMPLOT_MAX_TIME);
         axis.Ticker.Levels    = 2;
         break;
     case ImPlotScale_Log10:
@@ -2241,6 +2246,7 @@ void SetupAxisScale(ImAxis idx, ImPlotScale scale) {
         axis.TransformData    = nullptr;
         axis.Locator          = Locator_Log10;
         axis.ConstraintRange  = ImPlotRange(DBL_MIN, INFINITY);
+        axis.ConstraintFit    = ImPlotRange(DBL_MIN, INFINITY);
         break;
     case ImPlotScale_SymLog:
         axis.TransformForward = TransformForward_SymLog;
@@ -2248,6 +2254,7 @@ void SetupAxisScale(ImAxis idx, ImPlotScale scale) {
         axis.TransformData    = nullptr;
         axis.Locator          = Locator_SymLog;
         axis.ConstraintRange  = ImPlotRange(-INFINITY, INFINITY);
+        axis.ConstraintFit    = ImPlotRange(-INFINITY, INFINITY);
         break;
     default:
         axis.TransformForward = nullptr;
@@ -2255,6 +2262,7 @@ void SetupAxisScale(ImAxis idx, ImPlotScale scale) {
         axis.TransformData    = nullptr;
         axis.Locator          = nullptr;
         axis.ConstraintRange  = ImPlotRange(-INFINITY, INFINITY);
+        axis.ConstraintFit    = ImPlotRange(-INFINITY, INFINITY);
         break;
     }
 }
@@ -2292,6 +2300,17 @@ void SetupAxisZoomConstraints(ImAxis idx, double z_min, double z_max) {
     IM_ASSERT_USER_ERROR(axis.Enabled, "Axis is not enabled! Did you forget to call SetupAxis()?");
     axis.ConstraintZoom.Min = z_min;
     axis.ConstraintZoom.Max = z_max;
+}
+
+IMPLOT_API void SetupAxisFitConstraints(ImAxis idx, double v_min, double v_max) {
+  ImPlotContext& gp = *GImPlot;
+  IM_ASSERT_USER_ERROR(gp.CurrentPlot != nullptr && !gp.CurrentPlot->SetupLocked,
+                      "Setup needs to be called after BeginPlot and before any setup locking functions (e.g. PlotX)!");
+  ImPlotPlot& plot = *gp.CurrentPlot;
+  ImPlotAxis& axis = plot.Axes[idx];
+  IM_ASSERT_USER_ERROR(axis.Enabled, "Axis is not enabled! Did you forget to call SetupAxis()?");
+  axis.ConstraintFit.Min = v_min;
+  axis.ConstraintFit.Max = v_max;
 }
 
 void SetupAxes(const char* x_label, const char* y_label, ImPlotAxisFlags x_flags, ImPlotAxisFlags y_flags) {

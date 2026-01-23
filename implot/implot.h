@@ -757,6 +757,9 @@ IMPLOT_API void SetupAxisLimitsConstraints(ImAxis axis, double v_min, double v_m
 // Sets an axis' zoom constraints.
 IMPLOT_API void SetupAxisZoomConstraints(ImAxis axis, double z_min, double z_max);
 
+// (CUSTOM_EXTENSION) Sets an axis' limits fit constraints.
+IMPLOT_API void SetupAxisFitConstraints(ImAxis axis, double v_min, double v_max);
+
 // Sets the label and/or flags for primary X and Y axes (shorthand for two calls to SetupAxis).
 IMPLOT_API void SetupAxes(const char* x_label, const char* y_label, ImPlotAxisFlags x_flags=0, ImPlotAxisFlags y_flags=0);
 // Sets the primary X and Y axes range limits. If ImPlotCond_Always is used, the axes limits will be locked (shorthand for two calls to SetupAxisLimits).
