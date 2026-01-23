@@ -35,14 +35,30 @@ inline int format_percent(double value, char *buff, int size,
   return snprintf(buff, size, "%.0f%%", value);
 }
 
-// ImPlot axis formatter for KB/s values
-inline int format_kb_per_sec(double value, char *buff, int size,
+// ImPlot axis formatter for I/O rate in KB/s with dynamic units
+inline int format_io_rate_kb(double value, char *buff, int size,
                              void * /*user_data*/) {
-  return snprintf(buff, size, "%.1f KB/s", value);
+  if (value >= 1024.0 * 1024.0) {
+    return snprintf(buff, size, "%.1f GB/s", value / (1024.0 * 1024.0));
+  } else if (value >= 1024.0) {
+    return snprintf(buff, size, "%.1f MB/s", value / 1024.0);
+  } else if (value >= 1.0) {
+    return snprintf(buff, size, "%.1f KB/s", value);
+  } else {
+    return snprintf(buff, size, "%.0f B/s", value * 1024.0);
+  }
 }
 
-// ImPlot axis formatter for MB/s values
-inline int format_mb_per_sec(double value, char *buff, int size,
+// ImPlot axis formatter for I/O rate in MB/s with dynamic units
+inline int format_io_rate_mb(double value, char *buff, int size,
                              void * /*user_data*/) {
-  return snprintf(buff, size, "%.1f MB/s", value);
+  if (value >= 1024.0) {
+    return snprintf(buff, size, "%.1f GB/s", value / 1024.0);
+  } else if (value >= 1.0) {
+    return snprintf(buff, size, "%.1f MB/s", value);
+  } else if (value >= 1.0 / 1024.0) {
+    return snprintf(buff, size, "%.1f KB/s", value * 1024.0);
+  } else {
+    return snprintf(buff, size, "%.0f B/s", value * 1024.0 * 1024.0);
+  }
 }
