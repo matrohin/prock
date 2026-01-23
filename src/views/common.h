@@ -28,3 +28,21 @@ inline int format_memory_bytes(double bytes, char *buff, int size) {
     return snprintf(buff, size, "%.0f B", bytes);
   }
 }
+
+// ImPlot axis formatter for percentage values
+inline int format_percent(double value, char *buff, int size,
+                          void * /*user_data*/) {
+  return snprintf(buff, size, "%.0f%%", value);
+}
+
+// ImPlot axis formatter for KB/s values
+inline int format_kb_per_sec(double value, char *buff, int size,
+                             void * /*user_data*/) {
+  return snprintf(buff, size, "%.1f KB/s", value);
+}
+
+// ImPlot axis formatter for MB/s values
+inline int format_mb_per_sec(double value, char *buff, int size,
+                             void * /*user_data*/) {
+  return snprintf(buff, size, "%.1f MB/s", value);
+}

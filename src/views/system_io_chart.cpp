@@ -58,7 +58,8 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   }
 
   if (ImPlot::BeginPlot("##SystemIO", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
-    ImPlot::SetupAxes("Time", "MB/s", ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, format_mb_per_sec);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);

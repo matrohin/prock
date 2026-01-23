@@ -70,7 +70,8 @@ void cpu_chart_draw(ViewState &view_state) {
     }
     if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
-      ImPlot::SetupAxes("Time", "%", ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxisFormat(ImAxis_Y1, format_percent);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
       ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);

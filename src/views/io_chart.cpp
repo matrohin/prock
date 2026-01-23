@@ -73,7 +73,8 @@ void io_chart_draw(ViewState &view_state) {
     }
     if (ImPlot::BeginPlot("I/O Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
-      ImPlot::SetupAxes("Time", "KB/s", ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxisFormat(ImAxis_Y1, format_kb_per_sec);
       ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
       ImPlot::SetupMouseText(ImPlotLocation_NorthEast);

@@ -75,7 +75,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
   push_fit_with_padding(my_state.auto_fit);
   if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1),
                         ImPlotFlags_Crosshairs)) {
-    ImPlot::SetupAxes("Time", "%", ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, format_percent);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
