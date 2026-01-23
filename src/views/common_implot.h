@@ -3,12 +3,8 @@
 #include "base.h"
 #include "implot.h"
 
-inline void push_fit_with_padding(bool &auto_fit) {
+inline void push_fit_with_padding() {
   ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-  if (auto_fit) {
-    ImPlot::SetNextAxesToFit();
-    auto_fit = false;
-  }
 }
 
 inline void pop_fit_with_padding() {

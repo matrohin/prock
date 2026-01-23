@@ -1,5 +1,6 @@
 #include "mem_chart.h"
 
+#include "common_implot.h"
 #include "views/common.h"
 #include "views/common_charts.h"
 #include "views/view_state.h"
@@ -55,25 +56,24 @@ void mem_chart_draw(ViewState &view_state) {
     bool should_be_opened = true;
     view_state.cascade.next_if_new(chart.label);
 
-    ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-    if (my_state.auto_fit) {
-      ImPlot::SetNextAxesToFit();
-    } else if (!chart.y_axis_fitted && chart.mem_resident_kb.size() >= 1) {
-      ImPlot::SetNextAxisToFit(ImAxis_Y1);
-      chart.y_axis_fitted = true;
-    }
-
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
     if (ImGui::IsWindowFocused()) {
       view_state.focused_view = eFocusedView_MemChart;
+    }
+
+    push_fit_with_padding();
+    if (!chart.y_axis_fitted && chart.mem_resident_kb.size() >= 2) {
+      ImPlot::SetNextAxisToFit(ImAxis_Y1);
+      chart.y_axis_fitted = true;
     }
     if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisFormat(ImAxis_Y1, format_memory_kb);
       ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-      ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
       ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
+
+      setup_time_scale(chart.times);
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("Memory Usage", chart.times.data(),
@@ -87,9 +87,9 @@ void mem_chart_draw(ViewState &view_state) {
 
       ImPlot::EndPlot();
     }
-    ImGui::End();
 
-    ImPlot::PopStyleVar();
+    pop_fit_with_padding();
+    ImGui::End();
 
     // TODO: consider continuing supporting it with a member "opened"
     if (should_be_opened) {
@@ -100,7 +100,6 @@ void mem_chart_draw(ViewState &view_state) {
     }
   }
   my_state.charts.shrink_to(last);
-  my_state.auto_fit = false;
 }
 
 void mem_chart_add(MemChartState &my_state, const int pid, const char *comm) {

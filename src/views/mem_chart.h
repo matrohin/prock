@@ -12,7 +12,6 @@ struct MemChartState {
   BumpArena cur_arena;
   GrowingArray<MemChartData> charts;
   size_t wasted_bytes;
-  bool auto_fit;
 };
 
 void mem_chart_update(MemChartState &my_state, const State &state);

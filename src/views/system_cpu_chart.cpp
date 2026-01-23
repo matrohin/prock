@@ -72,7 +72,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
     view_state.focused_view = eFocusedView_SystemCpuChart;
   }
 
-  push_fit_with_padding(my_state.auto_fit);
+  push_fit_with_padding();
   if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1),
                         ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);

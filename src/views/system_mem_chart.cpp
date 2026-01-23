@@ -1,5 +1,6 @@
 #include "system_mem_chart.h"
 
+#include "common_implot.h"
 #include "views/common.h"
 #include "views/common_charts.h"
 #include "views/view_state.h"
@@ -46,27 +47,24 @@ void system_mem_chart_update(SystemMemChartState &my_state,
 void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   SystemMemChartState &my_state = view_state.system_mem_chart_state;
 
-  ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-  if (my_state.auto_fit) {
-    ImPlot::SetNextAxesToFit();
-    my_state.auto_fit = false;
-  } else if (!my_state.y_axis_fitted && my_state.used.size() >= 1) {
-    ImPlot::SetNextAxisToFit(ImAxis_Y1);
-    my_state.y_axis_fitted = true;
-  }
-
   ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS);
   if (ImGui::IsWindowFocused()) {
     view_state.focused_view = eFocusedView_SystemMemChart;
   }
 
+  push_fit_with_padding();
+  if (!my_state.y_axis_fitted && my_state.used.size() >= 2) {
+    ImPlot::SetNextAxisToFit(ImAxis_Y1);
+    my_state.y_axis_fitted = true;
+  }
   if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1),
                         ImPlotFlags_Crosshairs)) {
     ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisFormat(ImAxis_Y1, format_memory_kb);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-    ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
+
+    setup_time_scale(my_state.times);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
     ImPlot::PlotShaded("Used", my_state.times.data(), my_state.used.data(),
@@ -82,6 +80,6 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
     ImPlot::EndPlot();
   }
 
+  pop_fit_with_padding();
   ImGui::End();
-  ImPlot::PopStyleVar();
 }

@@ -1,5 +1,6 @@
 #include "io_chart.h"
 
+#include "common_implot.h"
 #include "views/common.h"
 #include "views/common_charts.h"
 #include "views/view_state.h"
@@ -59,25 +60,24 @@ void io_chart_draw(ViewState &view_state) {
     bool should_be_opened = true;
     view_state.cascade.next_if_new(chart.label);
 
-    ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-    if (my_state.auto_fit) {
-      ImPlot::SetNextAxesToFit();
-    } else if (!chart.y_axis_fitted && chart.read_kb_per_sec.size() >= 2) {
-      ImPlot::SetNextAxisToFit(ImAxis_Y1);
-      chart.y_axis_fitted = true;
-    }
-
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
     if (ImGui::IsWindowFocused()) {
       view_state.focused_view = eFocusedView_IoChart;
+    }
+
+    push_fit_with_padding();
+    if (!chart.y_axis_fitted && chart.read_kb_per_sec.size() >= 2) {
+      ImPlot::SetNextAxisToFit(ImAxis_Y1);
+      chart.y_axis_fitted = true;
     }
     if (ImPlot::BeginPlot("I/O Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisFormat(ImAxis_Y1, format_io_rate_kb);
       ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-      ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
       ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
+
+      setup_time_scale(chart.times);
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("Read", chart.times.data(),
@@ -96,9 +96,9 @@ void io_chart_draw(ViewState &view_state) {
 
       ImPlot::EndPlot();
     }
-    ImGui::End();
 
-    ImPlot::PopStyleVar();
+    pop_fit_with_padding();
+    ImGui::End();
 
     if (should_be_opened) {
       ++last;
@@ -109,7 +109,6 @@ void io_chart_draw(ViewState &view_state) {
     }
   }
   my_state.charts.shrink_to(last);
-  my_state.auto_fit = false;
 }
 
 void io_chart_add(IoChartState &my_state, const int pid, const char *comm) {

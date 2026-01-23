@@ -12,7 +12,6 @@ struct CpuChartState {
   BumpArena cur_arena;
   GrowingArray<CpuChartData> charts;
   size_t wasted_bytes = 0;
-  bool auto_fit;
 };
 
 void cpu_chart_update(CpuChartState &my_state, const State &state);

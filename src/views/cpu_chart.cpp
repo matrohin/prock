@@ -1,5 +1,6 @@
 #include "cpu_chart.h"
 
+#include "common_implot.h"
 #include "views/common.h"
 #include "views/common_charts.h"
 #include "views/view_state.h"
@@ -64,18 +65,16 @@ void cpu_chart_draw(ViewState &view_state) {
       view_state.focused_view = eFocusedView_CpuChart;
     }
 
-    ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0, 0.5f));
-    if (my_state.auto_fit) {
-      ImPlot::SetNextAxesToFit();
-    }
+    push_fit_with_padding();
     if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisFormat(ImAxis_Y1, format_percent);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
       ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-      ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
       ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
+
+      setup_time_scale(chart.times);
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("CPU Total Usage", chart.times.data(),
@@ -95,8 +94,9 @@ void cpu_chart_draw(ViewState &view_state) {
 
       ImPlot::EndPlot();
     }
+
+    pop_fit_with_padding();
     ImGui::End();
-    ImPlot::PopStyleVar();
 
     if (should_be_opened) {
       ++last;
@@ -107,7 +107,6 @@ void cpu_chart_draw(ViewState &view_state) {
     }
   }
   my_state.charts.shrink_to(last);
-  my_state.auto_fit = false;
 }
 
 void cpu_chart_add(CpuChartState &my_state, const int pid, const char *comm) {

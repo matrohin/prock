@@ -6,7 +6,6 @@ struct SystemMemChartState {
   GrowingArray<double> used; // Used memory in GB (Total - Available)
   size_t wasted_bytes;
   bool y_axis_fitted;
-  bool auto_fit;
 };
 
 void system_mem_chart_update(SystemMemChartState &my_state, const State &state);
