@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstddef>
@@ -18,17 +19,10 @@ constexpr size_t SLAB_SIZE = 4096 * 1024; // 4KB
 struct ArenaSlab {
   void *cur;
   size_t left_size;
+  size_t total_size;
   ArenaSlab *prev;
 
-  static ArenaSlab *create(const size_t size, ArenaSlab *prev = nullptr) {
-    void *slab = calloc(size, 1);
-    void *cur = static_cast<uint8_t *>(slab) + sizeof(ArenaSlab);
-    ArenaSlab *res = static_cast<ArenaSlab *>(slab);
-    res->cur = cur;
-    res->left_size = size - sizeof(ArenaSlab);
-    res->prev = prev;
-    return res;
-  }
+  static ArenaSlab *create(size_t size, ArenaSlab *prev = nullptr);
 
   void *advance(const size_t size) {
     void *res = cur;
@@ -36,7 +30,58 @@ struct ArenaSlab {
     left_size -= size;
     return res;
   }
+
+  void reset() {
+    cur = reinterpret_cast<uint8_t *>(this) + sizeof(ArenaSlab);
+    left_size = total_size - sizeof(ArenaSlab);
+    memset(cur, 0, left_size);
+  }
 };
+
+struct SlabCache {
+  std::atomic<ArenaSlab *> head{nullptr};
+
+  void push(ArenaSlab *slab) {
+    slab->reset();
+    ArenaSlab *old_head = head.load(std::memory_order_relaxed);
+    do {
+      slab->prev = old_head;
+    } while (!head.compare_exchange_weak(old_head, slab,
+                                         std::memory_order_release,
+                                         std::memory_order_relaxed));
+  }
+
+  ArenaSlab *pop() {
+    ArenaSlab *old_head = head.load(std::memory_order_relaxed);
+    do {
+      if (!old_head) return nullptr;
+    } while (!head.compare_exchange_weak(old_head, old_head->prev,
+                                         std::memory_order_acquire,
+                                         std::memory_order_relaxed));
+    return old_head;
+  }
+};
+
+extern SlabCache g_slab_cache;
+
+inline ArenaSlab *ArenaSlab::create(const size_t size, ArenaSlab *prev) {
+  ArenaSlab *res = nullptr;
+
+  if (size == SLAB_SIZE) {
+    res = g_slab_cache.pop();
+  }
+
+  if (!res) {
+    void *slab = calloc(size, 1);
+    res = static_cast<ArenaSlab *>(slab);
+    res->cur = reinterpret_cast<uint8_t *>(slab) + sizeof(ArenaSlab);
+    res->left_size = size - sizeof(ArenaSlab);
+    res->total_size = size;
+  }
+
+  res->prev = prev;
+  return res;
+}
 
 struct BumpArena {
   ArenaSlab *cur_slab = nullptr;
@@ -73,7 +118,11 @@ struct BumpArena {
     cur_slab = nullptr;
     while (it) {
       ArenaSlab *prev = it->prev;
-      free(it);
+      if (it->total_size == SLAB_SIZE) {
+        g_slab_cache.push(it);
+      } else {
+        free(it);
+      }
       it = prev;
     }
   }

@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 // UNITY BUILD:
+#include "base.cpp"
 #include "sources/library_reader.cpp"
 #include "sources/process_stat.cpp"
 #include "state.cpp"
