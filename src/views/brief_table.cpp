@@ -170,12 +170,16 @@ static void data_columns_draw(const ProcessStat &stat,
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc))
     ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
                        derived_stat.cpu_kernel_perc);
-  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes))
-    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
-                       derived_stat.mem_resident_bytes / 1024);
-  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes))
-    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.0f K",
-                       stat.vsize / 1024.0);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes)) {
+    char buf[32];
+    format_memory_bytes(derived_stat.mem_resident_bytes, buf, sizeof(buf));
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%s", buf);
+  }
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes)) {
+    char buf[32];
+    format_memory_bytes(stat.vsize, buf, sizeof(buf));
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%s", buf);
+  }
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoReadKbPerSec))
     ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
                        derived_stat.io_read_kb_per_sec);

@@ -11,10 +11,6 @@
 
 #include <cmath>
 
-namespace {
-constexpr double KB_TO_GB = 1.0 / (1024.0 * 1024.0);
-}
-
 void system_mem_chart_update(SystemMemChartState &my_state,
                              const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
@@ -32,7 +28,7 @@ void system_mem_chart_update(SystemMemChartState &my_state,
   *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
       update_at;
   *my_state.used.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-      used_kb * KB_TO_GB;
+      used_kb;
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -66,7 +62,8 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
   if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1),
                         ImPlotFlags_Crosshairs)) {
-    ImPlot::SetupAxes("Time", "GB", ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, format_memory_kb);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
