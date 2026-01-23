@@ -8,13 +8,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <sys/mman.h>
 #include <utility>
 
 using uint = unsigned int;
 using ulong = unsigned long;
 using ulonglong = unsigned long long;
 
-constexpr size_t SLAB_SIZE = 4096 * 1024; // 4KB
+constexpr size_t SLAB_SIZE = 4096; // 4KB, matches page size
 
 struct ArenaSlab {
   void *cur;
@@ -72,7 +73,9 @@ inline ArenaSlab *ArenaSlab::create(const size_t size, ArenaSlab *prev) {
   }
 
   if (!res) {
-    void *slab = calloc(size, 1);
+    void *slab = mmap(nullptr, size, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (slab == MAP_FAILED) return nullptr;
     res = static_cast<ArenaSlab *>(slab);
     res->cur = reinterpret_cast<uint8_t *>(slab) + sizeof(ArenaSlab);
     res->left_size = size - sizeof(ArenaSlab);
@@ -121,7 +124,7 @@ struct BumpArena {
       if (it->total_size == SLAB_SIZE) {
         g_slab_cache.push(it);
       } else {
-        free(it);
+        munmap(it, it->total_size);
       }
       it = prev;
     }
