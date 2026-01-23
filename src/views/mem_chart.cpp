@@ -9,6 +9,19 @@
 #include "implot.h"
 
 #include <cmath>
+#include <cstdio>
+
+namespace {
+int format_memory_kb(double value, char *buff, int size, void * /*user_data*/) {
+  if (value >= 1024.0 * 1024.0) {
+    return snprintf(buff, size, "%.1f GB", value / (1024.0 * 1024.0));
+  } else if (value >= 1024.0) {
+    return snprintf(buff, size, "%.1f MB", value / 1024.0);
+  } else {
+    return snprintf(buff, size, "%.0f KB", value);
+  }
+}
+} // namespace
 
 void mem_chart_update(MemChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(
@@ -69,7 +82,8 @@ void mem_chart_draw(ViewState &view_state) {
     }
     if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
-      ImPlot::SetupAxes("Time", "KB", ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxisFormat(ImAxis_Y1, format_memory_kb);
       ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
       ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
