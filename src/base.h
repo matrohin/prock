@@ -3,13 +3,11 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <sys/mman.h>
-#include <utility>
 
 using uint = unsigned int;
 using ulong = unsigned long;
@@ -77,7 +75,7 @@ inline ArenaSlab *ArenaSlab::create(const size_t size, ArenaSlab *prev) {
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (slab == MAP_FAILED) return nullptr;
     res = static_cast<ArenaSlab *>(slab);
-    res->cur = reinterpret_cast<uint8_t *>(slab) + sizeof(ArenaSlab);
+    res->cur = static_cast<uint8_t *>(slab) + sizeof(ArenaSlab);
     res->left_size = size - sizeof(ArenaSlab);
     res->total_size = size;
   }

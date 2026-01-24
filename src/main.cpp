@@ -33,6 +33,7 @@
 #include "views/library_viewer.cpp"
 #include "views/mem_chart.cpp"
 #include "views/menu_bar.cpp"
+#include "views/net_chart.cpp"
 #include "views/system_cpu_chart.cpp"
 #include "views/system_io_chart.cpp"
 #include "views/system_mem_chart.cpp"

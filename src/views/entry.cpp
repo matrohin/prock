@@ -5,6 +5,7 @@
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
+#include "views/net_chart.h"
 #include "views/system_cpu_chart.h"
 #include "views/system_io_chart.h"
 #include "views/system_mem_chart.h"
@@ -16,6 +17,7 @@ void views_update(ViewState &view_state, State &state) {
   cpu_chart_update(view_state.cpu_chart_state, state);
   mem_chart_update(view_state.mem_chart_state, state);
   io_chart_update(view_state.io_chart_state, state);
+  net_chart_update(view_state.net_chart_state, state);
   system_cpu_chart_update(view_state.system_cpu_chart_state, state);
   system_mem_chart_update(view_state.system_mem_chart_state, state);
   system_io_chart_update(view_state.system_io_chart_state, state);
@@ -29,6 +31,7 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   cpu_chart_draw(view_state);
   mem_chart_draw(view_state);
   io_chart_draw(view_state);
+  net_chart_draw(view_state);
   system_io_chart_draw(ctx, view_state);
   system_net_chart_draw(ctx, view_state);
   system_mem_chart_draw(ctx, view_state);
