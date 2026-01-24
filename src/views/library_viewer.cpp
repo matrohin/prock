@@ -68,7 +68,8 @@ void sort_libraries(LibraryViewerWindow &win) {
 } // unnamed namespace
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync,
-                            const int pid, const char *comm) {
+                            const int pid, const char *comm,
+                            const ImGuiID dock_id) {
   // Check if window exists for pid - reopen if found
   for (size_t i = 0; i < state.windows.size(); ++i) {
     if (state.windows.data()[i].pid == pid) {
@@ -83,6 +84,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
   win->open = true;
   win->status = eLibraryViewerStatus_Loading;
   win->pid = pid;
+  win->dock_id = dock_id;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->process_name[sizeof(win->process_name) - 1] = '\0';
   win->libraries = {};
@@ -175,7 +177,12 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                "Libraries: %s (%d) - %zu libraries###Libraries%d",
                win.process_name, win.pid, win.libraries.size, win.pid);
     }
-    view_state.cascade.next_if_new(title);
+
+    if (win.dock_id != 0) {
+      ImGui::SetNextWindowDockID(win.dock_id, ImGuiCond_Once);
+    } else {
+      view_state.cascade.next_if_new(title);
+    }
 
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
       if (ImGui::IsWindowFocused()) {
@@ -235,7 +242,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           for (size_t j = 0; j < win.libraries.size; ++j) {
             const LibraryEntry &lib = win.libraries.data[j];
             if (!filter.PassFilter(lib.path)) continue;
-            const bool is_selected = (win.selected_index == static_cast<int>(j));
+            const bool is_selected =
+                (win.selected_index == static_cast<int>(j));
             ImGui::TableNextRow();
 
             // Path with selection

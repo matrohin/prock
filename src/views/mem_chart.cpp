@@ -52,7 +52,11 @@ void mem_chart_draw(ViewState &view_state) {
     }
     MemChartData &chart = my_state.charts.data()[last];
     bool should_be_opened = true;
-    view_state.cascade.next_if_new(chart.label);
+    if (chart.dock_id != 0) {
+      ImGui::SetNextWindowDockID(chart.dock_id, ImGuiCond_Once);
+    } else {
+      view_state.cascade.next_if_new(chart.label);
+    }
 
     ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
     if (ImGui::IsWindowFocused()) {
@@ -100,7 +104,8 @@ void mem_chart_draw(ViewState &view_state) {
   my_state.charts.shrink_to(last);
 }
 
-void mem_chart_add(MemChartState &my_state, const int pid, const char *comm) {
+void mem_chart_add(MemChartState &my_state, const int pid, const char *comm,
+                   const ImGuiID dock_id) {
   if (common_charts_contains_pid(my_state.charts, pid)) {
     return;
   }
@@ -108,6 +113,7 @@ void mem_chart_add(MemChartState &my_state, const int pid, const char *comm) {
   MemChartData &data =
       *my_state.charts.emplace_back(my_state.cur_arena, my_state.wasted_bytes);
   data.pid = pid;
+  data.dock_id = dock_id;
   snprintf(data.label, sizeof(data.label), "Memory Usage: %s (%d)", comm, pid);
 
   common_charts_sort_added(my_state.charts);

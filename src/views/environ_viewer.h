@@ -18,12 +18,16 @@ enum EnvironViewerColumnId {
 };
 
 struct EnvironViewerWindow {
-  bool open;
   EnvironViewerStatus status;
   int pid;
+  ImGuiID dock_id;
   char process_name[64];
-  int error_code;
   char error_message[128];
+  int error_code;
+  int selected_index; // -1 means no selection
+  char filter_text[256];
+
+  bool open;
 
   // Data (owned by EnvironViewerState::cur_arena)
   Array<EnvironEntry> entries;
@@ -31,8 +35,6 @@ struct EnvironViewerWindow {
   // Sorting and selection
   EnvironViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
-  int selected_index; // -1 means no selection
-  char filter_text[256];
 };
 
 struct EnvironViewerState {
@@ -47,6 +49,6 @@ struct ViewState;
 struct State;
 
 void environ_viewer_request(EnvironViewerState &state, Sync &sync, int pid,
-                            const char *comm);
+                            const char *comm, ImGuiID dock_id = 0);
 void environ_viewer_update(EnvironViewerState &state, Sync &sync);
 void environ_viewer_draw(FrameContext &ctx, ViewState &view_state);

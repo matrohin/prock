@@ -19,12 +19,16 @@ enum LibraryViewerColumnId {
 };
 
 struct LibraryViewerWindow {
-  bool open;
   LibraryViewerStatus status;
   int pid;
+  ImGuiID dock_id;
   char process_name[64];
-  int error_code;
   char error_message[128];
+  int error_code;
+  int selected_index; // -1 means no selection
+  char filter_text[256];
+
+  bool open;
 
   // Data (owned by LibraryViewerState::cur_arena)
   Array<LibraryEntry> libraries;
@@ -32,8 +36,6 @@ struct LibraryViewerWindow {
   // Sorting and selection
   LibraryViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
-  int selected_index; // -1 means no selection
-  char filter_text[256];
 };
 
 struct LibraryViewerState {
@@ -48,6 +50,6 @@ struct ViewState;
 struct State;
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid,
-                            const char *comm);
+                            const char *comm, ImGuiID dock_id = 0);
 void library_viewer_update(LibraryViewerState &state, Sync &sync);
 void library_viewer_draw(FrameContext &ctx, ViewState &view_state);

@@ -63,7 +63,8 @@ void sort_environ(EnvironViewerWindow &win) {
 } // unnamed namespace
 
 void environ_viewer_request(EnvironViewerState &state, Sync &sync,
-                            const int pid, const char *comm) {
+                            const int pid, const char *comm,
+                            const ImGuiID dock_id) {
   // Check if window exists for pid - reopen if found
   for (size_t i = 0; i < state.windows.size(); ++i) {
     if (state.windows.data()[i].pid == pid) {
@@ -78,6 +79,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   win->open = true;
   win->status = eEnvironViewerStatus_Loading;
   win->pid = pid;
+  win->dock_id = dock_id;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->process_name[sizeof(win->process_name) - 1] = '\0';
   win->entries = {};
@@ -170,7 +172,12 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                "Environment: %s (%d) - %zu variables###Environ%d",
                win.process_name, win.pid, win.entries.size, win.pid);
     }
-    view_state.cascade.next_if_new(title);
+
+    if (win.dock_id != 0) {
+      ImGui::SetNextWindowDockID(win.dock_id, ImGuiCond_Once);
+    } else {
+      view_state.cascade.next_if_new(title);
+    }
 
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
       if (ImGui::IsWindowFocused()) {

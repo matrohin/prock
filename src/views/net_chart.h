@@ -2,6 +2,7 @@
 
 struct NetChartData {
   int pid;
+  ImGuiID dock_id;
   char label[128];
   GrowingArray<double> times;
   GrowingArray<double> recv_kb_per_sec;
@@ -18,4 +19,5 @@ struct NetChartState {
 void net_chart_update(NetChartState &my_state, const State &state);
 void net_chart_draw(ViewState &view_state);
 
-void net_chart_add(NetChartState &my_state, int pid, const char *comm);
+void net_chart_add(NetChartState &my_state, int pid, const char *comm,
+                   ImGuiID dock_id = 0);

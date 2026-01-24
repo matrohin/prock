@@ -37,6 +37,7 @@
 #include "views/mem_chart.cpp"
 #include "views/menu_bar.cpp"
 #include "views/net_chart.cpp"
+#include "views/process_host.cpp"
 #include "views/system_cpu_chart.cpp"
 #include "views/system_io_chart.cpp"
 #include "views/system_mem_chart.cpp"

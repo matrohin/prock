@@ -23,6 +23,20 @@ const char *PROCESS_COPY_HEADER =
     "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tNet Recv (KB/s)\tNet "
     "Send (KB/s)\n";
 
+static void open_all_windows(const int pid, ViewState &view_state,
+                             const ProcessStat &stat) {
+  const ImGuiID dock_id =
+      process_host_open(view_state.process_host_state, pid, stat.comm);
+  cpu_chart_add(view_state.cpu_chart_state, pid, stat.comm, dock_id);
+  mem_chart_add(view_state.mem_chart_state, pid, stat.comm, dock_id);
+  io_chart_add(view_state.io_chart_state, pid, stat.comm, dock_id);
+  net_chart_add(view_state.net_chart_state, pid, stat.comm, dock_id);
+  library_viewer_request(view_state.library_viewer_state, *view_state.sync, pid,
+                         stat.comm, dock_id);
+  environ_viewer_request(view_state.environ_viewer_state, *view_state.sync, pid,
+                         stat.comm, dock_id);
+}
+
 static void copy_process_row(const ProcessStat &stat,
                              const ProcessDerivedStat &derived) {
   char buf[512];
@@ -52,15 +66,15 @@ static void copy_all_processes(BumpArena &arena,
     const ProcessStat &stat = snapshot.stats.data[line.state_index];
     const ProcessDerivedStat &derived =
         snapshot.derived_stats.data[line.state_index];
-    ptr += snprintf(
-        ptr, buf_size - (ptr - buf),
-        "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%.1f\t%.1f\n",
-        stat.pid, stat.comm, stat.state, stat.num_threads,
-        derived.cpu_user_perc + derived.cpu_kernel_perc, derived.cpu_user_perc,
-        derived.cpu_kernel_perc, derived.mem_resident_bytes / 1024.0,
-        stat.vsize / 1024.0, derived.io_read_kb_per_sec,
-        derived.io_write_kb_per_sec, derived.net_recv_kb_per_sec,
-        derived.net_send_kb_per_sec);
+    ptr += snprintf(ptr, buf_size - (ptr - buf),
+                    "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%."
+                    "1f\t%.1f\t%.1f\n",
+                    stat.pid, stat.comm, stat.state, stat.num_threads,
+                    derived.cpu_user_perc + derived.cpu_kernel_perc,
+                    derived.cpu_user_perc, derived.cpu_kernel_perc,
+                    derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0,
+                    derived.io_read_kb_per_sec, derived.io_write_kb_per_sec,
+                    derived.net_recv_kb_per_sec, derived.net_send_kb_per_sec);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -259,6 +273,12 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
       my_state.selected_pid = n->pid;
     }
 
+    // Double-click to open process detail
+    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) &&
+        !ImGui::IsItemToggledOpen()) {
+      open_all_windows(n->pid, view_state, stat);
+    }
+
     table_context_menu_draw(ctx, view_state, state, my_state, n->pid, stat,
                             derived_stat, label);
 
@@ -377,7 +397,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     } else {
       // Flat mode rendering
       for (size_t i = 0; i < my_state.lines.size; ++i) {
-        BriefTableLine &line = my_state.lines.data[i];
+        const BriefTableLine &line = my_state.lines.data[i];
         // NOLINTNEXTLINE
         const ProcessStat &stat = state.snapshot.stats.data[line.state_index];
 
@@ -398,6 +418,12 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
               ImGui::IsItemFocused()) {
             my_state.selected_pid = line.pid;
           }
+
+          // Double-click to open process detail
+          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+            open_all_windows(line.pid, view_state, stat);
+          }
+
           table_context_menu_draw(ctx, view_state, state, my_state, line.pid,
                                   stat, derived_stat, label);
         }

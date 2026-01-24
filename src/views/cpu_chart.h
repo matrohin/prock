@@ -2,6 +2,7 @@
 
 struct CpuChartData {
   int pid;
+  ImGuiID dock_id;
   char label[128];
   GrowingArray<double> times;
   GrowingArray<double> cpu_kernel_perc;
@@ -17,4 +18,5 @@ struct CpuChartState {
 void cpu_chart_update(CpuChartState &my_state, const State &state);
 void cpu_chart_draw(ViewState &view_state);
 
-void cpu_chart_add(CpuChartState &my_state, int pid, const char *comm);
+void cpu_chart_add(CpuChartState &my_state, int pid, const char *comm,
+                   ImGuiID dock_id = 0);

@@ -8,6 +8,7 @@
 #include "views/mem_chart.h"
 #include "views/menu_bar.h"
 #include "views/net_chart.h"
+#include "views/process_host.h"
 #include "views/system_cpu_chart.h"
 #include "views/system_io_chart.h"
 #include "views/system_mem_chart.h"
@@ -76,6 +77,7 @@ struct ViewState {
 
   PreferencesState preferences_state;
   BriefTableState brief_table_state;
+  ProcessHostState process_host_state;
   CpuChartState cpu_chart_state;
   MemChartState mem_chart_state;
   IoChartState io_chart_state;
