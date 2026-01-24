@@ -68,13 +68,8 @@ void cpu_chart_draw(ViewState &view_state) {
     push_fit_with_padding();
     if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
-      ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
-      ImPlot::SetupAxisFormat(ImAxis_Y1, format_percent);
+      setup_chart(chart.times, format_percent);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
-      ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-      ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
-
-      setup_time_scale(chart.times);
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("Total", chart.times.data(),
@@ -88,8 +83,7 @@ void cpu_chart_draw(ViewState &view_state) {
       ImPlot::PlotLine("Kernel", chart.times.data(),
                        chart.cpu_kernel_perc.data(),
                        chart.cpu_kernel_perc.size());
-      ImPlot::PlotLine("Total", chart.times.data(),
-                       chart.cpu_total_perc.data(),
+      ImPlot::PlotLine("Total", chart.times.data(), chart.cpu_total_perc.data(),
                        chart.cpu_total_perc.size());
 
       ImPlot::EndPlot();

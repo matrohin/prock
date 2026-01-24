@@ -53,7 +53,7 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   }
 
   push_fit_with_padding();
-  bool should_fit_y = !my_state.y_axis_fitted && my_state.used.size() >= 2;
+  const bool should_fit_y = !my_state.y_axis_fitted && my_state.used.size() >= 2;
   if (should_fit_y) {
     ImPlot::SetNextAxisToFit(ImAxis_Y1);
   }
@@ -62,12 +62,7 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
     if (should_fit_y) {
       my_state.y_axis_fitted = true;
     }
-    ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisFormat(ImAxis_Y1, format_memory_kb);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-    ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
-
-    setup_time_scale(my_state.times);
+    setup_chart(my_state.times, format_memory_kb);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
     ImPlot::PlotShaded("Used", my_state.times.data(), my_state.used.data(),

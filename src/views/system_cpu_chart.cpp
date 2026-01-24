@@ -75,13 +75,9 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
   push_fit_with_padding();
   if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1),
                         ImPlotFlags_Crosshairs)) {
-    ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisFormat(ImAxis_Y1, format_percent);
-    ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-    ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
+    setup_chart(my_state.times, format_percent);
 
-    setup_time_scale(my_state.times);
+    ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
 
     if (!my_state.show_per_core) {
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
@@ -106,7 +102,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
                        my_state.total_usage.size());
     } else if (my_state.stacked) {
       // Stacked per-core view
-      size_t n = my_state.core_usage[0].size();
+      const size_t n = my_state.core_usage[0].size();
       if (n > 0 && my_state.num_cores > 0) {
         Array<double> prev = Array<double>::create(ctx.frame_arena, n);
         Array<double> curr = Array<double>::create(ctx.frame_arena, n);
@@ -121,7 +117,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
           char label[16];
           snprintf(label, sizeof(label), "Core %d", i);
 
-          ImPlotItem *item = ImPlot::GetCurrentPlot()->Items.GetItem(label);
+          const ImPlotItem *item = ImPlot::GetCurrentPlot()->Items.GetItem(label);
           const bool is_hidden = item && !item->Show;
 
           if (is_hidden) {

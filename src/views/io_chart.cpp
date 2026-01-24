@@ -66,7 +66,8 @@ void io_chart_draw(ViewState &view_state) {
     }
 
     push_fit_with_padding();
-    bool should_fit_y = !chart.y_axis_fitted && chart.read_kb_per_sec.size() >= 2;
+    const bool should_fit_y =
+        !chart.y_axis_fitted && chart.read_kb_per_sec.size() >= 2;
     if (should_fit_y) {
       ImPlot::SetNextAxisToFit(ImAxis_Y1);
     }
@@ -75,12 +76,8 @@ void io_chart_draw(ViewState &view_state) {
       if (should_fit_y) {
         chart.y_axis_fitted = true;
       }
-      ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
-      ImPlot::SetupAxisFormat(ImAxis_Y1, format_io_rate_kb);
-      ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, HUGE_VAL);
-      ImPlot::SetupMouseText(ImPlotLocation_NorthEast);
 
-      setup_time_scale(chart.times);
+      setup_chart(chart.times, format_io_rate_kb);
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
       ImPlot::PlotShaded("Read", chart.times.data(),
