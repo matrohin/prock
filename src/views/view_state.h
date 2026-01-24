@@ -2,6 +2,7 @@
 
 #include "views/brief_table.h"
 #include "views/cpu_chart.h"
+#include "views/environ_viewer.h"
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
@@ -65,6 +66,7 @@ enum FocusedView {
   eFocusedView_IoChart,
   eFocusedView_NetChart,
   eFocusedView_LibraryViewer,
+  eFocusedView_EnvironViewer,
 };
 
 struct ViewState {
@@ -83,4 +85,5 @@ struct ViewState {
   SystemIoChartState system_io_chart_state;
   SystemNetChartState system_net_chart_state;
   LibraryViewerState library_viewer_state;
+  EnvironViewerState environ_viewer_state;
 };

@@ -1,6 +1,7 @@
 #include "library_reader.h"
 
 #include "base.h"
+#include "environ_reader.h"
 #include "sync.h"
 #include "tracy/Tracy.hpp"
 
@@ -9,6 +10,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <sys/stat.h>
 
@@ -95,18 +97,29 @@ static LibraryResponse read_process_libraries(const int pid) {
 
 void library_reader_thread(Sync &sync) {
   while (!sync.quit.load()) {
-    LibraryRequest request;
+    LibraryRequest lib_request;
+    EnvironRequest env_request;
     {
       std::unique_lock<std::mutex> lock(sync.quit_mutex);
       sync.library_cv.wait(lock, [&] {
-        return sync.quit.load() || sync.library_request_queue.peek(request);
+        return sync.quit.load() ||
+               sync.library_request_queue.peek(lib_request) ||
+               sync.environ_request_queue.peek(env_request);
       });
     }
     if (sync.quit.load()) break;
 
-    while (sync.library_request_queue.pop(request)) {
-      LibraryResponse response = read_process_libraries(request.pid);
+    while (sync.library_request_queue.pop(lib_request)) {
+      LibraryResponse response = read_process_libraries(lib_request.pid);
       if (!sync.library_response_queue.push(response)) {
+        response.owner_arena.destroy();
+      }
+      glfwPostEmptyEvent();
+    }
+
+    while (sync.environ_request_queue.pop(env_request)) {
+      EnvironResponse response = read_process_environ(env_request.pid);
+      if (!sync.environ_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
       glfwPostEmptyEvent();

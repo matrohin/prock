@@ -2,6 +2,7 @@
 
 #include "views/brief_table.h"
 #include "views/cpu_chart.h"
+#include "views/environ_viewer.h"
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
@@ -23,6 +24,7 @@ void views_update(ViewState &view_state, State &state) {
   system_io_chart_update(view_state.system_io_chart_state, state);
   system_net_chart_update(view_state.system_net_chart_state, state);
   library_viewer_update(view_state.library_viewer_state, *view_state.sync);
+  environ_viewer_update(view_state.environ_viewer_state, *view_state.sync);
 }
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
@@ -37,4 +39,5 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   system_mem_chart_draw(ctx, view_state);
   system_cpu_chart_draw(ctx, view_state);
   library_viewer_draw(ctx, view_state);
+  environ_viewer_draw(ctx, view_state);
 }

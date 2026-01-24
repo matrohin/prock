@@ -22,6 +22,7 @@
 
 // UNITY BUILD:
 #include "base.cpp"
+#include "sources/environ_reader.cpp"
 #include "sources/library_reader.cpp"
 #include "sources/process_stat.cpp"
 #include "state.cpp"
@@ -30,6 +31,7 @@
 #include "views/brief_table_logic.cpp"
 #include "views/cpu_chart.cpp"
 #include "views/entry.cpp"
+#include "views/environ_viewer.cpp"
 #include "views/io_chart.cpp"
 #include "views/library_viewer.cpp"
 #include "views/mem_chart.cpp"
@@ -372,8 +374,8 @@ int main(int, char **) {
     }
   }};
 
-  std::thread library_thread{[&sync] {
-    tracy::SetThreadName("library_reader");
+  std::thread proc_reader_thread{[&sync] {
+    tracy::SetThreadName("proc_reader");
     library_reader_thread(sync);
   }};
 
@@ -418,7 +420,7 @@ int main(int, char **) {
   sync.quit_cv.notify_one();
   sync.library_cv.notify_one();
   gathering_thread.join();
-  library_thread.join();
+  proc_reader_thread.join();
 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();

@@ -2,6 +2,7 @@
 
 #include "views/common.h"
 #include "views/cpu_chart.h"
+#include "views/environ_viewer.h"
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
@@ -134,6 +135,10 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     }
     if (ImGui::MenuItem("Show Loaded Libraries")) {
       library_viewer_request(view_state.library_viewer_state, *view_state.sync,
+                             pid, stat.comm);
+    }
+    if (ImGui::MenuItem("Show Environment")) {
+      environ_viewer_request(view_state.environ_viewer_state, *view_state.sync,
                              pid, stat.comm);
     }
     ImGui::Separator();

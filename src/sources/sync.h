@@ -36,6 +36,22 @@ struct LibraryResponse {
   Array<LibraryEntry> libraries;
 };
 
+struct EnvironEntry {
+  char name[256];
+  char value[4096];
+};
+
+struct EnvironRequest {
+  int pid;
+};
+
+struct EnvironResponse {
+  int pid;
+  int error_code; // 0=success, errno otherwise
+  BumpArena owner_arena;
+  Array<EnvironEntry> entries;
+};
+
 struct Sync {
   std::atomic<bool> quit;
   std::atomic<float> update_period{0.5f};  // seconds, 0 = paused
@@ -43,8 +59,10 @@ struct Sync {
   std::condition_variable quit_cv;
   RingBuffer<UpdateSnapshot, 256> update_queue;
 
-  // Library reader thread communication
+  // Library/environ reader thread communication
   RingBuffer<LibraryRequest, 16> library_request_queue;
   RingBuffer<LibraryResponse, 16> library_response_queue;
+  RingBuffer<EnvironRequest, 16> environ_request_queue;
+  RingBuffer<EnvironResponse, 16> environ_response_queue;
   std::condition_variable library_cv;
 };
