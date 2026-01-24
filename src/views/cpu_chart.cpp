@@ -77,18 +77,18 @@ void cpu_chart_draw(ViewState &view_state) {
       setup_time_scale(chart.times);
 
       ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-      ImPlot::PlotShaded("CPU Total Usage", chart.times.data(),
+      ImPlot::PlotShaded("Total", chart.times.data(),
                          chart.cpu_total_perc.data(),
                          chart.cpu_total_perc.size(), 0, CHART_FLAGS);
-      ImPlot::PlotShaded("CPU Kernel Usage", chart.times.data(),
+      ImPlot::PlotShaded("Kernel", chart.times.data(),
                          chart.cpu_kernel_perc.data(),
                          chart.cpu_kernel_perc.size(), 0, CHART_FLAGS);
       ImPlot::PopStyleVar();
 
-      ImPlot::PlotLine("CPU Kernel Usage", chart.times.data(),
+      ImPlot::PlotLine("Kernel", chart.times.data(),
                        chart.cpu_kernel_perc.data(),
                        chart.cpu_kernel_perc.size());
-      ImPlot::PlotLine("CPU Total Usage", chart.times.data(),
+      ImPlot::PlotLine("Total", chart.times.data(),
                        chart.cpu_total_perc.data(),
                        chart.cpu_total_perc.size());
 
