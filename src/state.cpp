@@ -94,8 +94,25 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
         (write_sectors_delta * SECTOR_SIZE * BYTES_TO_MB) / time_delta;
   }
 
-  return StateSnapshot{snapshot.stats,     derived_stats,
-                       snapshot.cpu_stats, cpu_perc,
-                       snapshot.mem_info,  snapshot.disk_io_stats,
-                       disk_io_rate,       snapshot.at};
+  // Compute network I/O rates in MB/s
+  NetIoRate net_io_rate = {};
+  if (time_delta > 0 && old.net_io_stats.bytes_received > 0) {
+    ulonglong recv_delta =
+        snapshot.net_io_stats.bytes_received - old.net_io_stats.bytes_received;
+    ulonglong send_delta = snapshot.net_io_stats.bytes_transmitted -
+                           old.net_io_stats.bytes_transmitted;
+    net_io_rate.recv_mb_per_sec = (recv_delta * BYTES_TO_MB) / time_delta;
+    net_io_rate.send_mb_per_sec = (send_delta * BYTES_TO_MB) / time_delta;
+  }
+
+  return StateSnapshot{snapshot.stats,
+                       derived_stats,
+                       snapshot.cpu_stats,
+                       cpu_perc,
+                       snapshot.mem_info,
+                       snapshot.disk_io_stats,
+                       disk_io_rate,
+                       snapshot.net_io_stats,
+                       net_io_rate,
+                       snapshot.at};
 }

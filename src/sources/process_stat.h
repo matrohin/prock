@@ -170,6 +170,12 @@ struct DiskIoStat {
   ulonglong sectors_written; // Cumulative sectors written
 };
 
+// From /proc/net/dev - aggregated system-wide network I/O
+struct NetIoStat {
+  ulonglong bytes_received;    // Cumulative bytes received
+  ulonglong bytes_transmitted; // Cumulative bytes transmitted
+};
+
 struct GatheringState {
   SteadyTimePoint last_update;
 };

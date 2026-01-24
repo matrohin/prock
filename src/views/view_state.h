@@ -9,6 +9,7 @@
 #include "views/system_cpu_chart.h"
 #include "views/system_io_chart.h"
 #include "views/system_mem_chart.h"
+#include "views/system_net_chart.h"
 
 #include "imgui_internal.h"
 
@@ -57,6 +58,7 @@ enum FocusedView {
   eFocusedView_SystemCpuChart,
   eFocusedView_SystemMemChart,
   eFocusedView_SystemIoChart,
+  eFocusedView_SystemNetChart,
   eFocusedView_CpuChart,
   eFocusedView_MemChart,
   eFocusedView_IoChart,
@@ -76,5 +78,6 @@ struct ViewState {
   SystemCpuChartState system_cpu_chart_state;
   SystemMemChartState system_mem_chart_state;
   SystemIoChartState system_io_chart_state;
+  SystemNetChartState system_net_chart_state;
   LibraryViewerState library_viewer_state;
 };

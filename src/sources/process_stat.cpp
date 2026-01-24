@@ -265,6 +265,52 @@ static DiskIoStat read_disk_io_stats() {
   return result;
 }
 
+// Reads /proc/net/dev for system-wide network I/O stats
+// Aggregates all network interfaces except loopback
+static NetIoStat read_net_io_stats() {
+  FILE *netdev_file = fopen("/proc/net/dev", "r");
+  if (!netdev_file) {
+    return {};
+  }
+
+  NetIoStat result = {};
+  char line[512];
+  // Skip first two header lines
+  fgets(line, sizeof(line), netdev_file);
+  fgets(line, sizeof(line), netdev_file);
+
+  while (fgets(line, sizeof(line), netdev_file)) {
+    char interface[64];
+    ulonglong rx_bytes, rx_packets, rx_errs, rx_drop, rx_fifo, rx_frame;
+    ulonglong rx_compressed, rx_multicast;
+    ulonglong tx_bytes, tx_packets, tx_errs, tx_drop, tx_fifo, tx_colls;
+    ulonglong tx_carrier, tx_compressed;
+
+    // Format: "iface: rx_bytes rx_packets ... tx_bytes tx_packets ..."
+    int parsed = sscanf(
+        line,
+        " %63[^:]: %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu "
+        "%llu %llu %llu %llu",
+        interface, &rx_bytes, &rx_packets, &rx_errs, &rx_drop, &rx_fifo,
+        &rx_frame, &rx_compressed, &rx_multicast, &tx_bytes, &tx_packets,
+        &tx_errs, &tx_drop, &tx_fifo, &tx_colls, &tx_carrier, &tx_compressed);
+    if (parsed < 10) {
+      continue;
+    }
+
+    // Skip loopback interface
+    if (strncmp(interface, "lo", 2) == 0 && interface[2] == '\0') {
+      continue;
+    }
+
+    result.bytes_received += rx_bytes;
+    result.bytes_transmitted += tx_bytes;
+  }
+
+  fclose(netdev_file);
+  return result;
+}
+
 // Reads /proc/meminfo for system-wide memory stats
 // Values are in kB (as reported by /proc/meminfo)
 static MemInfo read_mem_info() {
@@ -308,6 +354,7 @@ void gather(GatheringState &state, Sync &sync) {
   const auto cpu_stats = read_cpu_stats(arena);
   const auto mem_info = read_mem_info();
   const auto disk_io_stats = read_disk_io_stats();
+  const auto net_io_stats = read_net_io_stats();
 
   const float period_secs = sync.update_period.load();
   {
@@ -329,7 +376,7 @@ void gather(GatheringState &state, Sync &sync) {
   const SystemTimePoint system_now = SystemClock::now();
   const bool pushed = sync.update_queue.push(
       UpdateSnapshot{arena, process_stats, cpu_stats, mem_info, disk_io_stats,
-                     state.last_update, system_now});
+                     net_io_stats, state.last_update, system_now});
   if (!pushed) {
     arena.destroy();
   }

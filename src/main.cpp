@@ -36,6 +36,7 @@
 #include "views/system_cpu_chart.cpp"
 #include "views/system_io_chart.cpp"
 #include "views/system_mem_chart.cpp"
+#include "views/system_net_chart.cpp"
 
 // See https://github.com/ocornut/imgui/issues/1206
 // Sometimes imgui needs second frame update to handle some UI without delays.
@@ -222,6 +223,12 @@ Pos=0,19
 Size=640,296
 Collapsed=0
 DockId=0x00000003,1
+
+[Window][System Network]
+Pos=0,19
+Size=640,296
+Collapsed=0
+DockId=0x00000003,2
 
 [Window][###ProcessTable]
 Pos=0,317

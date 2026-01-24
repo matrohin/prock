@@ -32,6 +32,12 @@ struct DiskIoRate {
   double write_mb_per_sec;
 };
 
+// Computed network I/O rates in MB/s
+struct NetIoRate {
+  double recv_mb_per_sec;
+  double send_mb_per_sec;
+};
+
 struct StateSnapshot {
   Array<ProcessStat> stats;
   Array<ProcessDerivedStat> derived_stats;
@@ -40,6 +46,8 @@ struct StateSnapshot {
   MemInfo mem_info;
   DiskIoStat disk_io_stats;
   DiskIoRate disk_io_rate;
+  NetIoStat net_io_stats;
+  NetIoRate net_io_rate;
   SteadyTimePoint at;
 };
 
