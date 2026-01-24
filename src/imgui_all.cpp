@@ -1,3 +1,5 @@
+#define IMGUI_IMPL_OPENGL_ES2
+
 #include "imgui.cpp"
 #include "imgui_draw.cpp"
 #include "imgui_tables.cpp"

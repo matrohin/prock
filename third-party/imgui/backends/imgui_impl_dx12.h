@@ -45,7 +45,7 @@ struct ImGui_ImplDX12_InitInfo
     D3D12_GPU_DESCRIPTOR_HANDLE LegacySingleSrvGpuDescriptor;
 #endif
 
-    ImGui_ImplDX12_InitInfo()   { memset((void*)this, 0, sizeof(*this)); }
+    ImGui_ImplDX12_InitInfo()   { memset(this, 0, sizeof(*this)); }
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
@@ -65,7 +65,7 @@ IMGUI_IMPL_API bool     ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames
 IMGUI_IMPL_API bool     ImGui_ImplDX12_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplDX12_InvalidateDeviceObjects();
 
-// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void     ImGui_ImplDX12_UpdateTexture(ImTextureData* tex);
 
 // [BETA] Selected render state data shared with callbacks.

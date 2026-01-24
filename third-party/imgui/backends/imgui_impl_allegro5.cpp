@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-09-18: Call platform_io.ClearRendererHandlers() and platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-08-12: Inputs: fixed missing support for ImGuiKey_PrintScreen under Windows, as raw Allegro 5 does not receive it.
 //  2025-08-12: Added ImGui_ImplAllegro5_SetDisplay() function to change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
 //  2025-07-07: Fixed texture update broken on some platforms where ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten.
@@ -64,8 +65,8 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_allegro5.h"
-#include <cstring>  // memcpy
-#include <stdint.h> // uint64_t
+#include <stdint.h>     // uint64_t
+#include <cstring>      // memcpy
 
 // Allegro
 #include <allegro5/allegro.h>
@@ -500,6 +501,7 @@ void ImGui_ImplAllegro5_Shutdown()
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
     if (bd->VertexDecl)
@@ -510,6 +512,8 @@ void ImGui_ImplAllegro5_Shutdown()
     io.BackendPlatformName = io.BackendRendererName = nullptr;
     io.BackendPlatformUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_RendererHasTextures);
+    platform_io.ClearRendererHandlers();
+    platform_io.ClearPlatformHandlers();
     IM_DELETE(bd);
 }
 
@@ -521,7 +525,7 @@ void ImGui_ImplAllegro5_SetDisplay(ALLEGRO_DISPLAY* display)
     if (bd->VertexDecl)
     {
         al_destroy_vertex_decl(bd->VertexDecl);
-        bd->VertexDecl = NULL;
+        bd->VertexDecl = nullptr;
     }
 
     if (bd->Display && !bd->VertexDecl)
