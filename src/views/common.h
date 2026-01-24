@@ -66,3 +66,10 @@ inline int format_io_rate_mb(double value, char *buff, int size,
   }
 }
 
+template <class T> void common_views_sort_added(GrowingArray<T> &views) {
+  // FIXME: performance (no need to resort sorted part)
+  std::sort(
+      views.data(), views.data() + views.size(),
+      [](const auto &left, const auto &right) { return left.pid < right.pid; });
+}
+

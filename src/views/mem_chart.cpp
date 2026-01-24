@@ -8,6 +8,7 @@
 #include "state.h"
 
 #include "implot.h"
+#include "tracy/Tracy.hpp"
 
 void mem_chart_update(MemChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(
@@ -43,6 +44,7 @@ void mem_chart_update(MemChartState &my_state, const State &state) {
 }
 
 void mem_chart_draw(ViewState &view_state) {
+  ZoneScoped;
   MemChartState &my_state = view_state.mem_chart_state;
   size_t last = 0;
 
@@ -113,5 +115,5 @@ void mem_chart_add(MemChartState &my_state, const int pid, const char *comm,
   data.flags |= eProcessWindowFlags_RedockRequested;
   snprintf(data.label, sizeof(data.label), "Memory Usage: %s (%d)", comm, pid);
 
-  common_charts_sort_added(my_state.charts);
+  common_views_sort_added(my_state.charts);
 }

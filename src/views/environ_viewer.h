@@ -28,7 +28,6 @@ struct EnvironViewerWindow {
   char filter_text[256];
 
   ProcessWindowFlags flags;
-  bool open;
 
   // Data (owned by EnvironViewerState::cur_arena)
   Array<EnvironEntry> entries;
@@ -42,7 +41,6 @@ struct EnvironViewerState {
   GrowingArray<EnvironViewerWindow> windows;
   BumpArena cur_arena;
   size_t wasted_bytes;
-  int focused_window_pid = -1;
 };
 
 struct FrameContext;

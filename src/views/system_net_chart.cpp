@@ -9,6 +9,7 @@
 
 #include "imgui.h"
 #include "implot.h"
+#include "tracy/Tracy.hpp"
 
 void system_net_chart_update(SystemNetChartState &my_state,
                              const State &state) {
@@ -41,6 +42,7 @@ void system_net_chart_update(SystemNetChartState &my_state,
 }
 
 void system_net_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
+  ZoneScoped;
   SystemNetChartState &my_state = view_state.system_net_chart_state;
 
   if (ImGui::Begin("System Network", nullptr, COMMON_VIEW_FLAGS)) {

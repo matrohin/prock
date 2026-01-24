@@ -10,6 +10,7 @@
 #include "imgui.h"
 #include "implot.h"
 #include "implot_internal.h"
+#include "tracy/Tracy.hpp"
 
 void system_cpu_chart_update(SystemCpuChartState &my_state,
                              const State &state) {
@@ -64,6 +65,7 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
 }
 
 void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
+  ZoneScoped;
   SystemCpuChartState &my_state = view_state.system_cpu_chart_state;
   if (ImGui::Begin("System CPU Usage", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();

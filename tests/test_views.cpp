@@ -11,6 +11,7 @@ using ImPlotShadedFlags = int;
 #include "test_helpers.h"
 #include "views/brief_table.h"
 #include "views/common_charts.h"
+#include "views/common.h"
 
 // ============================================================================
 // binary_search_pid Tests
@@ -317,7 +318,7 @@ TEST_CASE("common_charts_sort_added") {
     charts.emplace_back(arena, wasted)->pid = 20;
     charts.emplace_back(arena, wasted)->pid = 40;
 
-    common_charts_sort_added(charts);
+    common_views_sort_added(charts);
 
     CHECK(charts.data()[0].pid == 10);
     CHECK(charts.data()[1].pid == 20);
@@ -333,7 +334,7 @@ TEST_CASE("common_charts_sort_added") {
     charts.emplace_back(arena, wasted)->pid = 2;
     charts.emplace_back(arena, wasted)->pid = 3;
 
-    common_charts_sort_added(charts);
+    common_views_sort_added(charts);
 
     CHECK(charts.data()[0].pid == 1);
     CHECK(charts.data()[1].pid == 2);

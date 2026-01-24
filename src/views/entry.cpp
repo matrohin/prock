@@ -14,7 +14,10 @@
 #include "views/system_net_chart.h"
 #include "views/view_state.h"
 
+#include "tracy/Tracy.hpp"
+
 void views_update(ViewState &view_state, State &state) {
+  ZoneScoped;
   brief_table_update(view_state.brief_table_state, state);
   cpu_chart_update(view_state.cpu_chart_state, state);
   mem_chart_update(view_state.mem_chart_state, state);
@@ -29,6 +32,7 @@ void views_update(ViewState &view_state, State &state) {
 }
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+  ZoneScoped;
   menu_bar_draw(view_state);
   brief_table_draw(ctx, view_state, state);
   process_host_draw(view_state);

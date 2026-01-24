@@ -154,13 +154,9 @@ static bool update(State &state, ViewState &view_state, Sync &sync) {
   return updated;
 }
 
-static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
-                 ViewState &view_state) {
+static void draw_main_window(const ImGuiIO &io, const State &state,
+                             ViewState &view_state) {
   ZoneScoped;
-  // Start the Dear ImGui frame
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
 
   ImGui::SetNextWindowSize(io.DisplaySize, ImGuiCond_Always);
   ImGui::SetNextWindowPos(ImVec2(0.0, 0.0), ImGuiCond_Always);
@@ -186,8 +182,22 @@ static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
   frame_ctx.frame_arena.destroy();
 
   ImGui::End();
+}
 
-  ImGui::Render();
+static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
+                 ViewState &view_state) {
+  ZoneScoped;
+  // Start the Dear ImGui frame
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  {
+    ZoneScopedN("ImGui frame");
+    ImGui::NewFrame();
+
+    draw_main_window(io, state, view_state);
+
+    ImGui::Render();
+  }
   int display_w = 0;
   int display_h = 0;
   glfwGetFramebufferSize(window, &display_w, &display_h);

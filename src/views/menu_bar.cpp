@@ -4,6 +4,7 @@
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "tracy/Tracy.hpp"
 
 static void apply_theme(const bool dark_mode) {
   if (dark_mode) {
@@ -44,7 +45,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Text("Updates");
     ImGui::Separator();
 
-    int current_idx = 2;  // default to 0.5s
+    int current_idx = 2; // default to 0.5s
     for (int i = 0; i < 6; i++) {
       if (prefs.update_period == PERIODS[i]) {
         current_idx = i;
@@ -80,6 +81,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
 }
 
 void menu_bar_draw(ViewState &view_state) {
+  ZoneScoped;
   if (ImGui::BeginMenuBar()) {
     if (ImGui::BeginMenu("View")) {
       ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
@@ -106,8 +108,8 @@ void menu_bar_draw(ViewState &view_state) {
           view_state.process_host_state.focused_pid > 0;
       if (ImGui::MenuItem("Restore Process Window Layout", nullptr, false,
                           has_focused_process)) {
-        process_host_restore_layout(
-            view_state, view_state.process_host_state.focused_pid);
+        process_host_restore_layout(view_state,
+                                    view_state.process_host_state.focused_pid);
       }
 
       ImGui::PopItemFlag();

@@ -9,6 +9,7 @@
 #include "state.h"
 
 #include "implot.h"
+#include "tracy/Tracy.hpp"
 
 #include <cmath>
 
@@ -50,6 +51,7 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
 }
 
 void cpu_chart_draw(ViewState &view_state) {
+  ZoneScoped;
   CpuChartState &my_state = view_state.cpu_chart_state;
 
   size_t last = 0;
@@ -120,5 +122,5 @@ void cpu_chart_add(CpuChartState &my_state, const int pid, const char *comm,
   data.flags |= eProcessWindowFlags_RedockRequested;
   snprintf(data.label, sizeof(data.label), "CPU Usage: %s (%d)", comm, pid);
 
-  common_charts_sort_added(my_state.charts);
+  common_views_sort_added(my_state.charts);
 }

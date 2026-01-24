@@ -10,6 +10,7 @@
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "tracy/Tracy.hpp"
 
 static void close_docked_children(const ImGuiID dock_id, ViewState &view_state,
                                   const int pid) {
@@ -32,6 +33,11 @@ void process_host_restore_layout(ViewState &view_state, const int pid) {
 
 ImGuiID process_host_open(ProcessHostState &state, const int pid,
                           const char *comm) {
+  for (size_t i = 0; i < state.windows.size(); ++i) {
+    ProcessHostWindow &win = state.windows.data()[i];
+    if (win.pid == pid) return 0;
+  }
+
   ProcessHostWindow *win =
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
   win->pid = pid;
@@ -43,6 +49,7 @@ ImGuiID process_host_open(ProcessHostState &state, const int pid,
 }
 
 void process_host_draw(ViewState &view_state) {
+  ZoneScoped;
   ProcessHostState &my_state = view_state.process_host_state;
   size_t last = 0;
 

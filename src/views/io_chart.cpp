@@ -8,6 +8,7 @@
 #include "state.h"
 
 #include "implot.h"
+#include "tracy/Tracy.hpp"
 
 void io_chart_update(IoChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(
@@ -47,6 +48,7 @@ void io_chart_update(IoChartState &my_state, const State &state) {
 }
 
 void io_chart_draw(ViewState &view_state) {
+  ZoneScoped;
   IoChartState &my_state = view_state.io_chart_state;
   size_t last = 0;
 
@@ -123,5 +125,5 @@ void io_chart_add(IoChartState &my_state, const int pid, const char *comm,
   data.flags |= eProcessWindowFlags_RedockRequested;
   snprintf(data.label, sizeof(data.label), "I/O Usage: %s (%d)", comm, pid);
 
-  common_charts_sort_added(my_state.charts);
+  common_views_sort_added(my_state.charts);
 }

@@ -9,6 +9,7 @@
 
 #include "imgui.h"
 #include "implot.h"
+#include "tracy/Tracy.hpp"
 
 void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
@@ -40,6 +41,7 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
 }
 
 void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
+  ZoneScoped;
   SystemIoChartState &my_state = view_state.system_io_chart_state;
 
   if (ImGui::Begin("System I/O", nullptr, COMMON_VIEW_FLAGS)) {

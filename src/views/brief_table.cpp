@@ -12,6 +12,7 @@
 #include "state.h"
 
 #include "imgui_internal.h"
+#include "tracy/Tracy.hpp"
 
 #include <cerrno>
 #include <chrono>
@@ -27,6 +28,7 @@ static void open_all_windows(const int pid, ViewState &view_state,
                              const ProcessStat &stat) {
   const ImGuiID dock_id =
       process_host_open(view_state.process_host_state, pid, stat.comm);
+  if (dock_id == 0) return;
   cpu_chart_add(view_state.cpu_chart_state, pid, stat.comm, dock_id);
   mem_chart_add(view_state.mem_chart_state, pid, stat.comm, dock_id);
   io_chart_add(view_state.io_chart_state, pid, stat.comm, dock_id);
@@ -299,6 +301,7 @@ static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
 
 void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state) {
+  ZoneScoped;
   BriefTableState &my_state = view_state.brief_table_state;
 
   char title[64];

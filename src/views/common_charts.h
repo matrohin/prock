@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base.h"
+#include "state.h"
 
 #include <algorithm>
 
@@ -35,13 +36,6 @@ bool common_charts_contains_pid(const GrowingArray<T> &charts, int pid) {
     }
   }
   return left < right && data[left].pid == pid;
-}
-
-template <class T> void common_charts_sort_added(GrowingArray<T> &charts) {
-  // FIXME: performance (no need to resort sorted part)
-  std::sort(
-      charts.data(), charts.data() + charts.size(),
-      [](const auto &left, const auto &right) { return left.pid < right.pid; });
 }
 
 template <class T, class F>

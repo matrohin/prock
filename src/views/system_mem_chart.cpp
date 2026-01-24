@@ -9,6 +9,7 @@
 
 #include "imgui.h"
 #include "implot.h"
+#include "tracy/Tracy.hpp"
 
 void system_mem_chart_update(SystemMemChartState &my_state,
                              const State &state) {
@@ -43,6 +44,7 @@ void system_mem_chart_update(SystemMemChartState &my_state,
 }
 
 void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
+  ZoneScoped;
   SystemMemChartState &my_state = view_state.system_mem_chart_state;
 
   if (ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS)) {

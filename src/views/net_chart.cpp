@@ -8,6 +8,7 @@
 #include "state.h"
 
 #include "implot.h"
+#include "tracy/Tracy.hpp"
 
 void net_chart_update(NetChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(
@@ -47,6 +48,7 @@ void net_chart_update(NetChartState &my_state, const State &state) {
 }
 
 void net_chart_draw(ViewState &view_state) {
+  ZoneScoped;
   NetChartState &my_state = view_state.net_chart_state;
   size_t last = 0;
 
@@ -122,5 +124,5 @@ void net_chart_add(NetChartState &my_state, const int pid, const char *comm,
   data.flags |= eProcessWindowFlags_RedockRequested;
   snprintf(data.label, sizeof(data.label), "Network Usage: %s (%d)", comm, pid);
 
-  common_charts_sort_added(my_state.charts);
+  common_views_sort_added(my_state.charts);
 }

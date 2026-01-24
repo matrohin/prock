@@ -4,6 +4,7 @@
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "tracy/Tracy.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -65,35 +66,21 @@ void sort_environ(EnvironViewerWindow &win) {
 void environ_viewer_request(EnvironViewerState &state, Sync &sync,
                             const int pid, const char *comm,
                             const ImGuiID dock_id) {
-  // Check if window exists for pid - reopen if found
-  for (size_t i = 0; i < state.windows.size(); ++i) {
-    if (state.windows.data()[i].pid == pid) {
-      state.windows.data()[i].open = true;
-      return;
-    }
-  }
-
   // Create new window
   EnvironViewerWindow *win =
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
-  win->open = true;
   win->status = eEnvironViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
-  win->process_name[sizeof(win->process_name) - 1] = '\0';
-  win->entries = {};
-  win->error_code = 0;
-  win->error_message[0] = '\0';
-  win->sorted_by = eEnvironViewerColumnId_Name;
-  win->sorted_order = ImGuiSortDirection_Ascending;
   win->selected_index = -1;
-  win->filter_text[0] = '\0';
 
   EnvironRequest req = {pid};
   sync.environ_request_queue.push(req);
   sync.library_cv.notify_one();
+
+  common_views_sort_added(state.windows);
 }
 
 void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
@@ -146,6 +133,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
 }
 
 void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
+  ZoneScoped;
   EnvironViewerState &my_state = view_state.environ_viewer_state;
   size_t last = 0;
 
@@ -154,12 +142,6 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     EnvironViewerWindow &win = my_state.windows.data()[last];
-    if (!win.open) {
-      my_state.wasted_bytes += sizeof(EnvironViewerWindow);
-      my_state.wasted_bytes += win.entries.size * sizeof(EnvironEntry);
-      continue;
-    }
-
     char title[128];
     if (win.status == eEnvironViewerStatus_Error) {
       snprintf(title, sizeof(title), "Environment: %s (%d) - Error###Environ%d",
@@ -177,11 +159,9 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     process_window_handle_docking_and_pos(view_state, win.dock_id,
                                           win.flags, title);
 
-    if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
-      process_window_check_close(win.flags, win.open);
-      if (ImGui::IsWindowFocused()) {
-        my_state.focused_window_pid = win.pid;
-      }
+    bool should_be_opened = true;
+    if (ImGui::Begin(title, &should_be_opened, COMMON_VIEW_FLAGS)) {
+      process_window_check_close(win.flags, should_be_opened);
 
       // Content area - show previous data while loading, or error message
       if (win.status == eEnvironViewerStatus_Error) {
@@ -273,7 +253,12 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       }
     }
     ImGui::End();
-    ++last;
+
+    if (should_be_opened) {
+      ++last;
+    } else {
+      my_state.wasted_bytes += win.entries.size * sizeof(EnvironEntry);
+    }
   }
   my_state.windows.shrink_to(last);
 }
