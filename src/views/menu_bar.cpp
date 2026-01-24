@@ -15,7 +15,11 @@ static void apply_theme(const bool dark_mode) {
 }
 
 static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
-static const char *LABELS[] = {"Paused", "0.25s", "0.5s", "1s", "2s", "5s"};
+static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s", "1s", "2s", "5s"};
+
+static constexpr float ZOOM_SCALES[] = {0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
+static const char *ZOOM_LABELS[] = {"75%", "100%", "125%", "150%", "200%"};
+static constexpr int ZOOM_COUNT = 5;
 
 static void draw_preferences_modal(PreferencesState &prefs) {
   if (prefs.show_preferences_modal) {
@@ -42,6 +46,25 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Spacing();
     ImGui::Spacing();
 
+    ImGui::Text("Display");
+    ImGui::Separator();
+
+    int zoom_idx = 1;  // default to 100%
+    for (int i = 0; i < ZOOM_COUNT; i++) {
+      if (prefs.zoom_scale == ZOOM_SCALES[i]) {
+        zoom_idx = i;
+        break;
+      }
+    }
+
+    ImGui::SetNextItemWidth(100);
+    if (ImGui::Combo("Zoom", &zoom_idx, ZOOM_LABELS, ZOOM_COUNT)) {
+      prefs.zoom_scale = ZOOM_SCALES[zoom_idx];
+    }
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+
     ImGui::Text("Updates");
     ImGui::Separator();
 
@@ -54,7 +77,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     }
 
     ImGui::SetNextItemWidth(100);
-    if (ImGui::Combo("Update Period", &current_idx, LABELS, 6)) {
+    if (ImGui::Combo("Update Period", &current_idx, PERIOD_LABELS, 6)) {
       prefs.update_period = PERIODS[current_idx];
     }
 

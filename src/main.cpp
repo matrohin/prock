@@ -48,6 +48,9 @@
 // Sometimes imgui needs second frame update to handle some UI without delays.
 // Reproducible example: context menus
 static int g_needs_updates = 0;
+static float g_applied_zoom_scale = 1.0f;
+static bool g_applied_dark_mode = false;
+static ImGuiStyle g_base_style;  // Style after theme + monitor scale, before zoom
 void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
                                int /*action*/, int /*mods*/) {
   g_needs_updates = 2;
@@ -82,6 +85,9 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     view_state->preferences_state.target_fps = val;
   } else if (sscanf(line, "TreeMode=%d", &val) == 1) {
     view_state->brief_table_state.tree_mode = (val != 0);
+  } else if (sscanf(line, "ZoomScale=%f", &fval) == 1) {
+    view_state->preferences_state.zoom_scale =
+        fval < 0.75f ? 0.75f : (fval > 2.0f ? 2.0f : fval);
   }
 }
 
@@ -105,6 +111,7 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   buf->appendf("UpdatePeriod=%.2f\n",
                view_state->preferences_state.update_period);
   buf->appendf("TargetFPS=%d\n", view_state->preferences_state.target_fps);
+  buf->appendf("ZoomScale=%.2f\n", view_state->preferences_state.zoom_scale);
   buf->append("\n");
 
   buf->appendf("[%s][ProcessTable]\n", handler->TypeName);
@@ -351,9 +358,18 @@ int main(int, char **) {
     ImGui::StyleColorsLight();
   }
 
+  // Apply monitor scale and save as base style (before zoom)
   ImGuiStyle &style = ImGui::GetStyle();
   style.ScaleAllSizes(main_scale);
   style.WindowRounding = 0.0f;
+  g_base_style = style;
+
+  // Apply zoom on top of base style
+  float zoom = view_state.preferences_state.zoom_scale;
+  style.ScaleAllSizes(zoom);
+  io.FontGlobalScale = zoom;
+  g_applied_zoom_scale = zoom;
+  g_applied_dark_mode = view_state.preferences_state.dark_mode;
 
   ImPlot::GetStyle().UseLocalTime = true;
 
@@ -412,6 +428,29 @@ int main(int, char **) {
     if (sync.update_period.load() != new_period) {
       sync.update_period.store(new_period);
       sync.quit_cv.notify_one();
+    }
+
+    // Update base style colors if theme changed
+    const bool new_dark_mode = view_state.preferences_state.dark_mode;
+    if (g_applied_dark_mode != new_dark_mode) {
+      if (new_dark_mode) {
+        ImGui::StyleColorsDark(&g_base_style);
+      } else {
+        ImGui::StyleColorsLight(&g_base_style);
+      }
+      g_applied_dark_mode = new_dark_mode;
+    }
+
+    // Apply zoom scale if changed
+    const float new_zoom = view_state.preferences_state.zoom_scale;
+    if (g_applied_zoom_scale != new_zoom) {
+      // Restore base style (has monitor scale, no zoom)
+      ImGuiStyle &style = ImGui::GetStyle();
+      style = g_base_style;
+      // Apply zoom on top
+      style.ScaleAllSizes(new_zoom);
+      io.FontGlobalScale = new_zoom;
+      g_applied_zoom_scale = new_zoom;
     }
 
     draw(window, io, state, view_state);
