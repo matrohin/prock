@@ -10,8 +10,6 @@
 #include "imgui.h"
 #include "implot.h"
 
-#include <cmath>
-
 void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   const DiskIoRate &rate = snapshot.disk_io_rate;
@@ -50,7 +48,8 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   }
 
   push_fit_with_padding();
-  bool should_fit_y = !my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2;
+  const bool should_fit_y =
+      !my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2;
   if (should_fit_y) {
     ImPlot::SetNextAxisToFit(ImAxis_Y1);
   }
@@ -60,18 +59,18 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
     }
     setup_chart(my_state.times, format_io_rate_mb);
 
-    ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-    ImPlot::PlotShaded("Read", my_state.times.data(),
+    push_fill_alpha();
+    ImPlot::PlotShaded(TITLE_READ, my_state.times.data(),
                        my_state.read_mb_per_sec.data(),
-                       my_state.read_mb_per_sec.size(), 0, CHART_FLAGS);
-    ImPlot::PlotShaded("Write", my_state.times.data(),
+                       my_state.read_mb_per_sec.size());
+    ImPlot::PlotShaded(TITLE_WRITE, my_state.times.data(),
                        my_state.write_mb_per_sec.data(),
-                       my_state.write_mb_per_sec.size(), 0, CHART_FLAGS);
-    ImPlot::PopStyleVar();
-    ImPlot::PlotLine("Read", my_state.times.data(),
+                       my_state.write_mb_per_sec.size());
+    pop_fill_alpha();
+    ImPlot::PlotLine(TITLE_READ, my_state.times.data(),
                      my_state.read_mb_per_sec.data(),
                      my_state.read_mb_per_sec.size());
-    ImPlot::PlotLine("Write", my_state.times.data(),
+    ImPlot::PlotLine(TITLE_WRITE, my_state.times.data(),
                      my_state.write_mb_per_sec.data(),
                      my_state.write_mb_per_sec.size());
 

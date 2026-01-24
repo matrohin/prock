@@ -158,7 +158,7 @@ static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
   ImGui::SetNextWindowSize(io.DisplaySize, ImGuiCond_Always);
   ImGui::SetNextWindowPos(ImVec2(0.0, 0.0), ImGuiCond_Always);
 
-  ImGuiWindowFlags main_window_flags =
+  constexpr ImGuiWindowFlags main_window_flags =
       ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
@@ -171,7 +171,7 @@ static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
   ImGui::Begin("prock", nullptr, main_window_flags);
   ImGui::PopStyleVar(3);
 
-  ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
+  const ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
   ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
   FrameContext frame_ctx = {};

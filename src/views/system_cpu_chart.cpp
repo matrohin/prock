@@ -11,8 +11,6 @@
 #include "implot.h"
 #include "implot_internal.h"
 
-#include <cmath>
-
 void system_cpu_chart_update(SystemCpuChartState &my_state,
                              const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
@@ -80,24 +78,25 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
 
     if (!my_state.show_per_core) {
-      ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-      ImPlot::PlotShaded("Total", my_state.times.data(),
+      push_fill_alpha();
+      ImPlot::PlotShaded(TITLE_TOTAL, my_state.times.data(),
                          my_state.total_usage.data(),
-                         my_state.total_usage.size(), 0, CHART_FLAGS);
-      ImPlot::PlotShaded("Kernel", my_state.times.data(),
+                         my_state.total_usage.size());
+      ImPlot::PlotShaded(TITLE_KERNEL, my_state.times.data(),
                          my_state.kernel_usage.data(),
-                         my_state.kernel_usage.size(), 0, CHART_FLAGS);
-      ImPlot::PlotShaded("Interrupts", my_state.times.data(),
+                         my_state.kernel_usage.size());
+      ImPlot::PlotShaded(TITLE_INTERRUPTS, my_state.times.data(),
                          my_state.interrupts_usage.data(),
-                         my_state.interrupts_usage.size(), 0, CHART_FLAGS);
-      ImPlot::PopStyleVar();
-      ImPlot::PlotLine("Interrupts", my_state.times.data(),
+                         my_state.interrupts_usage.size());
+      pop_fill_alpha();
+
+      ImPlot::PlotLine(TITLE_INTERRUPTS, my_state.times.data(),
                        my_state.interrupts_usage.data(),
                        my_state.interrupts_usage.size());
-      ImPlot::PlotLine("Kernel", my_state.times.data(),
+      ImPlot::PlotLine(TITLE_KERNEL, my_state.times.data(),
                        my_state.kernel_usage.data(),
                        my_state.kernel_usage.size());
-      ImPlot::PlotLine("Total", my_state.times.data(),
+      ImPlot::PlotLine(TITLE_TOTAL, my_state.times.data(),
                        my_state.total_usage.data(),
                        my_state.total_usage.size());
     } else if (my_state.stacked) {
@@ -108,7 +107,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
         Array<double> curr = Array<double>::create(ctx.frame_arena, n);
         memset(prev.data, 0, n * sizeof(double));
 
-        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.7f);
+        push_fill_alpha(0.7f);
 
         // Call SetupLock manually to get correct GetItem id
         // for the first line if it was hidden by the user:
@@ -117,7 +116,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
           char label[16];
           snprintf(label, sizeof(label), "Core %d", i);
 
-          const ImPlotItem *item = ImPlot::GetCurrentPlot()->Items.GetItem(label);
+          const ImPlotItem *item =
+              ImPlot::GetCurrentPlot()->Items.GetItem(label);
           const bool is_hidden = item && !item->Show;
 
           if (is_hidden) {
@@ -130,11 +130,11 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
           }
 
           ImPlot::PlotShaded(label, my_state.times.data(), prev.data, curr.data,
-                             n, CHART_FLAGS);
+                             n);
 
           std::swap(prev.data, curr.data);
         }
-        ImPlot::PopStyleVar();
+        pop_fill_alpha();
       }
     } else {
       // Separate lines per-core view

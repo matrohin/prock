@@ -71,19 +71,20 @@ void cpu_chart_draw(ViewState &view_state) {
       setup_chart(chart.times, format_percent);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
 
-      ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-      ImPlot::PlotShaded("Total", chart.times.data(),
+      push_fill_alpha();
+      ImPlot::PlotShaded(TITLE_TOTAL, chart.times.data(),
                          chart.cpu_total_perc.data(),
-                         chart.cpu_total_perc.size(), 0, CHART_FLAGS);
-      ImPlot::PlotShaded("Kernel", chart.times.data(),
+                         chart.cpu_total_perc.size());
+      ImPlot::PlotShaded(TITLE_KERNEL, chart.times.data(),
                          chart.cpu_kernel_perc.data(),
-                         chart.cpu_kernel_perc.size(), 0, CHART_FLAGS);
-      ImPlot::PopStyleVar();
+                         chart.cpu_kernel_perc.size());
+      pop_fill_alpha();
 
-      ImPlot::PlotLine("Kernel", chart.times.data(),
+      ImPlot::PlotLine(TITLE_KERNEL, chart.times.data(),
                        chart.cpu_kernel_perc.data(),
                        chart.cpu_kernel_perc.size());
-      ImPlot::PlotLine("Total", chart.times.data(), chart.cpu_total_perc.data(),
+      ImPlot::PlotLine(TITLE_TOTAL, chart.times.data(),
+                       chart.cpu_total_perc.data(),
                        chart.cpu_total_perc.size());
 
       ImPlot::EndPlot();

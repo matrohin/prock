@@ -9,6 +9,11 @@ inline void push_fit_with_padding() {
 
 inline void pop_fit_with_padding() { ImPlot::PopStyleVar(); }
 
+inline void push_fill_alpha(const float val = 0.25f) {
+  ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, val);
+}
+inline void pop_fill_alpha() { ImPlot::PopStyleVar(); }
+
 inline void setup_chart(const GrowingArray<double> &times,
                         const ImPlotFormatter y_formatter) {
   ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);

@@ -4,7 +4,7 @@
 StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
                                     const UpdateSnapshot &snapshot) {
   const StateSnapshot &old = old_state.snapshot;
-  Array<ProcessDerivedStat> derived_stats =
+  const Array<ProcessDerivedStat> derived_stats =
       Array<ProcessDerivedStat>::create(arena, snapshot.stats.size);
 
   const double ticks_passed =
@@ -74,10 +74,10 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
        ++i) {
     const CpuCoreStat &cur = snapshot.cpu_stats.data[i];
     const CpuCoreStat &prev = old.cpu_stats.data[i];
-    ulong total_delta = cur.total() - prev.total();
-    ulong busy_delta = cur.busy() - prev.busy();
-    ulong kernel_delta = cur.kernel() - prev.kernel();
-    ulong interrupts_delta = cur.interrupts() - prev.interrupts();
+    const ulong total_delta = cur.total() - prev.total();
+    const ulong busy_delta = cur.busy() - prev.busy();
+    const ulong kernel_delta = cur.kernel() - prev.kernel();
+    const ulong interrupts_delta = cur.interrupts() - prev.interrupts();
     cpu_perc.total.data[i] =
         total_delta > 0 ? (busy_delta * 100.0) / total_delta : 0.0;
     cpu_perc.kernel.data[i] =
@@ -95,10 +95,11 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   const double time_delta =
       std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
   if (time_delta > 0 && old.disk_io_stats.sectors_read > 0) {
-    ulonglong read_sectors_delta =
+    const ulonglong read_sectors_delta =
         snapshot.disk_io_stats.sectors_read - old.disk_io_stats.sectors_read;
-    ulonglong write_sectors_delta = snapshot.disk_io_stats.sectors_written -
-                                    old.disk_io_stats.sectors_written;
+    const ulonglong write_sectors_delta =
+        snapshot.disk_io_stats.sectors_written -
+        old.disk_io_stats.sectors_written;
     disk_io_rate.read_mb_per_sec =
         (read_sectors_delta * SECTOR_SIZE * BYTES_TO_MB) / time_delta;
     disk_io_rate.write_mb_per_sec =
@@ -108,22 +109,17 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   // Compute network I/O rates in MB/s
   NetIoRate net_io_rate = {};
   if (time_delta > 0 && old.net_io_stats.bytes_received > 0) {
-    ulonglong recv_delta =
+    const ulonglong recv_delta =
         snapshot.net_io_stats.bytes_received - old.net_io_stats.bytes_received;
-    ulonglong send_delta = snapshot.net_io_stats.bytes_transmitted -
-                           old.net_io_stats.bytes_transmitted;
+    const ulonglong send_delta = snapshot.net_io_stats.bytes_transmitted -
+                                 old.net_io_stats.bytes_transmitted;
     net_io_rate.recv_mb_per_sec = (recv_delta * BYTES_TO_MB) / time_delta;
     net_io_rate.send_mb_per_sec = (send_delta * BYTES_TO_MB) / time_delta;
   }
 
-  return StateSnapshot{snapshot.stats,
-                       derived_stats,
-                       snapshot.cpu_stats,
-                       cpu_perc,
-                       snapshot.mem_info,
-                       snapshot.disk_io_stats,
-                       disk_io_rate,
-                       snapshot.net_io_stats,
-                       net_io_rate,
-                       snapshot.at};
+  return StateSnapshot{snapshot.stats,     derived_stats,
+                       snapshot.cpu_stats, cpu_perc,
+                       snapshot.mem_info,  snapshot.disk_io_stats,
+                       disk_io_rate,       snapshot.net_io_stats,
+                       net_io_rate,        snapshot.at};
 }

@@ -10,8 +10,6 @@
 #include "imgui.h"
 #include "implot.h"
 
-#include <cmath>
-
 void system_mem_chart_update(SystemMemChartState &my_state,
                              const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
@@ -24,7 +22,7 @@ void system_mem_chart_update(SystemMemChartState &my_state,
                                state.update_system_time.time_since_epoch())
                                .count();
 
-  ulong used_kb = mem.mem_total - mem.mem_available;
+  const ulong used_kb = mem.mem_total - mem.mem_available;
 
   *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
       update_at;
@@ -53,7 +51,8 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   }
 
   push_fit_with_padding();
-  const bool should_fit_y = !my_state.y_axis_fitted && my_state.used.size() >= 2;
+  const bool should_fit_y =
+      !my_state.y_axis_fitted && my_state.used.size() >= 2;
   if (should_fit_y) {
     ImPlot::SetNextAxisToFit(ImAxis_Y1);
   }
@@ -64,14 +63,15 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
     }
     setup_chart(my_state.times, format_memory_kb);
 
-    ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-    ImPlot::PlotShaded("Used", my_state.times.data(), my_state.used.data(),
-                       my_state.used.size(), 0, CHART_FLAGS);
-    ImPlot::PopStyleVar();
-    ImPlot::PlotLine("Used", my_state.times.data(), my_state.used.data(),
+    push_fill_alpha();
+    ImPlot::PlotShaded(TITLE_USED, my_state.times.data(), my_state.used.data(),
+                       my_state.used.size());
+    pop_fill_alpha();
+
+    ImPlot::PlotLine(TITLE_USED, my_state.times.data(), my_state.used.data(),
                      my_state.used.size());
 
-    if (ImPlot::IsLegendEntryHovered("Used")) {
+    if (ImPlot::IsLegendEntryHovered(TITLE_USED)) {
       ImGui::SetTooltip("Used = MemTotal - MemAvailable");
     }
 

@@ -9,8 +9,6 @@
 
 #include "implot.h"
 
-#include <cmath>
-
 void io_chart_update(IoChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(
                                state.update_system_time.time_since_epoch())
@@ -79,18 +77,19 @@ void io_chart_draw(ViewState &view_state) {
 
       setup_chart(chart.times, format_io_rate_kb);
 
-      ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-      ImPlot::PlotShaded("Read", chart.times.data(),
+      push_fill_alpha();
+      ImPlot::PlotShaded(TITLE_READ, chart.times.data(),
                          chart.read_kb_per_sec.data(),
-                         chart.read_kb_per_sec.size(), 0, CHART_FLAGS);
-      ImPlot::PlotShaded("Write", chart.times.data(),
+                         chart.read_kb_per_sec.size());
+      ImPlot::PlotShaded(TITLE_WRITE, chart.times.data(),
                          chart.write_kb_per_sec.data(),
-                         chart.write_kb_per_sec.size(), 0, CHART_FLAGS);
-      ImPlot::PopStyleVar();
+                         chart.write_kb_per_sec.size());
+      pop_fill_alpha();
 
-      ImPlot::PlotLine("Read", chart.times.data(), chart.read_kb_per_sec.data(),
+      ImPlot::PlotLine(TITLE_READ, chart.times.data(),
+                       chart.read_kb_per_sec.data(),
                        chart.read_kb_per_sec.size());
-      ImPlot::PlotLine("Write", chart.times.data(),
+      ImPlot::PlotLine(TITLE_WRITE, chart.times.data(),
                        chart.write_kb_per_sec.data(),
                        chart.write_kb_per_sec.size());
 

@@ -4,7 +4,21 @@
 
 #include <algorithm>
 
-static constexpr ImPlotShadedFlags CHART_FLAGS = 0;
+// CPU chart titles:
+constexpr const char *TITLE_TOTAL = "Total";
+constexpr const char *TITLE_KERNEL = "Kernel";
+constexpr const char *TITLE_INTERRUPTS = "Interrupts";
+
+// IO chart titles
+constexpr const char *TITLE_READ = "Read";
+constexpr const char *TITLE_WRITE = "Write";
+
+// Memory chart titles
+constexpr const char *TITLE_USED = "Used";
+
+// Net chart titles
+constexpr const char *TITLE_RECV = "Recv";
+constexpr const char *TITLE_SEND = "Send";
 
 template <class T>
 bool common_charts_contains_pid(const GrowingArray<T> &charts, int pid) {

@@ -9,8 +9,6 @@
 
 #include "implot.h"
 
-#include <cmath>
-
 void net_chart_update(NetChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(
                                state.update_system_time.time_since_epoch())
@@ -79,18 +77,20 @@ void net_chart_draw(ViewState &view_state) {
 
       setup_chart(chart.times, format_io_rate_kb);
 
-      ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-      ImPlot::PlotShaded("Recv", chart.times.data(),
+      push_fill_alpha();
+      ImPlot::PlotShaded(TITLE_RECV, chart.times.data(),
                          chart.recv_kb_per_sec.data(),
-                         chart.recv_kb_per_sec.size(), 0, CHART_FLAGS);
-      ImPlot::PlotShaded("Send", chart.times.data(),
+                         chart.recv_kb_per_sec.size());
+      ImPlot::PlotShaded(TITLE_SEND, chart.times.data(),
                          chart.send_kb_per_sec.data(),
-                         chart.send_kb_per_sec.size(), 0, CHART_FLAGS);
-      ImPlot::PopStyleVar();
+                         chart.send_kb_per_sec.size());
+      pop_fill_alpha();
 
-      ImPlot::PlotLine("Recv", chart.times.data(), chart.recv_kb_per_sec.data(),
+      ImPlot::PlotLine(TITLE_RECV, chart.times.data(),
+                       chart.recv_kb_per_sec.data(),
                        chart.recv_kb_per_sec.size());
-      ImPlot::PlotLine("Send", chart.times.data(), chart.send_kb_per_sec.data(),
+      ImPlot::PlotLine(TITLE_SEND, chart.times.data(),
+                       chart.send_kb_per_sec.data(),
                        chart.send_kb_per_sec.size());
 
       ImPlot::EndPlot();
