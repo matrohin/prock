@@ -19,14 +19,33 @@
       "displayName": "Debug Dev",
       "description": "Debug build for development",
       "binaryDir": "${sourceDir}/build/Debug",
-      "inherits": ["common"]
+      "inherits": ["common"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_TRACY": "OFF"
+      }
+    },
+    {
+      "name": "releasy-tracy",
+      "displayName": "Release Tracy",
+      "description": "Release build for development",
+      "binaryDir": "${sourceDir}/build/RelTracy",
+      "inherits": ["common"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "ENABLE_TRACY": "ON"
+      }
     },
     {
       "name": "release",
       "displayName": "Release",
       "description": "Release build for production",
       "binaryDir": "${sourceDir}/build/Release",
-      "inherits": ["common"]
+      "inherits": ["common"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_TRACY": "OFF"
+      }
     }
   ]
 }

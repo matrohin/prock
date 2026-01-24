@@ -2,17 +2,18 @@
 
 #include "base.h"
 #include "sync.h"
+#include "tracy/Tracy.hpp"
 
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
-#include <cstring>
 #include <mutex>
 #include <sys/stat.h>
 
 static LibraryResponse read_process_libraries(const int pid) {
+  ZoneScoped;
   LibraryResponse response = {};
   response.pid = pid;
   response.owner_arena = BumpArena::create();

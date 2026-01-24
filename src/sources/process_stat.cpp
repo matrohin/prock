@@ -1,6 +1,7 @@
 #include "process_stat.h"
 
 #include "sync.h"
+#include "tracy/Tracy.hpp"
 
 #include <algorithm>
 #include <linux/inet_diag.h>
@@ -238,6 +239,7 @@ static bool read_process(const int pid, ProcessStat *out) {
 }
 
 static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
+  ZoneScoped;
   DIR *proc_dir = opendir("/proc");
   if (!proc_dir) {
     printf("Couldn't get a process list");
@@ -315,6 +317,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
 // Reads /proc/stat for system-wide CPU stats
 // Returns array where [0] = total, [1..n] = per-core
 static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
+  ZoneScoped;
   FILE *stat_file = fopen("/proc/stat", "r");
   if (!stat_file) {
     return {};
@@ -358,6 +361,7 @@ static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
 // Reads /proc/diskstats for system-wide disk I/O stats
 // Aggregates all block devices (skips partitions by looking at device naming)
 static DiskIoStat read_disk_io_stats() {
+  ZoneScoped;
   FILE *diskstats_file = fopen("/proc/diskstats", "r");
   if (!diskstats_file) {
     return {};
@@ -423,6 +427,7 @@ static DiskIoStat read_disk_io_stats() {
 // Reads /proc/net/dev for system-wide network I/O stats
 // Aggregates all network interfaces except loopback
 static NetIoStat read_net_io_stats() {
+  ZoneScoped;
   FILE *netdev_file = fopen("/proc/net/dev", "r");
   if (!netdev_file) {
     return {};
@@ -469,6 +474,7 @@ static NetIoStat read_net_io_stats() {
 // Reads /proc/meminfo for system-wide memory stats
 // Values are in kB (as reported by /proc/meminfo)
 static MemInfo read_mem_info() {
+  ZoneScoped;
   FILE *meminfo_file = fopen("/proc/meminfo", "r");
   if (!meminfo_file) {
     return {};
@@ -504,13 +510,6 @@ static MemInfo read_mem_info() {
 }
 
 void gather(GatheringState &state, Sync &sync) {
-  BumpArena arena = BumpArena::create();
-  const auto process_stats = read_all_processes(arena);
-  const auto cpu_stats = read_cpu_stats(arena);
-  const auto mem_info = read_mem_info();
-  const auto disk_io_stats = read_disk_io_stats();
-  const auto net_io_stats = read_net_io_stats();
-
   const float period_secs = sync.update_period.load();
   {
     std::unique_lock<std::mutex> lock(sync.quit_mutex);
@@ -524,9 +523,17 @@ void gather(GatheringState &state, Sync &sync) {
     }
   }
   if (sync.quit.load()) {
-    arena.destroy();
     return;
   }
+
+  ZoneScoped;
+  BumpArena arena = BumpArena::create();
+  const auto process_stats = read_all_processes(arena);
+  const auto cpu_stats = read_cpu_stats(arena);
+  const auto mem_info = read_mem_info();
+  const auto disk_io_stats = read_disk_io_stats();
+  const auto net_io_stats = read_net_io_stats();
+
   state.last_update = SteadyClock::now();
   const SystemTimePoint system_now = SystemClock::now();
   const bool pushed = sync.update_queue.push(

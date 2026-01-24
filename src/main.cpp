@@ -25,6 +25,7 @@
 #include "sources/library_reader.cpp"
 #include "sources/process_stat.cpp"
 #include "state.cpp"
+#include "tracy/Tracy.hpp"
 #include "views/brief_table.cpp"
 #include "views/brief_table_logic.cpp"
 #include "views/cpu_chart.cpp"
@@ -139,6 +140,7 @@ static void state_update(State &state, ViewState &view_state,
 }
 
 static bool update(State &state, ViewState &view_state, Sync &sync) {
+  ZoneScoped;
   UpdateSnapshot snapshot = {};
   bool updated = false;
   while (sync.update_queue.pop(snapshot)) {
@@ -150,6 +152,7 @@ static bool update(State &state, ViewState &view_state, Sync &sync) {
 
 static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
                  ViewState &view_state) {
+  ZoneScoped;
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -249,6 +252,7 @@ ShowPerCore=0
 Stacked=0
 )";
 
+constexpr const char *MAIN_FRAME = "main_frame";
 
 int main(int, char **) {
   glfwSetErrorCallback(glfw_error_callback);
@@ -360,6 +364,7 @@ int main(int, char **) {
   sync.update_period.store(view_state.preferences_state.update_period);
 
   std::thread gathering_thread{[&sync] {
+    tracy::SetThreadName("gathering");
     GatheringState gathering_state = {};
     while (!sync.quit.load()) {
       gather(gathering_state, sync);
@@ -367,9 +372,13 @@ int main(int, char **) {
     }
   }};
 
-  std::thread library_thread{[&sync] { library_reader_thread(sync); }};
+  std::thread library_thread{[&sync] {
+    tracy::SetThreadName("library_reader");
+    library_reader_thread(sync);
+  }};
 
   while (!glfwWindowShouldClose(window)) {
+    FrameMark;
     auto frame_start = SteadyClock::now();
 
     if (g_needs_updates > 0) {
@@ -379,6 +388,7 @@ int main(int, char **) {
       glfwWaitEvents();
     }
 
+    FrameMarkStart(MAIN_FRAME);
     if (update(state, view_state, sync)) {
       g_needs_updates = 2;
     }
@@ -393,11 +403,14 @@ int main(int, char **) {
     draw(window, io, state, view_state);
 
     glfwSwapBuffers(window);
+    FrameMarkEnd(MAIN_FRAME);
 
-    const int target_fps = view_state.preferences_state.target_fps;
-    const auto target_frame_time =
-        std::chrono::microseconds(1'000'000 / target_fps);
-    std::this_thread::sleep_until(frame_start + target_frame_time);
+    {
+      const int target_fps = view_state.preferences_state.target_fps;
+      const auto target_frame_time =
+          std::chrono::microseconds(1'000'000 / target_fps);
+      std::this_thread::sleep_until(frame_start + target_frame_time);
+    }
   }
 
   // Cleanup
