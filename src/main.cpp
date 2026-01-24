@@ -50,6 +50,7 @@
 static int g_needs_updates = 0;
 static float g_applied_zoom_scale = 1.0f;
 static bool g_applied_dark_mode = false;
+static float g_monitor_scale = 1.0f;
 static ImGuiStyle g_base_style;  // Style after theme + monitor scale, before zoom
 void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
                                int /*action*/, int /*mods*/) {
@@ -88,6 +89,12 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
   } else if (sscanf(line, "ZoomScale=%f", &fval) == 1) {
     view_state->preferences_state.zoom_scale =
         fval < 0.75f ? 0.75f : (fval > 2.0f ? 2.0f : fval);
+  } else if (strncmp(line, "FontPath=", 9) == 0) {
+    const char *path = line + 9;
+    size_t len = strlen(path);
+    if (len < sizeof(view_state->preferences_state.font_path)) {
+      memcpy(view_state->preferences_state.font_path, path, len + 1);
+    }
   }
 }
 
@@ -112,6 +119,9 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
                view_state->preferences_state.update_period);
   buf->appendf("TargetFPS=%d\n", view_state->preferences_state.target_fps);
   buf->appendf("ZoomScale=%.2f\n", view_state->preferences_state.zoom_scale);
+  if (view_state->preferences_state.font_path[0] != '\0') {
+    buf->appendf("FontPath=%s\n", view_state->preferences_state.font_path);
+  }
   buf->append("\n");
 
   buf->appendf("[%s][ProcessTable]\n", handler->TypeName);
@@ -122,6 +132,22 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
 
 static void glfw_error_callback(const int error, const char *description) {
   fprintf(stderr, "GLFW Error: %x: %s\n", error, description);
+}
+
+static constexpr float BASE_FONT_SIZE = 15.0f;
+
+static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
+  io.Fonts->Clear();
+  if (font_path && font_path[0] != '\0') {
+    ImFont *font =
+        io.Fonts->AddFontFromFileTTF(font_path, BASE_FONT_SIZE * scale);
+    if (!font) {
+      fprintf(stderr, "Failed to load font: %s, using default\n", font_path);
+      io.Fonts->AddFontDefault();
+    }
+  } else {
+    io.Fonts->AddFontDefault();
+  }
 }
 
 static bool state_init(State &state) {
@@ -292,6 +318,7 @@ int main(int, char **) {
   // Create window with graphics context
   float main_scale =
       ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
+  g_monitor_scale = main_scale;
   GLFWwindow *window = glfwCreateWindow(static_cast<int>(1280 * main_scale),
                                         static_cast<int>(800 * main_scale),
                                         "Prock", nullptr, nullptr);
@@ -373,9 +400,8 @@ int main(int, char **) {
 
   ImPlot::GetStyle().UseLocalTime = true;
 
-  /// Experimental flags:
-  // io.ConfigDpiScaleFonts = true;
-  // io.ConfigDpiScaleViewports = true;
+  // Load fonts (before OpenGL backend init)
+  load_fonts(io, view_state.preferences_state.font_path, main_scale);
 
   // Setup Platform/Renderer backends
   glfwSetMouseButtonCallback(window, maintaining_second_update);
@@ -451,6 +477,12 @@ int main(int, char **) {
       style.ScaleAllSizes(new_zoom);
       io.FontGlobalScale = new_zoom;
       g_applied_zoom_scale = new_zoom;
+    }
+
+    // Reload font if requested
+    if (view_state.preferences_state.font_needs_reload) {
+      view_state.preferences_state.font_needs_reload = false;
+      load_fonts(io, view_state.preferences_state.font_path, g_monitor_scale);
     }
 
     draw(window, io, state, view_state);
