@@ -132,6 +132,10 @@ struct ProcessStat {
   // From /proc/[pid]/io
   ulonglong io_read_bytes;  // Actual bytes read from storage
   ulonglong io_write_bytes; // Actual bytes written to storage
+
+  // Network I/O (aggregated from socket stats via netlink INET_DIAG)
+  ulonglong net_recv_bytes;
+  ulonglong net_send_bytes;
 };
 
 // From /proc/stat - all values are cumulative ticks

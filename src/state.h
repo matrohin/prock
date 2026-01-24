@@ -17,6 +17,8 @@ struct ProcessDerivedStat {
   double mem_resident_bytes;
   double io_read_kb_per_sec;
   double io_write_kb_per_sec;
+  double net_recv_kb_per_sec;
+  double net_send_kb_per_sec;
 };
 
 // Computed CPU percentages: [0]=aggregate, [1..n]=per-core

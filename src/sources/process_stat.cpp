@@ -3,6 +3,129 @@
 #include "sync.h"
 
 #include <algorithm>
+#include <linux/inet_diag.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <linux/sock_diag.h>
+#include <linux/tcp.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+// Socket inode with network byte counts
+struct SocketNetStats {
+  unsigned long inode;
+  ulonglong recv_bytes;
+  ulonglong send_bytes;
+};
+
+// Query socket stats via netlink INET_DIAG for TCP sockets
+// Returns array sorted by inode for binary search
+static Array<SocketNetStats> query_socket_stats_netlink(BumpArena &arena) {
+  GrowingArray<SocketNetStats> result = {};
+  size_t wasted = 0;
+
+  const int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_SOCK_DIAG);
+  if (fd < 0) {
+    return {};
+  }
+
+  // Query for TCP sockets (AF_INET and AF_INET6)
+  int families[] = {AF_INET, AF_INET6};
+  for (const int family : families) {
+    struct {
+      nlmsghdr nlh;
+      inet_diag_req_v2 req;
+    } request = {};
+
+    request.nlh.nlmsg_len = sizeof(request);
+    request.nlh.nlmsg_type = SOCK_DIAG_BY_FAMILY;
+    request.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    request.req.sdiag_family = static_cast<__u8>(family);
+    request.req.sdiag_protocol = IPPROTO_TCP;
+    request.req.idiag_states = ~0U; // All states
+    request.req.idiag_ext |= (1 << (INET_DIAG_INFO - 1));
+
+    if (send(fd, &request, sizeof(request), 0) < 0) {
+      continue;
+    }
+
+    bool done = false;
+    char buf[16384];
+    while (!done) {
+      ssize_t len = recv(fd, buf, sizeof(buf), 0);
+      if (len <= 0) break;
+
+      for (nlmsghdr *h = reinterpret_cast<nlmsghdr *>(buf); NLMSG_OK(h, len);
+           h = NLMSG_NEXT(h, len)) {
+        if (h->nlmsg_type == NLMSG_DONE || h->nlmsg_type == NLMSG_ERROR) {
+          done = true;
+          break;
+        }
+
+        inet_diag_msg *diag = static_cast<inet_diag_msg *>(NLMSG_DATA(h));
+        const unsigned long inode = diag->idiag_inode;
+        if (inode == 0) continue;
+
+        // Parse response attributes for TCP_INFO
+        unsigned int rta_len = h->nlmsg_len - NLMSG_LENGTH(sizeof(*diag));
+        for (rtattr *attr = reinterpret_cast<rtattr *>(diag + 1);
+             RTA_OK(attr, rta_len); attr = RTA_NEXT(attr, rta_len)) {
+          if (attr->rta_type == INET_DIAG_INFO) {
+            const tcp_info *info = static_cast<tcp_info *>(RTA_DATA(attr));
+            SocketNetStats *stats = result.emplace_back(arena, wasted);
+            stats->inode = inode;
+            stats->recv_bytes = info->tcpi_bytes_received;
+            stats->send_bytes = info->tcpi_bytes_acked;
+          }
+        }
+      }
+    }
+  }
+
+  close(fd);
+
+  // Sort by inode for binary search
+  std::sort(result.data(), result.data() + result.size(),
+            [](const SocketNetStats &a, const SocketNetStats &b) {
+              return a.inode < b.inode;
+            });
+
+  return {result.data(), result.size()};
+}
+
+// Read socket inodes owned by a process from /proc/[pid]/fd/
+static void read_process_socket_inodes(const int pid,
+                                       GrowingArray<unsigned long> &out,
+                                       BumpArena &arena) {
+  char fd_path[64];
+  snprintf(fd_path, sizeof(fd_path), "/proc/%d/fd", pid);
+
+  DIR *fd_dir = opendir(fd_path);
+  if (!fd_dir) return;
+
+  size_t wasted = 0;
+  char link_buf[128];
+  while (dirent *entry = readdir(fd_dir)) {
+    if (entry->d_type != DT_LNK) continue;
+
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s/%s", fd_path, entry->d_name);
+
+    const ssize_t link_len = readlink(full_path, link_buf, sizeof(link_buf) - 1);
+    if (link_len <= 0) continue;
+    link_buf[link_len] = '\0';
+
+    // Check for socket:[inode] pattern
+    if (strncmp(link_buf, "socket:[", 8) == 0) {
+      const unsigned long inode = strtoul(link_buf + 8, nullptr, 10);
+      if (inode > 0) {
+        *out.emplace_back(arena, wasted) = inode;
+      }
+    }
+  }
+  closedir(fd_dir);
+}
 
 static bool read_process(const int pid, ProcessStat *out) {
   constexpr size_t PATH_BUF_SIZE = 64;
@@ -24,6 +147,8 @@ static bool read_process(const int pid, ProcessStat *out) {
   stat.comm[0] = '\0';
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
+  stat.net_recv_bytes = 0;
+  stat.net_send_bytes = 0;
 
   FILE *stat_file = fopen(stat_filename, "r");
   FILE *statm_file = fopen(statm_filename, "r");
@@ -137,7 +262,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
 
   Array<ProcessStat> result =
       Array<ProcessStat>::create(result_arena, pids.size);
-  LinkedNode<long> *it = pids.head;
+  const LinkedNode<long> *it = pids.head;
   ProcessStat *it_result = result.data;
   while (it) {
     if (read_process(it->value, it_result)) {
@@ -153,6 +278,36 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
             [](const ProcessStat &left, const ProcessStat &right) {
               return left.pid < right.pid;
             });
+
+  // Query socket stats from netlink and distribute to processes
+  const Array<SocketNetStats> socket_stats =
+      query_socket_stats_netlink(result_arena);
+  if (socket_stats.size > 0) {
+    GrowingArray<unsigned long> inodes = {};
+    for (size_t i = 0; i < result.size; ++i) {
+      ProcessStat &stat = result.data[i];
+      inodes.shrink_to(0);
+      read_process_socket_inodes(stat.pid, inodes, result_arena);
+
+      ulonglong total_recv = 0;
+      ulonglong total_send = 0;
+      for (size_t j = 0; j < inodes.size(); ++j) {
+        const unsigned long inode = inodes.data()[j];
+        const size_t found_inode = bin_search_exact(
+            socket_stats.size,
+            [&socket_stats](const size_t mid) {
+              return socket_stats.data[mid].inode;
+            },
+            inode);
+        if (found_inode < socket_stats.size) {
+          total_recv += socket_stats.data[found_inode].recv_bytes;
+          total_send += socket_stats.data[found_inode].send_bytes;
+        }
+      }
+      stat.net_recv_bytes = total_recv;
+      stat.net_send_bytes = total_send;
+    }
+  }
 
   return result;
 }

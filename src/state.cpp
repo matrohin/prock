@@ -49,6 +49,17 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
               (new_stat.io_write_bytes - old_stat.io_write_bytes) / 1024.0 /
               time_delta_secs;
         }
+        // Compute network I/O rates in KB/s
+        if (new_stat.net_recv_bytes >= old_stat.net_recv_bytes) {
+          result.net_recv_kb_per_sec =
+              (new_stat.net_recv_bytes - old_stat.net_recv_bytes) / 1024.0 /
+              time_delta_secs;
+        }
+        if (new_stat.net_send_bytes >= old_stat.net_send_bytes) {
+          result.net_send_kb_per_sec =
+              (new_stat.net_send_bytes - old_stat.net_send_bytes) / 1024.0 /
+              time_delta_secs;
+        }
       }
     }
   }

@@ -18,18 +18,21 @@
 
 const char *PROCESS_COPY_HEADER =
     "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
-    "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\n";
+    "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tNet Recv (KB/s)\tNet "
+    "Send (KB/s)\n";
 
 static void copy_process_row(const ProcessStat &stat,
                              const ProcessDerivedStat &derived) {
   char buf[512];
   snprintf(buf, sizeof(buf),
-           "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f",
+           "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%.1f\t"
+           "%.1f",
            PROCESS_COPY_HEADER, stat.pid, stat.comm, stat.state,
            stat.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
            derived.cpu_user_perc, derived.cpu_kernel_perc,
            derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0,
-           derived.io_read_kb_per_sec, derived.io_write_kb_per_sec);
+           derived.io_read_kb_per_sec, derived.io_write_kb_per_sec,
+           derived.net_recv_kb_per_sec, derived.net_send_kb_per_sec);
   ImGui::SetClipboardText(buf);
 }
 
@@ -47,14 +50,15 @@ static void copy_all_processes(BumpArena &arena,
     const ProcessStat &stat = snapshot.stats.data[line.state_index];
     const ProcessDerivedStat &derived =
         snapshot.derived_stats.data[line.state_index];
-    ptr +=
-        snprintf(ptr, buf_size - (ptr - buf),
-                 "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\n",
-                 stat.pid, stat.comm, stat.state, stat.num_threads,
-                 derived.cpu_user_perc + derived.cpu_kernel_perc,
-                 derived.cpu_user_perc, derived.cpu_kernel_perc,
-                 derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0,
-                 derived.io_read_kb_per_sec, derived.io_write_kb_per_sec);
+    ptr += snprintf(
+        ptr, buf_size - (ptr - buf),
+        "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%.1f\t%.1f\n",
+        stat.pid, stat.comm, stat.state, stat.num_threads,
+        derived.cpu_user_perc + derived.cpu_kernel_perc, derived.cpu_user_perc,
+        derived.cpu_kernel_perc, derived.mem_resident_bytes / 1024.0,
+        stat.vsize / 1024.0, derived.io_read_kb_per_sec,
+        derived.io_write_kb_per_sec, derived.net_recv_kb_per_sec,
+        derived.net_send_kb_per_sec);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -186,6 +190,12 @@ static void data_columns_draw(const ProcessStat &stat,
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec))
     ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
                        derived_stat.io_write_kb_per_sec);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_NetRecvKbPerSec))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
+                       derived_stat.net_recv_kb_per_sec);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_NetSendKbPerSec))
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
+                       derived_stat.net_send_kb_per_sec);
 }
 
 static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
@@ -324,6 +334,14 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_DefaultHide,
                             0.0f, eBriefTableColumnId_IoWriteKbPerSec);
+    ImGui::TableSetupColumn("Net Recv (KB/s)",
+                            ImGuiTableColumnFlags_PreferSortDescending |
+                                ImGuiTableColumnFlags_DefaultHide,
+                            0.0f, eBriefTableColumnId_NetRecvKbPerSec);
+    ImGui::TableSetupColumn("Net Send (KB/s)",
+                            ImGuiTableColumnFlags_PreferSortDescending |
+                                ImGuiTableColumnFlags_DefaultHide,
+                            0.0f, eBriefTableColumnId_NetSendKbPerSec);
     ImGui::TableHeadersRow();
 
     if (ImGuiTableSortSpecs *sort_specs = ImGui::TableGetSortSpecs()) {
