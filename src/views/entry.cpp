@@ -12,6 +12,7 @@
 #include "views/system_io_chart.h"
 #include "views/system_mem_chart.h"
 #include "views/system_net_chart.h"
+#include "views/threads_viewer.h"
 #include "views/view_state.h"
 
 #include "tracy/Tracy.hpp"
@@ -29,6 +30,7 @@ void views_update(ViewState &view_state, State &state) {
   system_net_chart_update(view_state.system_net_chart_state, state);
   library_viewer_update(view_state.library_viewer_state, *view_state.sync);
   environ_viewer_update(view_state.environ_viewer_state, *view_state.sync);
+  threads_viewer_update(view_state.threads_viewer_state, state, *view_state.sync);
 }
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
@@ -46,4 +48,11 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   system_cpu_chart_draw(ctx, view_state);
   library_viewer_draw(ctx, view_state);
   environ_viewer_draw(ctx, view_state);
+  threads_viewer_draw(ctx, view_state, state);
+}
+
+void views_process_thread_snapshots(ViewState &view_state, const State &state,
+                                    const UpdateSnapshot &snapshot) {
+  threads_viewer_process_snapshot(view_state.threads_viewer_state, state,
+                                  snapshot.thread_snapshots);
 }

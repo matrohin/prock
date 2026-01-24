@@ -7,6 +7,13 @@
 #include <condition_variable>
 #include <mutex>
 
+constexpr int MAX_WATCHED_PIDS = 16;
+
+struct ThreadSnapshot {
+  int pid;
+  Array<ProcessStat> threads;  // Reuse ProcessStat - same format for threads
+};
+
 struct UpdateSnapshot {
   BumpArena owner_arena;
   Array<ProcessStat> stats;
@@ -14,6 +21,7 @@ struct UpdateSnapshot {
   MemInfo mem_info;
   DiskIoStat disk_io_stats;
   NetIoStat net_io_stats;
+  Array<ThreadSnapshot> thread_snapshots;  // Per-watched-pid thread data
   SteadyTimePoint at;
   SystemTimePoint system_time;
 };
@@ -65,4 +73,8 @@ struct Sync {
   RingBuffer<EnvironRequest, 16> environ_request_queue;
   RingBuffer<EnvironResponse, 16> environ_response_queue;
   std::condition_variable library_cv;
+
+  // Thread gathering: PIDs to gather threads for, 0=empty slot
+  std::atomic<int> watched_pids[MAX_WATCHED_PIDS];
+  std::atomic<int> watched_pids_count{0};
 };

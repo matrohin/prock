@@ -13,6 +13,7 @@
 #include "views/system_io_chart.h"
 #include "views/system_mem_chart.h"
 #include "views/system_net_chart.h"
+#include "views/threads_viewer.h"
 
 #include "imgui_internal.h"
 
@@ -68,6 +69,7 @@ enum FocusedView {
   eFocusedView_NetChart,
   eFocusedView_LibraryViewer,
   eFocusedView_EnvironViewer,
+  eFocusedView_ThreadsViewer,
 };
 
 struct ViewState {
@@ -87,4 +89,5 @@ struct ViewState {
   SystemNetChartState system_net_chart_state;
   LibraryViewerState library_viewer_state;
   EnvironViewerState environ_viewer_state;
+  ThreadsViewerState threads_viewer_state;
 };

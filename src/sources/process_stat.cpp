@@ -128,6 +128,84 @@ static void read_process_socket_inodes(const int pid,
   closedir(fd_dir);
 }
 
+// Read stat for a thread (or process) given explicit paths
+static bool read_thread_stat(const int tid, const char *stat_path,
+                             const char *statm_path, const char *comm_path,
+                             ProcessStat *out) {
+  ProcessStat &stat = *out;
+  stat.pid = tid;
+  stat.comm[0] = '\0';
+  stat.io_read_bytes = 0;
+  stat.io_write_bytes = 0;
+  stat.net_recv_bytes = 0;
+  stat.net_send_bytes = 0;
+
+  FILE *stat_file = fopen(stat_path, "r");
+  FILE *statm_file = fopen(statm_path, "r");
+  FILE *comm_file = fopen(comm_path, "r");
+  if (!stat_file || !statm_file || !comm_file) {
+    if (stat_file) fclose(stat_file);
+    if (statm_file) fclose(statm_file);
+    if (comm_file) fclose(comm_file);
+    return false;
+  }
+
+  char stat_buf[512];
+  char statm_buf[128];
+
+  if (!fgets(stat_buf, sizeof(stat_buf), stat_file)) {
+    fclose(comm_file);
+    fclose(statm_file);
+    fclose(stat_file);
+    return false;
+  }
+  if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) {
+    fclose(comm_file);
+    fclose(statm_file);
+    fclose(stat_file);
+    return false;
+  }
+  if (fgets(stat.comm, sizeof(stat.comm), comm_file)) {
+    size_t len = strlen(stat.comm);
+    if (len > 0 && stat.comm[len - 1] == '\n') {
+      stat.comm[len - 1] = '\0';
+    }
+  }
+
+  fclose(comm_file);
+  fclose(statm_file);
+  fclose(stat_file);
+
+  char *after_comm = strrchr(stat_buf, ')');
+  if (!after_comm) {
+    return false;
+  }
+
+  sscanf(after_comm + 1,
+         " %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld "
+         "%ld %ld %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu "
+         "%lu %d %d %u %u %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %d",
+         &stat.state, &stat.ppid, &stat.pgrp, &stat.session, &stat.tty_nr,
+         &stat.tpgid, &stat.flags, &stat.minflt, &stat.cminflt, &stat.majflt,
+         &stat.cmajflt, &stat.utime, &stat.stime, &stat.cutime, &stat.cstime,
+         &stat.priority, &stat.nice, &stat.num_threads, &stat.itrealvalue,
+         &stat.starttime, &stat.vsize, &stat.rss, &stat.rsslim, &stat.startcode,
+         &stat.endcode, &stat.startstack, &stat.kstkesp, &stat.kstkeip,
+         &stat.signal, &stat.blocked, &stat.sigignore, &stat.sigcatch,
+         &stat.wchan, &stat.nswap, &stat.cnswap, &stat.exit_signal,
+         &stat.processor, &stat.rt_priority, &stat.policy,
+         &stat.delayacct_blkio_ticks, &stat.guest_time, &stat.cguest_time,
+         &stat.start_data, &stat.end_data, &stat.start_brk, &stat.arg_start,
+         &stat.arg_end, &stat.env_start, &stat.env_end, &stat.exit_code);
+
+  ulong unused_lib = 0;
+  sscanf(statm_buf, "%lu %lu %lu %lu %lu %lu", &stat.statm_size,
+         &stat.statm_resident, &stat.statm_shared, &stat.statm_text,
+         &unused_lib, &stat.statm_data);
+
+  return true;
+}
+
 static bool read_process(const int pid, ProcessStat *out) {
   constexpr size_t PATH_BUF_SIZE = 64;
 
@@ -473,6 +551,94 @@ static NetIoStat read_net_io_stats() {
 
 // Reads /proc/meminfo for system-wide memory stats
 // Values are in kB (as reported by /proc/meminfo)
+// Read all threads for a process from /proc/[pid]/task/
+static Array<ProcessStat> read_process_threads(const int pid,
+                                               BumpArena &arena) {
+  ZoneScoped;
+  char task_path[64];
+  snprintf(task_path, sizeof(task_path), "/proc/%d/task", pid);
+
+  DIR *task_dir = opendir(task_path);
+  if (!task_dir) {
+    return {};
+  }
+
+  LinkedList<int> tids = {};
+  while (dirent *entry = readdir(task_dir)) {
+    if (entry->d_type != DT_DIR) continue;
+
+    char *end = nullptr;
+    long tid = strtol(entry->d_name, &end, 10);
+    if (tid <= 0 || *end != '\0') continue;
+
+    *(tids.emplace_front(arena)) = static_cast<int>(tid);
+  }
+  closedir(task_dir);
+
+  Array<ProcessStat> result = Array<ProcessStat>::create(arena, tids.size);
+  const LinkedNode<int> *it = tids.head;
+  ProcessStat *it_result = result.data;
+
+  while (it) {
+    const int tid = it->value;
+
+    char stat_path[128];
+    char statm_path[128];
+    char comm_path[128];
+    snprintf(stat_path, sizeof(stat_path), "/proc/%d/task/%d/stat", pid, tid);
+    snprintf(statm_path, sizeof(statm_path), "/proc/%d/statm",
+             pid);  // statm is shared across threads
+    snprintf(comm_path, sizeof(comm_path), "/proc/%d/task/%d/comm", pid, tid);
+
+    if (read_thread_stat(tid, stat_path, statm_path, comm_path, it_result)) {
+      ++it_result;
+    }
+    it = it->next;
+  }
+  result.size = it_result - result.data;
+
+  // Sort by TID
+  std::sort(result.data, result.data + result.size,
+            [](const ProcessStat &a, const ProcessStat &b) {
+              return a.pid < b.pid;
+            });
+
+  return result;
+}
+
+// Read threads for all watched PIDs
+static Array<ThreadSnapshot> read_watched_threads(Sync &sync,
+                                                  BumpArena &arena) {
+  ZoneScoped;
+  const int count = sync.watched_pids_count.load();
+  if (count == 0) {
+    return {};
+  }
+
+  // Collect current watched PIDs
+  int pids[MAX_WATCHED_PIDS];
+  int actual_count = 0;
+  for (int i = 0; i < MAX_WATCHED_PIDS && actual_count < count; ++i) {
+    int pid = sync.watched_pids[i].load();
+    if (pid != 0) {
+      pids[actual_count++] = pid;
+    }
+  }
+
+  if (actual_count == 0) {
+    return {};
+  }
+
+  Array<ThreadSnapshot> result =
+      Array<ThreadSnapshot>::create(arena, actual_count);
+  for (int i = 0; i < actual_count; ++i) {
+    result.data[i].pid = pids[i];
+    result.data[i].threads = read_process_threads(pids[i], arena);
+  }
+
+  return result;
+}
+
 static MemInfo read_mem_info() {
   ZoneScoped;
   FILE *meminfo_file = fopen("/proc/meminfo", "r");
@@ -533,12 +699,14 @@ void gather(GatheringState &state, Sync &sync) {
   const auto mem_info = read_mem_info();
   const auto disk_io_stats = read_disk_io_stats();
   const auto net_io_stats = read_net_io_stats();
+  const auto thread_snapshots = read_watched_threads(sync, arena);
 
   state.last_update = SteadyClock::now();
   const SystemTimePoint system_now = SystemClock::now();
   const bool pushed = sync.update_queue.push(
       UpdateSnapshot{arena, process_stats, cpu_stats, mem_info, disk_io_stats,
-                     net_io_stats, state.last_update, system_now});
+                     net_io_stats, thread_snapshots, state.last_update,
+                     system_now});
   if (!pushed) {
     arena.destroy();
   }

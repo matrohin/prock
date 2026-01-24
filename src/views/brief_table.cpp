@@ -7,6 +7,7 @@
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
 #include "views/net_chart.h"
+#include "views/threads_viewer.h"
 #include "views/view_state.h"
 
 #include "state.h"
@@ -37,6 +38,8 @@ static void open_all_windows(const int pid, ViewState &view_state,
                          stat.comm, dock_id);
   environ_viewer_request(view_state.environ_viewer_state, *view_state.sync, pid,
                          stat.comm, dock_id);
+  threads_viewer_open(view_state.threads_viewer_state, *view_state.sync, pid,
+                      stat.comm, dock_id);
 }
 
 static void copy_process_row(const ProcessStat &stat,
@@ -156,6 +159,10 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     if (ImGui::MenuItem("Show Environment")) {
       environ_viewer_request(view_state.environ_viewer_state, *view_state.sync,
                              pid, stat.comm);
+    }
+    if (ImGui::MenuItem("Show Threads")) {
+      threads_viewer_open(view_state.threads_viewer_state, *view_state.sync,
+                          pid, stat.comm);
     }
     ImGui::Separator();
     if (ImGui::MenuItem("Kill Process", "Del") ||
