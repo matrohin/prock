@@ -124,8 +124,8 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_opengl3.h"
+#include <stdint.h> // intptr_t
 #include <stdio.h>
-#include <stdint.h>     // intptr_t
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif

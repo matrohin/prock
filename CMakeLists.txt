@@ -5,7 +5,7 @@ find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
 
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory(glfw-3.4)
+add_subdirectory(third-party/glfw-3.4)
 
 # Common options:
 add_library(project_warnings INTERFACE)
@@ -30,8 +30,8 @@ install(TARGETS ${PROJECT_NAME}
 set_source_files_properties(src/imgui_all.cpp PROPERTIES SKIP_LINTING ON)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui
-  ${CMAKE_CURRENT_SOURCE_DIR}/implot
+  third-party/imgui
+  third-party/implot
   ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw OpenGL::GLES2 X11::X11 project_warnings)
@@ -50,7 +50,7 @@ if(BUILD_TESTS)
   target_include_directories(prock_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/imgui
+    third-party/imgui
   )
   target_link_libraries(${PROJECT_NAME} PRIVATE project_warnings)
 
