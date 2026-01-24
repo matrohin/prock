@@ -28,6 +28,7 @@ struct LibraryViewerWindow {
   int selected_index; // -1 means no selection
   char filter_text[256];
 
+  ProcessWindowFlags flags;
   bool open;
 
   // Data (owned by LibraryViewerState::cur_arena)

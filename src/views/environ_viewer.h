@@ -27,6 +27,7 @@ struct EnvironViewerWindow {
   int selected_index; // -1 means no selection
   char filter_text[256];
 
+  ProcessWindowFlags flags;
   bool open;
 
   // Data (owned by EnvironViewerState::cur_arena)
@@ -52,3 +53,6 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync, int pid,
                             const char *comm, ImGuiID dock_id = 0);
 void environ_viewer_update(EnvironViewerState &state, Sync &sync);
 void environ_viewer_draw(FrameContext &ctx, ViewState &view_state);
+void environ_viewer_close_if_docked_in(EnvironViewerState &state, int pid,
+                                       ImGuiID dockspace_id);
+void environ_viewer_restore_layout_by_pid(EnvironViewerState &state, int pid);

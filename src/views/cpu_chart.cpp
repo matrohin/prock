@@ -1,8 +1,9 @@
 #include "cpu_chart.h"
 
-#include "common_implot.h"
 #include "views/common.h"
 #include "views/common_charts.h"
+#include "views/common_implot.h"
+#include "views/process_window_flags.h"
 #include "views/view_state.h"
 
 #include "state.h"
@@ -57,45 +58,42 @@ void cpu_chart_draw(ViewState &view_state) {
     if (last != i) {
       my_state.charts.data()[last] = my_state.charts.data()[i];
     }
-    const CpuChartData &chart = my_state.charts.data()[last];
+    CpuChartData &chart = my_state.charts.data()[last];
+
+    process_window_handle_docking_and_pos(view_state, chart.dock_id,
+                                          chart.flags, chart.label);
+
     bool should_be_opened = true;
-    if (chart.dock_id != 0) {
-      ImGui::SetNextWindowDockID(chart.dock_id, ImGuiCond_Once);
-    } else {
-      view_state.cascade.next_if_new(chart.label);
-    }
+    if (ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS)) {
+      process_window_check_close(chart.flags, should_be_opened);
 
-    ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
-    if (ImGui::IsWindowFocused()) {
-      view_state.focused_view = eFocusedView_CpuChart;
-    }
+      push_fit_with_padding();
+      if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
+                            ImPlotFlags_Crosshairs)) {
+        setup_chart(chart.times, format_percent);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
 
-    push_fit_with_padding();
-    if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
-                          ImPlotFlags_Crosshairs)) {
-      setup_chart(chart.times, format_percent);
-      ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
+        push_fill_alpha();
+        ImPlot::PlotShaded(TITLE_TOTAL, chart.times.data(),
+                           chart.cpu_total_perc.data(),
+                           chart.cpu_total_perc.size());
+        ImPlot::PlotShaded(TITLE_KERNEL, chart.times.data(),
+                           chart.cpu_kernel_perc.data(),
+                           chart.cpu_kernel_perc.size());
+        pop_fill_alpha();
 
-      push_fill_alpha();
-      ImPlot::PlotShaded(TITLE_TOTAL, chart.times.data(),
-                         chart.cpu_total_perc.data(),
-                         chart.cpu_total_perc.size());
-      ImPlot::PlotShaded(TITLE_KERNEL, chart.times.data(),
+        ImPlot::PlotLine(TITLE_KERNEL, chart.times.data(),
                          chart.cpu_kernel_perc.data(),
                          chart.cpu_kernel_perc.size());
-      pop_fill_alpha();
+        ImPlot::PlotLine(TITLE_TOTAL, chart.times.data(),
+                         chart.cpu_total_perc.data(),
+                         chart.cpu_total_perc.size());
 
-      ImPlot::PlotLine(TITLE_KERNEL, chart.times.data(),
-                       chart.cpu_kernel_perc.data(),
-                       chart.cpu_kernel_perc.size());
-      ImPlot::PlotLine(TITLE_TOTAL, chart.times.data(),
-                       chart.cpu_total_perc.data(),
-                       chart.cpu_total_perc.size());
+        ImPlot::EndPlot();
+      }
 
-      ImPlot::EndPlot();
+      pop_fit_with_padding();
     }
-
-    pop_fit_with_padding();
     ImGui::End();
 
     if (should_be_opened) {
@@ -119,6 +117,7 @@ void cpu_chart_add(CpuChartState &my_state, const int pid, const char *comm,
       *my_state.charts.emplace_back(my_state.cur_arena, my_state.wasted_bytes);
   data.pid = pid;
   data.dock_id = dock_id;
+  data.flags |= eProcessWindowFlags_RedockRequested;
   snprintf(data.label, sizeof(data.label), "CPU Usage: %s (%d)", comm, pid);
 
   common_charts_sort_added(my_state.charts);

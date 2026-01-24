@@ -305,9 +305,6 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   snprintf(title, sizeof(title), "Process Table (%zu processes)###ProcessTable",
            my_state.lines.size);
   ImGui::Begin(title, nullptr, COMMON_VIEW_FLAGS);
-  if (ImGui::IsWindowFocused()) {
-    view_state.focused_view = eFocusedView_BriefTable;
-  }
 
   if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
     ImGui::SetKeyboardFocusHere();

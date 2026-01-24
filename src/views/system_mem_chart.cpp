@@ -45,39 +45,36 @@ void system_mem_chart_update(SystemMemChartState &my_state,
 void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   SystemMemChartState &my_state = view_state.system_mem_chart_state;
 
-  ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS);
-  if (ImGui::IsWindowFocused()) {
-    view_state.focused_view = eFocusedView_SystemMemChart;
-  }
-
-  push_fit_with_padding();
-  const bool should_fit_y =
-      !my_state.y_axis_fitted && my_state.used.size() >= 2;
-  if (should_fit_y) {
-    ImPlot::SetNextAxisToFit(ImAxis_Y1);
-  }
-  if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1),
-                        ImPlotFlags_Crosshairs)) {
+  if (ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS)) {
+    push_fit_with_padding();
+    const bool should_fit_y =
+        !my_state.y_axis_fitted && my_state.used.size() >= 2;
     if (should_fit_y) {
-      my_state.y_axis_fitted = true;
+      ImPlot::SetNextAxisToFit(ImAxis_Y1);
     }
-    setup_chart(my_state.times, format_memory_kb);
+    if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1),
+                          ImPlotFlags_Crosshairs)) {
+      if (should_fit_y) {
+        my_state.y_axis_fitted = true;
+      }
+      setup_chart(my_state.times, format_memory_kb);
 
-    push_fill_alpha();
-    ImPlot::PlotShaded(TITLE_USED, my_state.times.data(), my_state.used.data(),
+      push_fill_alpha();
+      ImPlot::PlotShaded(TITLE_USED, my_state.times.data(),
+                         my_state.used.data(), my_state.used.size());
+      pop_fill_alpha();
+
+      ImPlot::PlotLine(TITLE_USED, my_state.times.data(), my_state.used.data(),
                        my_state.used.size());
-    pop_fill_alpha();
 
-    ImPlot::PlotLine(TITLE_USED, my_state.times.data(), my_state.used.data(),
-                     my_state.used.size());
+      if (ImPlot::IsLegendEntryHovered(TITLE_USED)) {
+        ImGui::SetTooltip("Used = MemTotal - MemAvailable");
+      }
 
-    if (ImPlot::IsLegendEntryHovered(TITLE_USED)) {
-      ImGui::SetTooltip("Used = MemTotal - MemAvailable");
+      ImPlot::EndPlot();
     }
 
-    ImPlot::EndPlot();
+    pop_fit_with_padding();
   }
-
-  pop_fit_with_padding();
   ImGui::End();
 }

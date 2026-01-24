@@ -42,41 +42,39 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
 void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   SystemIoChartState &my_state = view_state.system_io_chart_state;
 
-  ImGui::Begin("System I/O", nullptr, COMMON_VIEW_FLAGS);
-  if (ImGui::IsWindowFocused()) {
-    view_state.focused_view = eFocusedView_SystemIoChart;
-  }
-
-  push_fit_with_padding();
-  const bool should_fit_y =
-      !my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2;
-  if (should_fit_y) {
-    ImPlot::SetNextAxisToFit(ImAxis_Y1);
-  }
-  if (ImPlot::BeginPlot("##SystemIO", ImVec2(-1, -1), ImPlotFlags_Crosshairs)) {
+  if (ImGui::Begin("System I/O", nullptr, COMMON_VIEW_FLAGS)) {
+    push_fit_with_padding();
+    const bool should_fit_y =
+        !my_state.y_axis_fitted && my_state.read_mb_per_sec.size() >= 2;
     if (should_fit_y) {
-      my_state.y_axis_fitted = true;
+      ImPlot::SetNextAxisToFit(ImAxis_Y1);
     }
-    setup_chart(my_state.times, format_io_rate_mb);
+    if (ImPlot::BeginPlot("##SystemIO", ImVec2(-1, -1),
+                          ImPlotFlags_Crosshairs)) {
+      if (should_fit_y) {
+        my_state.y_axis_fitted = true;
+      }
+      setup_chart(my_state.times, format_io_rate_mb);
 
-    push_fill_alpha();
-    ImPlot::PlotShaded(TITLE_READ, my_state.times.data(),
+      push_fill_alpha();
+      ImPlot::PlotShaded(TITLE_READ, my_state.times.data(),
+                         my_state.read_mb_per_sec.data(),
+                         my_state.read_mb_per_sec.size());
+      ImPlot::PlotShaded(TITLE_WRITE, my_state.times.data(),
+                         my_state.write_mb_per_sec.data(),
+                         my_state.write_mb_per_sec.size());
+      pop_fill_alpha();
+      ImPlot::PlotLine(TITLE_READ, my_state.times.data(),
                        my_state.read_mb_per_sec.data(),
                        my_state.read_mb_per_sec.size());
-    ImPlot::PlotShaded(TITLE_WRITE, my_state.times.data(),
+      ImPlot::PlotLine(TITLE_WRITE, my_state.times.data(),
                        my_state.write_mb_per_sec.data(),
                        my_state.write_mb_per_sec.size());
-    pop_fill_alpha();
-    ImPlot::PlotLine(TITLE_READ, my_state.times.data(),
-                     my_state.read_mb_per_sec.data(),
-                     my_state.read_mb_per_sec.size());
-    ImPlot::PlotLine(TITLE_WRITE, my_state.times.data(),
-                     my_state.write_mb_per_sec.data(),
-                     my_state.write_mb_per_sec.size());
 
-    ImPlot::EndPlot();
+      ImPlot::EndPlot();
+    }
+
+    pop_fit_with_padding();
   }
-
-  pop_fit_with_padding();
   ImGui::End();
 }

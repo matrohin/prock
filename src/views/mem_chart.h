@@ -6,6 +6,7 @@ struct MemChartData {
   char label[128];
   GrowingArray<double> times;
   GrowingArray<double> mem_resident_kb;
+  ProcessWindowFlags flags;
   bool y_axis_fitted;
 };
 
@@ -20,3 +21,6 @@ void mem_chart_draw(ViewState &view_state);
 
 void mem_chart_add(MemChartState &my_state, int pid, const char *comm,
                    ImGuiID dock_id = 0);
+void mem_chart_close_if_docked_in(MemChartState &my_state, int pid,
+                                  ImGuiID dockspace_id);
+void mem_chart_restore_layout_by_pid(MemChartState &my_state, int pid);

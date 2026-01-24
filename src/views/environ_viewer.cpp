@@ -80,6 +80,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   win->status = eEnvironViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
+  win->flags |= eProcessWindowFlags_RedockRequested;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->process_name[sizeof(win->process_name) - 1] = '\0';
   win->entries = {};
@@ -173,15 +174,12 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                win.process_name, win.pid, win.entries.size, win.pid);
     }
 
-    if (win.dock_id != 0) {
-      ImGui::SetNextWindowDockID(win.dock_id, ImGuiCond_Once);
-    } else {
-      view_state.cascade.next_if_new(title);
-    }
+    process_window_handle_docking_and_pos(view_state, win.dock_id,
+                                          win.flags, title);
 
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
+      process_window_check_close(win.flags, win.open);
       if (ImGui::IsWindowFocused()) {
-        view_state.focused_view = eFocusedView_EnvironViewer;
         my_state.focused_window_pid = win.pid;
       }
 

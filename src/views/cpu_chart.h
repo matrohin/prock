@@ -1,8 +1,11 @@
 #pragma once
 
+#include "process_window_flags.h"
+
 struct CpuChartData {
   int pid;
   ImGuiID dock_id;
+  ProcessWindowFlags flags;
   char label[128];
   GrowingArray<double> times;
   GrowingArray<double> cpu_kernel_perc;
@@ -12,7 +15,7 @@ struct CpuChartData {
 struct CpuChartState {
   BumpArena cur_arena;
   GrowingArray<CpuChartData> charts;
-  size_t wasted_bytes = 0;
+  size_t wasted_bytes;
 };
 
 void cpu_chart_update(CpuChartState &my_state, const State &state);

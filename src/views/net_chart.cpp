@@ -55,52 +55,47 @@ void net_chart_draw(ViewState &view_state) {
       my_state.charts.data()[last] = my_state.charts.data()[i];
     }
     NetChartData &chart = my_state.charts.data()[last];
+    process_window_handle_docking_and_pos(view_state, chart.dock_id,
+                                          chart.flags, chart.label);
     bool should_be_opened = true;
-    if (chart.dock_id != 0) {
-      ImGui::SetNextWindowDockID(chart.dock_id, ImGuiCond_Once);
-    } else {
-      view_state.cascade.next_if_new(chart.label);
-    }
+    if (ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS)) {
+      process_window_check_close(chart.flags, should_be_opened);
 
-    ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS);
-    if (ImGui::IsWindowFocused()) {
-      view_state.focused_view = eFocusedView_NetChart;
-    }
-
-    push_fit_with_padding();
-    const bool should_fit_y =
-        !chart.y_axis_fitted && chart.recv_kb_per_sec.size() >= 2;
-    if (should_fit_y) {
-      ImPlot::SetNextAxisToFit(ImAxis_Y1);
-    }
-    if (ImPlot::BeginPlot("Network Usage", ImVec2(-1, -1),
-                          ImPlotFlags_Crosshairs)) {
+      push_fit_with_padding();
+      const bool should_fit_y =
+          !chart.y_axis_fitted && chart.recv_kb_per_sec.size() >= 2;
       if (should_fit_y) {
-        chart.y_axis_fitted = true;
+        ImPlot::SetNextAxisToFit(ImAxis_Y1);
       }
+      if (ImPlot::BeginPlot("Network Usage", ImVec2(-1, -1),
+                            ImPlotFlags_Crosshairs)) {
+        if (should_fit_y) {
+          chart.y_axis_fitted = true;
+        }
 
-      setup_chart(chart.times, format_io_rate_kb);
+        setup_chart(chart.times, format_io_rate_kb);
 
-      push_fill_alpha();
-      ImPlot::PlotShaded(TITLE_RECV, chart.times.data(),
+        push_fill_alpha();
+        ImPlot::PlotShaded(TITLE_RECV, chart.times.data(),
+                           chart.recv_kb_per_sec.data(),
+                           chart.recv_kb_per_sec.size());
+        ImPlot::PlotShaded(TITLE_SEND, chart.times.data(),
+                           chart.send_kb_per_sec.data(),
+                           chart.send_kb_per_sec.size());
+        pop_fill_alpha();
+
+        ImPlot::PlotLine(TITLE_RECV, chart.times.data(),
                          chart.recv_kb_per_sec.data(),
                          chart.recv_kb_per_sec.size());
-      ImPlot::PlotShaded(TITLE_SEND, chart.times.data(),
+        ImPlot::PlotLine(TITLE_SEND, chart.times.data(),
                          chart.send_kb_per_sec.data(),
                          chart.send_kb_per_sec.size());
-      pop_fill_alpha();
 
-      ImPlot::PlotLine(TITLE_RECV, chart.times.data(),
-                       chart.recv_kb_per_sec.data(),
-                       chart.recv_kb_per_sec.size());
-      ImPlot::PlotLine(TITLE_SEND, chart.times.data(),
-                       chart.send_kb_per_sec.data(),
-                       chart.send_kb_per_sec.size());
+        ImPlot::EndPlot();
+      }
 
-      ImPlot::EndPlot();
+      pop_fit_with_padding();
     }
-
-    pop_fit_with_padding();
     ImGui::End();
 
     if (should_be_opened) {
@@ -124,6 +119,7 @@ void net_chart_add(NetChartState &my_state, const int pid, const char *comm,
       *my_state.charts.emplace_back(my_state.cur_arena, my_state.wasted_bytes);
   data.pid = pid;
   data.dock_id = dock_id;
+  data.flags |= eProcessWindowFlags_RedockRequested;
   snprintf(data.label, sizeof(data.label), "Network Usage: %s (%d)", comm, pid);
 
   common_charts_sort_added(my_state.charts);

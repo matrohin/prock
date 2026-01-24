@@ -71,7 +71,6 @@ enum FocusedView {
 };
 
 struct ViewState {
-  FocusedView focused_view;
   Sync *sync;
   CascadeLayout cascade;
 

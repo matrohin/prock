@@ -1,5 +1,8 @@
 #pragma once
 
+#include "cpu_chart.h"
+#include "imgui_internal.h"
+
 #include <cstdio>
 
 constexpr ImGuiWindowFlags COMMON_VIEW_FLAGS = ImGuiWindowFlags_NoCollapse;
@@ -62,3 +65,4 @@ inline int format_io_rate_mb(double value, char *buff, int size,
     return snprintf(buff, size, "%.0f B/s", value * 1024.0 * 1024.0);
   }
 }
+

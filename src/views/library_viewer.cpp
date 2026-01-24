@@ -10,34 +10,33 @@
 #include <cstring>
 #include <unistd.h>
 
-namespace {
-
 const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 
-void copy_library_row(const LibraryEntry &lib) {
+static void copy_library_row(const LibraryEntry &lib) {
   char buf[512];
-  unsigned long mapped_size = lib.addr_end - lib.addr_start;
+  const unsigned long mapped_size = lib.addr_end - lib.addr_start;
   snprintf(buf, sizeof(buf), "%s%s\t%lu\t%ld", LIBRARY_COPY_HEADER, lib.path,
            mapped_size, lib.file_size);
   ImGui::SetClipboardText(buf);
 }
 
-void copy_all_libraries(BumpArena &arena, const LibraryViewerWindow &win) {
-  size_t buf_size = 128 + win.libraries.size * 320;
+static void copy_all_libraries(BumpArena &arena,
+                               const LibraryViewerWindow &win) {
+  const size_t buf_size = 128 + win.libraries.size * 320;
   char *buf = arena.alloc_string(buf_size);
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", LIBRARY_COPY_HEADER);
 
   for (size_t i = 0; i < win.libraries.size; ++i) {
     const LibraryEntry &lib = win.libraries.data[i];
-    unsigned long mapped_size = lib.addr_end - lib.addr_start;
+    const unsigned long mapped_size = lib.addr_end - lib.addr_start;
     ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n", lib.path,
                     mapped_size, lib.file_size);
   }
   ImGui::SetClipboardText(buf);
 }
 
-void sort_libraries(LibraryViewerWindow &win) {
+static void sort_libraries(LibraryViewerWindow &win) {
   if (win.libraries.size == 0) return;
 
   const auto compare = [&](const LibraryEntry &a, const LibraryEntry &b) {
@@ -65,8 +64,6 @@ void sort_libraries(LibraryViewerWindow &win) {
   }
 }
 
-} // unnamed namespace
-
 void library_viewer_request(LibraryViewerState &state, Sync &sync,
                             const int pid, const char *comm,
                             const ImGuiID dock_id) {
@@ -85,6 +82,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
   win->status = eLibraryViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
+  win->flags |= eProcessWindowFlags_RedockRequested;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->process_name[sizeof(win->process_name) - 1] = '\0';
   win->libraries = {};
@@ -178,15 +176,12 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                win.process_name, win.pid, win.libraries.size, win.pid);
     }
 
-    if (win.dock_id != 0) {
-      ImGui::SetNextWindowDockID(win.dock_id, ImGuiCond_Once);
-    } else {
-      view_state.cascade.next_if_new(title);
-    }
+    process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
+                                          title);
 
     if (ImGui::Begin(title, &win.open, COMMON_VIEW_FLAGS)) {
+      process_window_check_close(win.flags, win.open);
       if (ImGui::IsWindowFocused()) {
-        view_state.focused_view = eFocusedView_LibraryViewer;
         my_state.focused_window_pid = win.pid;
       }
 
