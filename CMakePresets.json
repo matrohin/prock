@@ -1,0 +1,32 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 27,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "common",
+      "hidden": true,
+      "cacheVariables": {
+        "GLFW_BUILD_X11": "ON",
+        "GLFW_BUILD_WAYLAND": "OFF"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug Dev",
+      "description": "Debug build for development",
+      "binaryDir": "${sourceDir}/build/Debug",
+      "inherits": ["common"]
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Release build for production",
+      "binaryDir": "${sourceDir}/build/Release",
+      "inherits": ["common"]
+    }
+  ]
+}

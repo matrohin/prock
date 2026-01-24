@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-This is a CMake-based C++ project targeting Linux with OpenGL ES 2.0. **All build commands must be run via WSL.**
+This is a CMake-based C++ project targeting Linux with OpenGL ES 2.0.
 
 ```bash
 # Configure (from project root)
-cmake -B build/Debug -DCMAKE_BUILD_TYPE=Debug
+cmake --preset debug
 
 # Build & Test
 ./build.sh

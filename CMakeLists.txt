@@ -4,6 +4,7 @@ project(prock VERSION 0.0.1 LANGUAGES CXX)
 find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
 
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(glfw-3.4)
 
 # Common options:
@@ -20,7 +21,12 @@ target_compile_options(project_warnings
 )
 
 # Main executable:
+include(GNUInstallDirs)
+
 add_executable(${PROJECT_NAME} src/main.cpp src/imgui_all.cpp)
+install(TARGETS ${PROJECT_NAME}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 set_source_files_properties(src/imgui_all.cpp PROPERTIES SKIP_LINTING ON)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
