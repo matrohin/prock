@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -423,7 +424,7 @@ int main(int, char **) {
   sync.update_period.store(view_state.preferences_state.update_period);
 
   std::thread gathering_thread{[&sync] {
-    tracy::SetThreadName("gathering");
+    pthread_setname_np(pthread_self(), "gathering");
     GatheringState gathering_state = {};
     while (!sync.quit.load()) {
       gather(gathering_state, sync);
@@ -432,7 +433,7 @@ int main(int, char **) {
   }};
 
   std::thread proc_reader_thread{[&sync] {
-    tracy::SetThreadName("proc_reader");
+    pthread_setname_np(pthread_self(), "proc_reader");
     library_reader_thread(sync);
   }};
 
