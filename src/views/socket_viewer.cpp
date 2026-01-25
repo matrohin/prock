@@ -99,6 +99,46 @@ static void format_address(char *buf, size_t buf_size, const SocketEntry &sock,
   }
 }
 
+const char *SOCKET_COPY_HEADER =
+    "Protocol\tLocal Address\tRemote Address\tState\tRecv-Q\tSend-Q\n";
+
+static void copy_socket_row(const SocketEntry &sock) {
+  char local_addr[64], remote_addr[64];
+  format_address(local_addr, sizeof(local_addr), sock, true);
+  format_address(remote_addr, sizeof(remote_addr), sock, false);
+
+  const bool is_tcp = (sock.protocol == eSocketProtocol_TCP ||
+                       sock.protocol == eSocketProtocol_TCP6);
+  char buf[512];
+  snprintf(buf, sizeof(buf), "%s%s\t%s\t%s\t%s\t%u\t%u", SOCKET_COPY_HEADER,
+           protocol_name(sock.protocol), local_addr, remote_addr,
+           is_tcp ? tcp_state_name(sock.state) : "-", sock.rx_queue,
+           sock.tx_queue);
+  ImGui::SetClipboardText(buf);
+}
+
+static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
+  const size_t buf_size = 128 + win.sockets.size * 256;
+  char *buf = arena.alloc_string(buf_size);
+  char *ptr = buf;
+  ptr += snprintf(ptr, buf_size, "%s", SOCKET_COPY_HEADER);
+
+  for (size_t i = 0; i < win.sockets.size; ++i) {
+    const SocketEntry &sock = win.sockets.data[i];
+    char local_addr[64], remote_addr[64];
+    format_address(local_addr, sizeof(local_addr), sock, true);
+    format_address(remote_addr, sizeof(remote_addr), sock, false);
+
+    const bool is_tcp = (sock.protocol == eSocketProtocol_TCP ||
+                         sock.protocol == eSocketProtocol_TCP6);
+    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\t%s\t%s\t%u\t%u\n",
+                    protocol_name(sock.protocol), local_addr, remote_addr,
+                    is_tcp ? tcp_state_name(sock.state) : "-", sock.rx_queue,
+                    sock.tx_queue);
+  }
+  ImGui::SetClipboardText(buf);
+}
+
 static void sort_sockets(SocketViewerWindow &win) {
   if (win.sockets.size == 0) return;
 
@@ -200,7 +240,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
   }
 }
 
-void socket_viewer_draw(FrameContext & /*ctx*/, ViewState &view_state) {
+void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   ZoneScoped;
   SocketViewerState &my_state = view_state.socket_viewer_state;
   size_t last = 0;
@@ -314,6 +354,17 @@ void socket_viewer_draw(FrameContext & /*ctx*/, ViewState &view_state) {
               win.selected_index = static_cast<int>(j);
             }
 
+            if (ImGui::BeginPopupContextItem()) {
+              win.selected_index = static_cast<int>(j);
+              if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+                copy_socket_row(sock);
+              }
+              if (ImGui::MenuItem("Copy All")) {
+                copy_all_sockets(ctx.frame_arena, win);
+              }
+              ImGui::EndPopup();
+            }
+
             // Local Address
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_LocalAddress);
             ImGui::TextUnformatted(local_addr);
@@ -350,6 +401,12 @@ void socket_viewer_draw(FrameContext & /*ctx*/, ViewState &view_state) {
           }
 
           ImGui::EndTable();
+
+          // Ctrl+C to copy selected row
+          if (win.selected_index >= 0 &&
+              ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+            copy_socket_row(win.sockets.data[win.selected_index]);
+          }
         }
       }
     }

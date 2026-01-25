@@ -21,11 +21,22 @@ enum ThreadsViewerColumnId {
   eThreadsViewerColumnId_Count,
 };
 
+enum ThreadsViewerStatus {
+  eThreadsViewerStatus_Loading,
+  eThreadsViewerStatus_Ready,
+  eThreadsViewerStatus_Error,
+};
+
 struct ThreadsViewerWindow {
   int pid;
   char process_name[64];
   ImGuiID dock_id;
   ProcessWindowFlags flags;
+
+  // Status tracking
+  ThreadsViewerStatus status;
+  char error_message[128];
+  int error_code;
 
   // Current data (owned by ThreadsViewerState::cur_arena)
   Array<ProcessStat> threads;

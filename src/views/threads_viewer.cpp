@@ -157,6 +157,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested;
+  win->status = eThreadsViewerStatus_Loading;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_tid = -1;
   win->sorted_by = eThreadsViewerColumnId_CpuTotal;
@@ -231,6 +232,8 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
     if (!snap || snap->threads.size == 0) {
       continue;
     }
+
+    win.status = eThreadsViewerStatus_Ready;
 
     // Save previous data for delta computation
     state.wasted_bytes +=
@@ -332,8 +335,18 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
     ThreadsViewerWindow &win = my_state.windows.data()[last];
 
     char title[128];
-    snprintf(title, sizeof(title), "Threads: %s (%d) - %zu threads###Threads%d",
-             win.process_name, win.pid, win.threads.size, win.pid);
+    if (win.status == eThreadsViewerStatus_Error) {
+      snprintf(title, sizeof(title), "Threads: %s (%d) - Error###Threads%d",
+               win.process_name, win.pid, win.pid);
+    } else if (win.status == eThreadsViewerStatus_Loading) {
+      snprintf(title, sizeof(title),
+               "Threads: %s (%d) - Loading...###Threads%d", win.process_name,
+               win.pid, win.pid);
+    } else {
+      snprintf(title, sizeof(title),
+               "Threads: %s (%d) - %zu threads [Live]###Threads%d",
+               win.process_name, win.pid, win.threads.size, win.pid);
+    }
 
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
                                           title);
@@ -342,7 +355,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
     if (ImGui::Begin(title, &should_be_opened, COMMON_VIEW_FLAGS)) {
       process_window_check_close(win.flags, should_be_opened);
 
-      if (win.threads.size > 0) {
+      if (win.status == eThreadsViewerStatus_Error) {
+        ImGui::TextWrapped("%s", win.error_message);
+      } else if (win.threads.size > 0) {
         if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
           ImGui::SetKeyboardFocusHere();
         }
