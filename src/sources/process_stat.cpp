@@ -13,17 +13,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-// Socket inode with network byte counts
-struct SocketNetStats {
-  unsigned long inode;
-  ulonglong recv_bytes;
-  ulonglong send_bytes;
-};
-
-// Query socket stats via netlink INET_DIAG for TCP sockets
+// Query all TCP/UDP sockets via netlink SOCK_DIAG
 // Returns array sorted by inode for binary search
-static Array<SocketNetStats> query_socket_stats_netlink(BumpArena &arena) {
-  GrowingArray<SocketNetStats> result = {};
+Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
+  GrowingArray<SocketEntry> result = {};
   size_t wasted = 0;
 
   const int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_SOCK_DIAG);
@@ -31,9 +24,20 @@ static Array<SocketNetStats> query_socket_stats_netlink(BumpArena &arena) {
     return {};
   }
 
-  // Query for TCP sockets (AF_INET and AF_INET6)
-  int families[] = {AF_INET, AF_INET6};
-  for (const int family : families) {
+  // Query for TCP and UDP sockets (AF_INET and AF_INET6)
+  struct ProtocolQuery {
+    int family;
+    int protocol;
+    SocketProtocol socket_protocol;
+  };
+  const ProtocolQuery queries[] = {
+      {AF_INET, IPPROTO_TCP, eSocketProtocol_TCP},
+      {AF_INET, IPPROTO_UDP, eSocketProtocol_UDP},
+      {AF_INET6, IPPROTO_TCP, eSocketProtocol_TCP6},
+      {AF_INET6, IPPROTO_UDP, eSocketProtocol_UDP6},
+  };
+
+  for (const auto &q : queries) {
     struct {
       nlmsghdr nlh;
       inet_diag_req_v2 req;
@@ -42,10 +46,13 @@ static Array<SocketNetStats> query_socket_stats_netlink(BumpArena &arena) {
     request.nlh.nlmsg_len = sizeof(request);
     request.nlh.nlmsg_type = SOCK_DIAG_BY_FAMILY;
     request.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-    request.req.sdiag_family = static_cast<__u8>(family);
-    request.req.sdiag_protocol = IPPROTO_TCP;
+    request.req.sdiag_family = static_cast<__u8>(q.family);
+    request.req.sdiag_protocol = static_cast<__u8>(q.protocol);
     request.req.idiag_states = ~0U; // All states
-    request.req.idiag_ext |= (1 << (INET_DIAG_INFO - 1));
+    // Request TCP_INFO for byte counts (only meaningful for TCP)
+    if (q.protocol == IPPROTO_TCP) {
+      request.req.idiag_ext |= (1 << (INET_DIAG_INFO - 1));
+    }
 
     if (send(fd, &request, sizeof(request), 0) < 0) {
       continue;
@@ -68,16 +75,41 @@ static Array<SocketNetStats> query_socket_stats_netlink(BumpArena &arena) {
         const unsigned long inode = diag->idiag_inode;
         if (inode == 0) continue;
 
-        // Parse response attributes for TCP_INFO
-        unsigned int rta_len = h->nlmsg_len - NLMSG_LENGTH(sizeof(*diag));
-        for (rtattr *attr = reinterpret_cast<rtattr *>(diag + 1);
-             RTA_OK(attr, rta_len); attr = RTA_NEXT(attr, rta_len)) {
-          if (attr->rta_type == INET_DIAG_INFO) {
-            const tcp_info *info = static_cast<tcp_info *>(RTA_DATA(attr));
-            SocketNetStats *stats = result.emplace_back(arena, wasted);
-            stats->inode = inode;
-            stats->recv_bytes = info->tcpi_bytes_received;
-            stats->send_bytes = info->tcpi_bytes_acked;
+        SocketEntry *entry = result.emplace_back(arena, wasted);
+        entry->inode = inode;
+        entry->protocol = q.socket_protocol;
+        entry->state = diag->idiag_state;
+        entry->tx_queue = diag->idiag_wqueue;
+        entry->rx_queue = diag->idiag_rqueue;
+        entry->bytes_received = 0;
+        entry->bytes_sent = 0;
+
+        // Extract addresses and ports
+        entry->local_port = ntohs(diag->id.idiag_sport);
+        entry->remote_port = ntohs(diag->id.idiag_dport);
+
+        if (q.family == AF_INET) {
+          entry->local_ip = diag->id.idiag_src[0];
+          entry->remote_ip = diag->id.idiag_dst[0];
+          memset(entry->local_ip6, 0, sizeof(entry->local_ip6));
+          memset(entry->remote_ip6, 0, sizeof(entry->remote_ip6));
+        } else {
+          entry->local_ip = 0;
+          entry->remote_ip = 0;
+          memcpy(entry->local_ip6, diag->id.idiag_src, 16);
+          memcpy(entry->remote_ip6, diag->id.idiag_dst, 16);
+        }
+
+        // Parse response attributes for TCP_INFO (byte counts)
+        if (q.protocol == IPPROTO_TCP) {
+          unsigned int rta_len = h->nlmsg_len - NLMSG_LENGTH(sizeof(*diag));
+          for (rtattr *attr = reinterpret_cast<rtattr *>(diag + 1);
+               RTA_OK(attr, rta_len); attr = RTA_NEXT(attr, rta_len)) {
+            if (attr->rta_type == INET_DIAG_INFO) {
+              const tcp_info *info = static_cast<tcp_info *>(RTA_DATA(attr));
+              entry->bytes_received = info->tcpi_bytes_received;
+              entry->bytes_sent = info->tcpi_bytes_acked;
+            }
           }
         }
       }
@@ -88,7 +120,7 @@ static Array<SocketNetStats> query_socket_stats_netlink(BumpArena &arena) {
 
   // Sort by inode for binary search
   std::sort(result.data(), result.data() + result.size(),
-            [](const SocketNetStats &a, const SocketNetStats &b) {
+            [](const SocketEntry &a, const SocketEntry &b) {
               return a.inode < b.inode;
             });
 
@@ -364,8 +396,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
             });
 
   // Query socket stats from netlink and distribute to processes
-  const Array<SocketNetStats> socket_stats =
-      query_socket_stats_netlink(result_arena);
+  const Array<SocketEntry> socket_stats = query_sockets_netlink(result_arena);
   if (socket_stats.size > 0) {
     GrowingArray<unsigned long> inodes = {};
     for (size_t i = 0; i < result.size; ++i) {
@@ -384,8 +415,8 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
             },
             inode);
         if (found_inode < socket_stats.size) {
-          total_recv += socket_stats.data[found_inode].recv_bytes;
-          total_send += socket_stats.data[found_inode].send_bytes;
+          total_recv += socket_stats.data[found_inode].bytes_received;
+          total_send += socket_stats.data[found_inode].bytes_sent;
         }
       }
       stat.net_recv_bytes = total_recv;

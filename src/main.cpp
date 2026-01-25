@@ -42,6 +42,7 @@
 #include "views/process_window_flags.cpp"
 #include "views/system_cpu_chart.cpp"
 #include "views/threads_viewer.cpp"
+#include "views/socket_viewer.cpp"
 #include "views/system_io_chart.cpp"
 #include "views/system_mem_chart.cpp"
 #include "views/system_net_chart.cpp"

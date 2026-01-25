@@ -185,4 +185,10 @@ struct GatheringState {
 };
 
 struct Sync;
+struct SocketEntry;
+
 void gather(GatheringState &state, Sync &sync);
+
+// Query all TCP/UDP sockets via netlink SOCK_DIAG
+// Returns array sorted by inode for binary search
+Array<SocketEntry> query_sockets_netlink(BumpArena &arena);
