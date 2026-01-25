@@ -518,8 +518,11 @@ static NetIoStat read_net_io_stats() {
   NetIoStat result = {};
   char line[512];
   // Skip first two header lines
-  fgets(line, sizeof(line), netdev_file);
-  fgets(line, sizeof(line), netdev_file);
+  if (!fgets(line, sizeof(line), netdev_file) ||
+      !fgets(line, sizeof(line), netdev_file)) {
+    fclose(netdev_file);
+    return {};
+  }
 
   while (fgets(line, sizeof(line), netdev_file)) {
     char interface[64];

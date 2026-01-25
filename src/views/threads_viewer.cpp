@@ -238,7 +238,7 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
         win.derived.size * sizeof(ThreadDerivedStat) +
         win.prev_threads.size * sizeof(ProcessStat);
 
-    SteadyTimePoint prev_at = win.prev_at;
+    SteadyTimePoint prev_at{SteadyClock::duration{win.prev_at_ns}};
     Array<ProcessStat> prev_threads = win.prev_threads;
 
     // Copy new thread data
@@ -286,7 +286,7 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
         Array<ProcessStat>::create(state.cur_arena, win.threads.size);
     memcpy(win.prev_threads.data, win.threads.data,
            win.threads.size * sizeof(ProcessStat));
-    win.prev_at = now;
+    win.prev_at_ns = now.time_since_epoch().count();
 
     // Apply current sorting
     if (win.sorted_order != ImGuiSortDirection_None) {
