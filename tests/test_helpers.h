@@ -6,13 +6,13 @@
 #include <cstring>
 
 // Helper to create a ProcessStat with minimal required fields
-inline ProcessStat make_process_stat(int pid, int ppid, const char *comm,
-                                     char state = 'S') {
+inline ProcessStat make_process_stat(BumpArena &arena, int pid, int ppid,
+                                     const char *comm, char state = 'S') {
   ProcessStat stat = {};
   stat.pid = pid;
   stat.ppid = ppid;
   stat.state = state;
-  strncpy(stat.comm, comm, sizeof(stat.comm) - 1);
+  stat.comm = arena.alloc_string_copy(comm);
   return stat;
 }
 
@@ -44,7 +44,7 @@ struct SnapshotBuilder {
                        double cpu_user = 0.0, double cpu_kernel = 0.0,
                        double mem_bytes = 0.0) {
     *stats.emplace_back(arena, wasted) =
-        make_process_stat(pid, ppid, comm, state);
+        make_process_stat(arena, pid, ppid, comm, state);
     *derived.emplace_back(arena, wasted) =
         make_derived_stat(cpu_user, cpu_kernel, mem_bytes);
     return *this;

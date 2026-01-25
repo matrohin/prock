@@ -69,19 +69,13 @@ EnvironResponse read_process_environ(const int pid) {
       EnvironEntry *entry = entries.emplace_back(response.owner_arena, wasted);
 
       size_t name_len = eq - ptr;
-      if (name_len >= sizeof(entry->name)) {
-        name_len = sizeof(entry->name) - 1;
-      }
-      strncpy(entry->name, ptr, name_len);
-      entry->name[name_len] = '\0';
+      entry->name = response.owner_arena.alloc_string_copy(ptr, name_len);
+      entry->name_len = name_len;
 
       const char *value_start = eq + 1;
       size_t value_len = len - (value_start - ptr);
-      if (value_len >= sizeof(entry->value)) {
-        value_len = sizeof(entry->value) - 1;
-      }
-      strncpy(entry->value, value_start, value_len);
-      entry->value[value_len] = '\0';
+      entry->value = response.owner_arena.alloc_string_copy(value_start, value_len);
+      entry->value_len = value_len;
     }
 
     ptr += len + 1;

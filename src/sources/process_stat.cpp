@@ -131,10 +131,10 @@ static void read_process_socket_inodes(const int pid,
 // Read stat for a thread (or process) given explicit paths
 static bool read_thread_stat(const int tid, const char *stat_path,
                              const char *statm_path, const char *comm_path,
-                             ProcessStat *out) {
+                             BumpArena &arena, ProcessStat *out) {
   ProcessStat &stat = *out;
   stat.pid = tid;
-  stat.comm[0] = '\0';
+  stat.comm = "";
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
   stat.net_recv_bytes = 0;
@@ -165,11 +165,13 @@ static bool read_thread_stat(const int tid, const char *stat_path,
     fclose(stat_file);
     return false;
   }
-  if (fgets(stat.comm, sizeof(stat.comm), comm_file)) {
-    size_t len = strlen(stat.comm);
-    if (len > 0 && stat.comm[len - 1] == '\n') {
-      stat.comm[len - 1] = '\0';
+  char comm_buf[64];
+  if (fgets(comm_buf, sizeof(comm_buf), comm_file)) {
+    size_t len = strlen(comm_buf);
+    if (len > 0 && comm_buf[len - 1] == '\n') {
+      --len;
     }
+    stat.comm = arena.alloc_string_copy(comm_buf, len);
   }
 
   fclose(comm_file);
@@ -206,7 +208,7 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   return true;
 }
 
-static bool read_process(const int pid, ProcessStat *out) {
+static bool read_process(const int pid, BumpArena &arena, ProcessStat *out) {
   constexpr size_t PATH_BUF_SIZE = 64;
 
   char stat_filename[PATH_BUF_SIZE];
@@ -223,7 +225,7 @@ static bool read_process(const int pid, ProcessStat *out) {
 
   ProcessStat &stat = *out;
   stat.pid = pid;
-  stat.comm[0] = '\0';
+  stat.comm = "";
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
   stat.net_recv_bytes = 0;
@@ -255,12 +257,14 @@ static bool read_process(const int pid, ProcessStat *out) {
     fclose(stat_file);
     return false;
   }
-  if (fgets(stat.comm, sizeof(stat.comm), comm_file)) {
+  char comm_buf[64];
+  if (fgets(comm_buf, sizeof(comm_buf), comm_file)) {
     // Strip trailing newline
-    size_t len = strlen(stat.comm);
-    if (len > 0 && stat.comm[len - 1] == '\n') {
-      stat.comm[len - 1] = '\0';
+    size_t len = strlen(comm_buf);
+    if (len > 0 && comm_buf[len - 1] == '\n') {
+      --len;
     }
+    stat.comm = arena.alloc_string_copy(comm_buf, len);
   }
 
   fclose(comm_file);
@@ -345,7 +349,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
   const LinkedNode<long> *it = pids.head;
   ProcessStat *it_result = result.data;
   while (it) {
-    if (read_process(it->value, it_result)) {
+    if (read_process(it->value, result_arena, it_result)) {
       ++it_result;
     }
     it = it->next;
@@ -590,7 +594,7 @@ static Array<ProcessStat> read_process_threads(const int pid,
              pid);  // statm is shared across threads
     snprintf(comm_path, sizeof(comm_path), "/proc/%d/task/%d/comm", pid, tid);
 
-    if (read_thread_stat(tid, stat_path, statm_path, comm_path, it_result)) {
+    if (read_thread_stat(tid, stat_path, statm_path, comm_path, arena, it_result)) {
       ++it_result;
     }
     it = it->next;

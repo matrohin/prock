@@ -71,7 +71,7 @@ library (unused since Linux 2.6; always 0) data       (6) data + stack
 
 struct ProcessStat {
   int pid;
-  char comm[64];
+  const char *comm;
   char state;
   int ppid;
   int pgrp;

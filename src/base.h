@@ -109,6 +109,18 @@ struct BumpArena {
     return static_cast<char *>(alloc_raw(size, 1));
   }
 
+  // Allocate and copy a string (null-terminated)
+  const char *alloc_string_copy(const char *src, size_t len) {
+    char *dst = alloc_string(len + 1);
+    memcpy(dst, src, len);
+    dst[len] = '\0';
+    return dst;
+  }
+
+  const char *alloc_string_copy(const char *src) {
+    return alloc_string_copy(src, strlen(src));
+  }
+
 
   template <class T> T *alloc() {
     return static_cast<T *>(alloc_raw(sizeof(T), alignof(T)));

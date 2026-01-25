@@ -64,8 +64,9 @@ static LibraryResponse read_process_libraries(const int pid) {
     if (found) continue;
 
     LibraryEntry *entry = entries.emplace_back(response.owner_arena, wasted);
-    strncpy(entry->path, pathname, sizeof(entry->path) - 1);
-    entry->path[sizeof(entry->path) - 1] = '\0';
+    size_t path_len = strlen(pathname);
+    entry->path = response.owner_arena.alloc_string_copy(pathname, path_len);
+    entry->path_len = path_len;
     entry->addr_start = addr_start;
     entry->addr_end = addr_end;
 

@@ -27,7 +27,8 @@ struct UpdateSnapshot {
 };
 
 struct LibraryEntry {
-  char path[256];
+  const char *path;
+  size_t path_len;
   unsigned long addr_start;
   unsigned long addr_end;
   long file_size; // -1 if stat failed
@@ -45,8 +46,10 @@ struct LibraryResponse {
 };
 
 struct EnvironEntry {
-  char name[256];
-  char value[4096];
+  const char *name;
+  const char *value;
+  size_t name_len;
+  size_t value_len;
 };
 
 struct EnvironRequest {

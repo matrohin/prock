@@ -92,11 +92,17 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eEnvironViewerStatus_Ready;
-          // Copy entries to our arena
+          // Copy entries to our arena, including string data
           win.entries =
               Array<EnvironEntry>::create(state.cur_arena, response.entries.size);
-          memcpy(win.entries.data, response.entries.data,
-                 response.entries.size * sizeof(EnvironEntry));
+          for (size_t j = 0; j < response.entries.size; ++j) {
+            const EnvironEntry &src = response.entries.data[j];
+            EnvironEntry &dst = win.entries.data[j];
+            dst.name = state.cur_arena.alloc_string_copy(src.name, src.name_len);
+            dst.name_len = src.name_len;
+            dst.value = state.cur_arena.alloc_string_copy(src.value, src.value_len);
+            dst.value_len = src.value_len;
+          }
         } else {
           win.status = eEnvironViewerStatus_Error;
           win.error_code = response.error_code;
@@ -120,8 +126,14 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
       if (win.entries.size > 0) {
         Array<EnvironEntry> new_entries =
             Array<EnvironEntry>::create(new_arena, win.entries.size);
-        memcpy(new_entries.data, win.entries.data,
-               win.entries.size * sizeof(EnvironEntry));
+        for (size_t j = 0; j < win.entries.size; ++j) {
+          const EnvironEntry &src = win.entries.data[j];
+          EnvironEntry &dst = new_entries.data[j];
+          dst.name = new_arena.alloc_string_copy(src.name, src.name_len);
+          dst.name_len = src.name_len;
+          dst.value = new_arena.alloc_string_copy(src.value, src.value_len);
+          dst.value_len = src.value_len;
+        }
         win.entries = new_entries;
       }
     }
@@ -237,7 +249,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             // Value
             ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
             ImGui::TextUnformatted(entry.value);
-            if (ImGui::IsItemHovered() && strlen(entry.value) > 50) {
+            if (ImGui::IsItemHovered() && entry.value_len > 50) {
               ImGui::SetTooltip("%s", entry.value);
             }
           }

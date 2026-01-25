@@ -93,11 +93,18 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eLibraryViewerStatus_Ready;
-          // Copy libraries to our arena
+          // Copy libraries to our arena, including string data
           win.libraries = Array<LibraryEntry>::create(state.cur_arena,
                                                       response.libraries.size);
-          memcpy(win.libraries.data, response.libraries.data,
-                 response.libraries.size * sizeof(LibraryEntry));
+          for (size_t j = 0; j < response.libraries.size; ++j) {
+            const LibraryEntry &src = response.libraries.data[j];
+            LibraryEntry &dst = win.libraries.data[j];
+            dst.path = state.cur_arena.alloc_string_copy(src.path, src.path_len);
+            dst.path_len = src.path_len;
+            dst.addr_start = src.addr_start;
+            dst.addr_end = src.addr_end;
+            dst.file_size = src.file_size;
+          }
         } else {
           win.status = eLibraryViewerStatus_Error;
           win.error_code = response.error_code;
@@ -121,8 +128,15 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
       if (win.libraries.size > 0) {
         Array<LibraryEntry> new_libs =
             Array<LibraryEntry>::create(new_arena, win.libraries.size);
-        memcpy(new_libs.data, win.libraries.data,
-               win.libraries.size * sizeof(LibraryEntry));
+        for (size_t j = 0; j < win.libraries.size; ++j) {
+          const LibraryEntry &src = win.libraries.data[j];
+          LibraryEntry &dst = new_libs.data[j];
+          dst.path = new_arena.alloc_string_copy(src.path, src.path_len);
+          dst.path_len = src.path_len;
+          dst.addr_start = src.addr_start;
+          dst.addr_end = src.addr_end;
+          dst.file_size = src.file_size;
+        }
         win.libraries = new_libs;
       }
     }
