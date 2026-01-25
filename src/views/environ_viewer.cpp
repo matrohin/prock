@@ -22,6 +22,15 @@ void copy_environ_row(const EnvironEntry &entry) {
   ImGui::SetClipboardText(buf);
 }
 
+void copy_path_segment(const char *start, const char *end) {
+  size_t len = end - start;
+  char buf[4096];
+  if (len >= sizeof(buf)) len = sizeof(buf) - 1;
+  memcpy(buf, start, len);
+  buf[len] = '\0';
+  ImGui::SetClipboardText(buf);
+}
+
 void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
   size_t buf_size = 128 + win.entries.size * 4400;
   char *buf = arena.alloc_string(buf_size);
@@ -34,6 +43,19 @@ void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
                     entry.value);
   }
   ImGui::SetClipboardText(buf);
+}
+
+// Returns true if value looks like a PATH-style variable (multiple colon-separated paths)
+bool is_expandable_value(const char *value, size_t len) {
+  if (len < 10) return false;  // Too short to benefit from expansion
+  int colons = 0;
+  for (size_t i = 0; i < len; ++i) {
+    if (value[i] == ':') {
+      ++colons;
+      if (colons >= 2) return true;  // At least 3 segments
+    }
+  }
+  return false;
 }
 
 void sort_environ(EnvironViewerWindow &win) {
@@ -75,6 +97,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   win->flags |= eProcessWindowFlags_RedockRequested;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_index = -1;
+  win->selected_child_index = -1;
 
   EnvironRequest req = {pid};
   sync.environ_request_queue.push(req);
@@ -208,7 +231,9 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                     ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |
                     ImGuiTableFlags_ScrollY)) {
           ImGui::TableSetupScrollFreeze(0, 1);
-          ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort,
+          ImGui::TableSetupColumn("Name",
+                                  ImGuiTableColumnFlags_DefaultSort |
+                                      ImGuiTableColumnFlags_NoHide,
                                   0.0f, eEnvironViewerColumnId_Name);
           ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_None, 0.0f,
                                   eEnvironViewerColumnId_Value);
@@ -233,41 +258,168 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               continue;
             }
             const bool is_selected = (win.selected_index == static_cast<int>(j));
+            const bool expandable =
+                is_expandable_value(entry.value, entry.value_len);
+
             ImGui::TableNextRow();
-
-            // Name with selection
             ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Name);
-            if (ImGui::Selectable(entry.name, is_selected,
-                                  ImGuiSelectableFlags_SpanAllColumns)) {
-              win.selected_index = static_cast<int>(j);
+
+            ImGui::PushID(static_cast<int>(j));
+
+            if (expandable) {
+              // Use TreeNode for expandable PATH-like values
+              const bool parent_selected =
+                  is_selected && win.selected_child_index < 0;
+              ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns |
+                                         ImGuiTreeNodeFlags_AllowOverlap;
+              if (parent_selected) flags |= ImGuiTreeNodeFlags_Selected;
+
+              bool is_open = ImGui::TreeNodeEx(entry.name, flags);
+
+              // Handle selection on click
+              if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+                win.selected_index = static_cast<int>(j);
+                win.selected_child_index = -1;
+              }
+
+              // Context menu
+              if (ImGui::BeginPopupContextItem()) {
+                win.selected_index = static_cast<int>(j);
+                win.selected_child_index = -1;
+                if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+                  copy_environ_row(entry);
+                }
+                if (ImGui::MenuItem("Copy All")) {
+                  copy_all_environ(ctx.frame_arena, win);
+                }
+                ImGui::EndPopup();
+              }
+
+              // Value column - show collapsed hint or nothing when expanded
+              ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
+              if (!is_open) {
+                ImGui::TextUnformatted(entry.value);
+                if (ImGui::IsItemHovered()) {
+                  ImGui::SetTooltip("%s", entry.value);
+                }
+              }
+
+              // Render children when expanded
+              if (is_open) {
+                const char *seg_start = entry.value;
+                const char *p = entry.value;
+                int seg_idx = 0;
+                while (*p || seg_start != p) {
+                  if (*p == ':' || *p == '\0') {
+                    const bool child_selected =
+                        is_selected && win.selected_child_index == seg_idx;
+                    const char *seg_end = p;
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Name);
+
+                    // Leaf node with selection support
+                    ImGui::PushID(seg_idx);
+                    ImGuiTreeNodeFlags leaf_flags =
+                        ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet |
+                        ImGuiTreeNodeFlags_NoTreePushOnOpen |
+                        ImGuiTreeNodeFlags_SpanAllColumns;
+                    if (child_selected)
+                      leaf_flags |= ImGuiTreeNodeFlags_Selected;
+
+                    char seg_label[32];
+                    snprintf(seg_label, sizeof(seg_label), "[%d]", seg_idx);
+                    ImGui::TreeNodeEx(seg_label, leaf_flags);
+
+                    if (ImGui::IsItemClicked()) {
+                      win.selected_index = static_cast<int>(j);
+                      win.selected_child_index = seg_idx;
+                    }
+
+                    // Context menu for child segment
+                    if (ImGui::BeginPopupContextItem()) {
+                      win.selected_index = static_cast<int>(j);
+                      win.selected_child_index = seg_idx;
+                      if (ImGui::MenuItem("Copy Path", "Ctrl+C")) {
+                        copy_path_segment(seg_start, seg_end);
+                      }
+                      ImGui::EndPopup();
+                    }
+
+                    ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
+                    if (seg_end > seg_start) {
+                      ImGui::TextUnformatted(seg_start, seg_end);
+                    } else {
+                      ImGui::TextDisabled("(empty)");
+                    }
+                    ImGui::PopID();
+
+                    if (*p == '\0') break;
+                    seg_start = p + 1;
+                    ++seg_idx;
+                  }
+                  ++p;
+                }
+                ImGui::TreePop();
+              }
+            } else {
+              // Non-expandable: use regular selectable
+              if (ImGui::Selectable(entry.name, is_selected,
+                                    ImGuiSelectableFlags_SpanAllColumns)) {
+                win.selected_index = static_cast<int>(j);
+                win.selected_child_index = -1;
+              }
+
+              if (ImGui::BeginPopupContextItem()) {
+                win.selected_index = static_cast<int>(j);
+                win.selected_child_index = -1;
+                if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+                  copy_environ_row(entry);
+                }
+                if (ImGui::MenuItem("Copy All")) {
+                  copy_all_environ(ctx.frame_arena, win);
+                }
+                ImGui::EndPopup();
+              }
+
+              // Value
+              ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
+              ImGui::TextUnformatted(entry.value);
+              if (ImGui::IsItemHovered() && entry.value_len > 50) {
+                ImGui::SetTooltip("%s", entry.value);
+              }
             }
 
-            if (ImGui::BeginPopupContextItem()) {
-              win.selected_index = static_cast<int>(j);
-              if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-                copy_environ_row(entry);
-              }
-              if (ImGui::MenuItem("Copy All")) {
-                copy_all_environ(ctx.frame_arena, win);
-              }
-              ImGui::EndPopup();
-            }
-
-            // Value
-            ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
-            ImGui::TextUnformatted(entry.value);
-            if (ImGui::IsItemHovered() && entry.value_len > 50) {
-              ImGui::SetTooltip("%s", entry.value);
-            }
+            ImGui::PopID();
           }
 
           ImGui::EndTable();
         }
 
-        // Ctrl+C to copy selected row
+        // Ctrl+C to copy selected row or child segment
         if (win.selected_index >= 0 &&
             ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-          copy_environ_row(win.entries.data[win.selected_index]);
+          const EnvironEntry &entry = win.entries.data[win.selected_index];
+          if (win.selected_child_index >= 0) {
+            // Copy specific path segment
+            const char *seg_start = entry.value;
+            const char *p = entry.value;
+            int seg_idx = 0;
+            while (*p || seg_start != p) {
+              if (*p == ':' || *p == '\0') {
+                if (seg_idx == win.selected_child_index) {
+                  copy_path_segment(seg_start, p);
+                  break;
+                }
+                if (*p == '\0') break;
+                seg_start = p + 1;
+                ++seg_idx;
+              }
+              ++p;
+            }
+          } else {
+            copy_environ_row(entry);
+          }
         }
       }
     }

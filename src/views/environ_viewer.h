@@ -24,7 +24,8 @@ struct EnvironViewerWindow {
   char process_name[64];
   char error_message[128];
   int error_code;
-  int selected_index; // -1 means no selection
+  int selected_index;       // -1 means no selection
+  int selected_child_index; // -1 means parent selected, >= 0 means child segment
   char filter_text[256];
 
   ProcessWindowFlags flags;
