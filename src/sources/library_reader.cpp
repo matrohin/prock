@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <climits>
 #include <cstdio>
 #include <cstring>
 #include <mutex>
@@ -41,9 +42,9 @@ static LibraryResponse read_process_libraries(const int pid) {
     unsigned long offset;
     char dev[16] = {};
     unsigned long inode;
-    char pathname[256] = {};
+    char pathname[PATH_MAX] = {};
 
-    int n = sscanf(line, "%lx-%lx %7s %lx %15s %lu %255s", &addr_start,
+    int n = sscanf(line, "%lx-%lx %7s %lx %15s %lu %4095s", &addr_start,
                    &addr_end, perms, &offset, dev, &inode, pathname);
 
     if (n < 7 || pathname[0] == '\0') continue;
