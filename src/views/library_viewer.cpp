@@ -192,6 +192,13 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
         ImGui::InputTextWithHint("##LibFilter", "Filter", win.filter_text,
                                  sizeof(win.filter_text));
+        ImGui::SameLine();
+        if (ImGui::Button("Refresh")) {
+          win.status = eLibraryViewerStatus_Loading;
+          LibraryRequest req = {win.pid};
+          view_state.sync->library_request_queue.push(req);
+          view_state.sync->library_cv.notify_one();
+        }
         ImGuiTextFilter filter;
         if (win.filter_text[0] != '\0') {
           strncpy(filter.InputBuf, win.filter_text, sizeof(filter.InputBuf));
