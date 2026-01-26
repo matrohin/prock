@@ -304,7 +304,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     }
 
     const int64_t now_ns = state.snapshot.at.time_since_epoch().count();
-    int current_tree_depth = 0; // Track depth for TreePop management
+    int current_tree_depth = 0;  // Track depth for TreePop management
+    int collapsed_at_depth = -1; // -1 means no collapsed parent; otherwise skip
+                                 // children deeper than this
 
     for (size_t i = 0; i < my_state.lines.size; ++i) {
       const BriefTableLine &line = my_state.lines.data[i];
@@ -318,8 +320,20 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       // Skip non-matching processes when filter is active
       if (!filter.PassFilter(line.comm) && !filter.PassFilter(label)) continue;
 
-      // In tree mode, pop back to the correct depth before rendering this node
+      // In tree mode, handle collapsed parent tracking and TreePop
       if (my_state.tree_mode) {
+        // If we've returned to or above a collapsed node's depth, stop
+        // skipping
+        if (collapsed_at_depth >= 0 && line.tree_depth <= collapsed_at_depth) {
+          collapsed_at_depth = -1;
+        }
+
+        // Skip children of collapsed nodes
+        if (collapsed_at_depth >= 0 && line.tree_depth > collapsed_at_depth) {
+          continue;
+        }
+
+        // Pop back to the correct depth before rendering this node
         while (current_tree_depth > line.tree_depth) {
           ImGui::TreePop();
           --current_tree_depth;
@@ -350,7 +364,6 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf;
         if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
 
-        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
         const bool node_open = ImGui::TreeNodeEx(label, flags);
 
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
@@ -368,6 +381,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         } else if (node_open) {
           // Leaf node that was opened - pop immediately
           ImGui::TreePop();
+        } else if (has_children) {
+          // Node is collapsed - skip its children
+          collapsed_at_depth = line.tree_depth;
         }
       } else {
         if (ImGui::Selectable(label, is_selected,
