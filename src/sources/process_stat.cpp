@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <linux/inet_diag.h>
+#include <dirent.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/sock_diag.h>
