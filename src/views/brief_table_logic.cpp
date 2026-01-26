@@ -62,7 +62,7 @@ static bool table_line_is_less(const BriefTableColumnId sorted_by,
   return false;
 }
 
-void sort_brief_table_lines(BriefTableState &my_state) {
+static void sort_flat(BriefTableState &my_state) {
   const auto sort_ascending =
       [sorted_by = my_state.sorted_by](const BriefTableLine &left,
                                        const BriefTableLine &right) {
@@ -79,6 +79,74 @@ void sort_brief_table_lines(BriefTableState &my_state) {
                        return sort_ascending(right, left);
                      });
   }
+
+  // Reset tree depth for flat mode
+  for (size_t i = 0; i < my_state.lines.size; ++i) {
+    my_state.lines.data[i].tree_depth = 0;
+  }
+}
+
+// Recursively add a process and its children to the output array (DFS)
+// Assumes lines are already sorted by PID
+static void add_tree_node(const Array<BriefTableLine> &src,
+                          BriefTableLine *dst, size_t &dst_idx, size_t src_idx,
+                          int depth) {
+  dst[dst_idx] = src.data[src_idx];
+  dst[dst_idx].tree_depth = depth;
+  ++dst_idx;
+
+  const int parent_pid = src.data[src_idx].pid;
+
+  // Find and add all children (already sorted by PID since src is sorted)
+  for (size_t i = 0; i < src.size; ++i) {
+    if (src.data[i].ppid == parent_pid && src.data[i].pid != parent_pid) {
+      add_tree_node(src, dst, dst_idx, i, depth + 1);
+    }
+  }
+}
+
+void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
+  Array<BriefTableLine> &lines = my_state.lines;
+  if (lines.size == 0) return;
+
+  // Sort by PID first for consistent tree ordering
+  std::sort(lines.data, lines.data + lines.size,
+            [](const BriefTableLine &a, const BriefTableLine &b) {
+              return a.pid < b.pid;
+            });
+
+  // Allocate output array
+  BriefTableLine *sorted = arena.alloc_array_of<BriefTableLine>(lines.size);
+  size_t sorted_idx = 0;
+
+  // Find root processes (ppid not in our PID list) and add with DFS
+  for (size_t i = 0; i < lines.size; ++i) {
+    const int ppid = lines.data[i].ppid;
+    // Root if ppid is 0, or if ppid is not found in our process list
+    bool is_root = (ppid == 0);
+    if (!is_root) {
+      is_root = true;
+      for (size_t j = 0; j < lines.size; ++j) {
+        if (lines.data[j].pid == ppid) {
+          is_root = false;
+          break;
+        }
+      }
+    }
+    if (is_root) {
+      add_tree_node(lines, sorted, sorted_idx, i, 0);
+    }
+  }
+
+  // Copy back to lines array
+  for (size_t i = 0; i < sorted_idx; ++i) {
+    my_state.lines.data[i] = sorted[i];
+  }
+  my_state.lines.size = sorted_idx;
+}
+
+void sort_brief_table_lines(BriefTableState &my_state) {
+  sort_flat(my_state);
 }
 
 static void brief_table_line_init(BriefTableLine &new_line,
@@ -156,5 +224,10 @@ void brief_table_update(BriefTableState &my_state, State &state) {
 
   new_lines.size = new_lines_count;
   my_state.lines = new_lines;
-  sort_brief_table_lines(my_state);
+
+  if (my_state.tree_mode) {
+    sort_brief_table_tree(my_state, state.snapshot_arena);
+  } else {
+    sort_brief_table_lines(my_state);
+  }
 }

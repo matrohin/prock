@@ -218,7 +218,14 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   ImGui::InputTextWithHint("##ProcessFilter", "Filter", my_state.filter_text,
                            sizeof(my_state.filter_text));
   ImGui::SameLine();
-  ImGui::Checkbox("Tree", &my_state.tree_mode);
+  bool reset_sort_to_pid = false;
+  if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {
+    // Reset to PID sorting when entering tree mode
+    my_state.sorted_by = eBriefTableColumnId_Pid;
+    my_state.sorted_order = ImGuiSortDirection_Ascending;
+    reset_sort_to_pid = true;
+    sort_brief_table_tree(my_state, ctx.frame_arena);
+  }
   ImGuiTextFilter filter;
   if (my_state.filter_text[0] != '\0') {
     strncpy(filter.InputBuf, my_state.filter_text, sizeof(filter.InputBuf));
@@ -274,6 +281,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_DefaultHide,
                             0.0f, eBriefTableColumnId_NetSendKbPerSec);
+    if (reset_sort_to_pid) {
+      ImGui::TableSetColumnSortDirection(eBriefTableColumnId_Pid,
+                                         ImGuiSortDirection_Ascending, false);
+    }
     ImGui::TableHeadersRow();
 
     if (ImGuiTableSortSpecs *sort_specs = ImGui::TableGetSortSpecs()) {
@@ -281,13 +292,19 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         my_state.sorted_by =
             static_cast<BriefTableColumnId>(sort_specs->Specs->ColumnUserID);
         my_state.sorted_order = sort_specs->Specs->SortDirection;
-        sort_brief_table_lines(my_state);
+        if (my_state.sorted_by != eBriefTableColumnId_Pid ||
+            my_state.sorted_order != ImGuiSortDirection_Ascending) {
+          my_state.tree_mode = false; // Disable tree mode when user sorts
+        }
+        if (!my_state.tree_mode) {
+          sort_brief_table_lines(my_state);
+        }
         sort_specs->SpecsDirty = false;
       }
     }
 
-    // Flat mode rendering
     const int64_t now_ns = state.snapshot.at.time_since_epoch().count();
+    int current_tree_depth = 0; // Track depth for TreePop management
 
     for (size_t i = 0; i < my_state.lines.size; ++i) {
       const BriefTableLine &line = my_state.lines.data[i];
@@ -301,6 +318,14 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       // Skip non-matching processes when filter is active
       if (!filter.PassFilter(line.comm) && !filter.PassFilter(label)) continue;
 
+      // In tree mode, pop back to the correct depth before rendering this node
+      if (my_state.tree_mode) {
+        while (current_tree_depth > line.tree_depth) {
+          ImGui::TreePop();
+          --current_tree_depth;
+        }
+      }
+
       ImGui::TableNextRow();
 
       // Apply row highlighting
@@ -313,18 +338,57 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       const bool is_selected = my_state.selected_pid == line.pid;
       ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
 
-      if (ImGui::Selectable(label, is_selected,
-                            ImGuiSelectableFlags_SpanAllColumns) ||
-          ImGui::IsItemFocused()) {
-        my_state.selected_pid = line.pid;
-      }
+      if (my_state.tree_mode) {
+        // Check if this node has children (next line has greater depth)
+        const bool has_children =
+            (i + 1 < my_state.lines.size) &&
+            (my_state.lines.data[i + 1].tree_depth > line.tree_depth);
 
-      if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-        open_all_windows(line.pid, line.comm, view_state);
-      }
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns |
+                                   ImGuiTreeNodeFlags_DefaultOpen |
+                                   ImGuiTreeNodeFlags_OpenOnArrow;
+        if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf;
+        if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
 
-      table_context_menu_draw(ctx, view_state, my_state, line, label);
-      data_columns_draw(line);
+        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+        const bool node_open = ImGui::TreeNodeEx(label, flags);
+
+        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+          my_state.selected_pid = line.pid;
+        }
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+          open_all_windows(line.pid, line.comm, view_state);
+        }
+        table_context_menu_draw(ctx, view_state, my_state, line, label);
+        data_columns_draw(line);
+
+        if (node_open && has_children) {
+          // Children will follow; track depth for later TreePop
+          ++current_tree_depth;
+        } else if (node_open) {
+          // Leaf node that was opened - pop immediately
+          ImGui::TreePop();
+        }
+      } else {
+        if (ImGui::Selectable(label, is_selected,
+                              ImGuiSelectableFlags_SpanAllColumns) ||
+            ImGui::IsItemFocused()) {
+          my_state.selected_pid = line.pid;
+        }
+
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+          open_all_windows(line.pid, line.comm, view_state);
+        }
+
+        table_context_menu_draw(ctx, view_state, my_state, line, label);
+        data_columns_draw(line);
+      }
+    }
+
+    // Pop any remaining tree levels
+    while (current_tree_depth > 0) {
+      ImGui::TreePop();
+      --current_tree_depth;
     }
 
     ImGui::EndTable();
