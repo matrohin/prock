@@ -369,7 +369,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
           my_state.selected_pid = line.pid;
         }
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) &&
+            !ImGui::IsItemToggledOpen()) {
           open_all_windows(line.pid, line.comm, view_state);
         }
         table_context_menu_draw(ctx, view_state, my_state, line, label);
