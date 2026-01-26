@@ -274,11 +274,8 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ImGui::TextWrapped("%s", win.error_message);
       } else if (win.sockets.size > 0 ||
                  win.status == eSocketViewerStatus_Ready) {
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
-          ImGui::SetKeyboardFocusHere();
-        }
-        ImGui::InputTextWithHint("##SockFilter", "Filter", win.filter_text,
-                                 sizeof(win.filter_text));
+        ImGuiTextFilter filter = draw_filter_input(
+            "##SockFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
           win.status = eSocketViewerStatus_Loading;
@@ -286,20 +283,11 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           view_state.sync->socket_request_queue.push(req);
           view_state.sync->library_cv.notify_one();
         }
-        ImGuiTextFilter filter;
-        if (win.filter_text[0] != '\0') {
-          strncpy(filter.InputBuf, win.filter_text, sizeof(filter.InputBuf));
-          filter.InputBuf[sizeof(filter.InputBuf) - 1] = '\0';
-          filter.Build();
-        }
 
         if (win.sockets.size == 0) {
           ImGui::TextDisabled("No sockets");
-        } else if (ImGui::BeginTable(
-                       "Sockets", eSocketViewerColumnId_Count,
-                       ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
-                           ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |
-                           ImGuiTableFlags_ScrollY)) {
+        } else if (ImGui::BeginTable("Sockets", eSocketViewerColumnId_Count,
+                                     COMMON_TABLE_FLAGS)) {
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed,
                                   50.0f, eSocketViewerColumnId_Protocol);
@@ -319,16 +307,8 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                   60.0f, eSocketViewerColumnId_SendQ);
           ImGui::TableHeadersRow();
 
-          // Handle sorting
-          if (ImGuiTableSortSpecs *sort_specs = ImGui::TableGetSortSpecs()) {
-            if (sort_specs->SpecsDirty) {
-              win.sorted_by = static_cast<SocketViewerColumnId>(
-                  sort_specs->Specs->ColumnUserID);
-              win.sorted_order = sort_specs->Specs->SortDirection;
-              sort_sockets(win);
-              sort_specs->SpecsDirty = false;
-            }
-          }
+          handle_table_sort_specs(win.sorted_by, win.sorted_order,
+                                  [&]() { sort_sockets(win); });
 
           char local_addr[64], remote_addr[64];
           for (size_t j = 0; j < win.sockets.size; ++j) {

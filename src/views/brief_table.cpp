@@ -212,11 +212,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
            my_state.lines.size);
   ImGui::Begin(title, nullptr, COMMON_VIEW_FLAGS);
 
-  if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
-    ImGui::SetKeyboardFocusHere();
-  }
-  ImGui::InputTextWithHint("##ProcessFilter", "Filter", my_state.filter_text,
-                           sizeof(my_state.filter_text));
+  ImGuiTextFilter filter = draw_filter_input(
+      "##ProcessFilter", my_state.filter_text, sizeof(my_state.filter_text));
   ImGui::SameLine();
   bool reset_sort_to_pid = false;
   if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {
@@ -225,12 +222,6 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     reset_sort_to_pid = true;
     sort_brief_table_tree(my_state, ctx.frame_arena);
-  }
-  ImGuiTextFilter filter;
-  if (my_state.filter_text[0] != '\0') {
-    strncpy(filter.InputBuf, my_state.filter_text, sizeof(filter.InputBuf));
-    filter.InputBuf[sizeof(filter.InputBuf) - 1] = '\0';
-    filter.Build();
   }
 
   if (ImGui::BeginTable(

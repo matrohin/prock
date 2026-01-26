@@ -187,11 +187,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           }
         }
       } else if (win.libraries.size > 0) {
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
-          ImGui::SetKeyboardFocusHere();
-        }
-        ImGui::InputTextWithHint("##LibFilter", "Filter", win.filter_text,
-                                 sizeof(win.filter_text));
+        ImGuiTextFilter filter = draw_filter_input(
+            "##LibFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
           win.status = eLibraryViewerStatus_Loading;
@@ -199,17 +196,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           view_state.sync->library_request_queue.push(req);
           view_state.sync->library_cv.notify_one();
         }
-        ImGuiTextFilter filter;
-        if (win.filter_text[0] != '\0') {
-          strncpy(filter.InputBuf, win.filter_text, sizeof(filter.InputBuf));
-          filter.InputBuf[sizeof(filter.InputBuf) - 1] = '\0';
-          filter.Build();
-        }
-        if (ImGui::BeginTable(
-                "Libraries", eLibraryViewerColumnId_Count,
-                ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |
-                    ImGuiTableFlags_ScrollY)) {
+        if (ImGui::BeginTable("Libraries", eLibraryViewerColumnId_Count,
+                              COMMON_TABLE_FLAGS)) {
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_DefaultSort,
                                   0.0f, eLibraryViewerColumnId_Path);
@@ -223,16 +211,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                   100.0f, eLibraryViewerColumnId_FileSize);
           ImGui::TableHeadersRow();
 
-          // Handle sorting
-          if (ImGuiTableSortSpecs *sort_specs = ImGui::TableGetSortSpecs()) {
-            if (sort_specs->SpecsDirty) {
-              win.sorted_by = static_cast<LibraryViewerColumnId>(
-                  sort_specs->Specs->ColumnUserID);
-              win.sorted_order = sort_specs->Specs->SortDirection;
-              sort_libraries(win);
-              sort_specs->SpecsDirty = false;
-            }
-          }
+          handle_table_sort_specs(win.sorted_by, win.sorted_order,
+                                  [&]() { sort_libraries(win); });
 
           for (size_t j = 0; j < win.libraries.size; ++j) {
             const LibraryEntry &lib = win.libraries.data[j];

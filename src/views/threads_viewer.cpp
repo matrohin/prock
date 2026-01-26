@@ -334,23 +334,11 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
       if (win.status == eThreadsViewerStatus_Error) {
         ImGui::TextWrapped("%s", win.error_message);
       } else if (win.threads.size > 0) {
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
-          ImGui::SetKeyboardFocusHere();
-        }
-        ImGui::InputTextWithHint("##ThreadFilter", "Filter", win.filter_text,
-                                 sizeof(win.filter_text));
-        ImGuiTextFilter filter;
-        if (win.filter_text[0] != '\0') {
-          strncpy(filter.InputBuf, win.filter_text, sizeof(filter.InputBuf));
-          filter.InputBuf[sizeof(filter.InputBuf) - 1] = '\0';
-          filter.Build();
-        }
+        ImGuiTextFilter filter = draw_filter_input(
+            "##ThreadFilter", win.filter_text, sizeof(win.filter_text));
 
-        if (ImGui::BeginTable(
-                "Threads", eThreadsViewerColumnId_Count,
-                ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |
-                    ImGuiTableFlags_ScrollY)) {
+        if (ImGui::BeginTable("Threads", eThreadsViewerColumnId_Count,
+                              COMMON_TABLE_FLAGS)) {
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("TID", ImGuiTableColumnFlags_DefaultSort,
                                   0.0f, eThreadsViewerColumnId_Tid);
@@ -369,16 +357,8 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                                   0.0f, eThreadsViewerColumnId_Memory);
           ImGui::TableHeadersRow();
 
-          // Handle sorting
-          if (ImGuiTableSortSpecs *sort_specs = ImGui::TableGetSortSpecs()) {
-            if (sort_specs->SpecsDirty) {
-              win.sorted_by = static_cast<ThreadsViewerColumnId>(
-                  sort_specs->Specs->ColumnUserID);
-              win.sorted_order = sort_specs->Specs->SortDirection;
-              sort_threads(win);
-              sort_specs->SpecsDirty = false;
-            }
-          }
+          handle_table_sort_specs(win.sorted_by, win.sorted_order,
+                                  [&]() { sort_threads(win); });
 
           for (size_t j = 0; j < win.threads.size; ++j) {
             const ProcessStat &thread = win.threads.data[j];
