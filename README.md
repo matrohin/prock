@@ -2,6 +2,8 @@
 
 Process Explorer for Linux.
 
+The tool is still in development. I need it myself to improve my Linux desktop experience.
+
 ## Features
 
 ### Process Monitoring
@@ -48,3 +50,7 @@ cmake --preset debug
 ./build.sh
 ./build/Debug/prock
 ```
+
+## Screenshots
+
+![Main View](./images/main-view.png) ![Process Views](./images/process-views.png)
