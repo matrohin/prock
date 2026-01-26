@@ -213,12 +213,14 @@ void brief_table_update(BriefTableState &my_state, State &state) {
   }
 
   // Add new processes
+  // On first update (old_lines empty), use 0 to avoid marking all as "new"
+  const int64_t new_process_first_seen = old_lines.size > 0 ? now_ns : 0;
   for (size_t i = 0; i < new_snapshot.stats.size; ++i) {
     if (!added.data[i]) {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[i],
                             new_snapshot.derived_stats.data[i]);
-      new_line.first_seen_ns = now_ns;
+      new_line.first_seen_ns = new_process_first_seen;
     }
   }
 
