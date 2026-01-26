@@ -3,7 +3,9 @@
 #include "cpu_chart.h"
 #include "imgui_internal.h"
 
+#include <cerrno>
 #include <cstdio>
+#include <unistd.h>
 
 constexpr ImGuiWindowFlags COMMON_VIEW_FLAGS = ImGuiWindowFlags_NoCollapse;
 
@@ -136,4 +138,14 @@ bool handle_table_sort_specs(ColumnId &sorted_by, ImGuiSortDirection &sorted_ord
     }
   }
   return false;
+}
+
+// Draw error message with optional pkexec restart button for permission errors
+inline void draw_error_with_pkexec(const char *error_message, int error_code) {
+  ImGui::TextWrapped("%s", error_message);
+  if (error_code == EACCES) {
+    if (ImGui::Button("Restart with pkexec")) {
+      execlp("pkexec", "pkexec", "/proc/self/exe", nullptr);
+    }
+  }
 }

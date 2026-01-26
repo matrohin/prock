@@ -180,12 +180,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       // Content area - show previous data while loading, or error message
       if (win.status == eLibraryViewerStatus_Error) {
-        ImGui::TextWrapped("%s", win.error_message);
-        if (win.error_code == EACCES) {
-          if (ImGui::Button("Restart with pkexec")) {
-            execlp("pkexec", "pkexec", "/proc/self/exe", nullptr);
-          }
-        }
+        draw_error_with_pkexec(win.error_message, win.error_code);
       } else if (win.libraries.size > 0) {
         ImGuiTextFilter filter = draw_filter_input(
             "##LibFilter", win.filter_text, sizeof(win.filter_text));
