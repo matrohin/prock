@@ -10,7 +10,6 @@
 
 #include <algorithm>
 #include <cerrno>
-#include <climits>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>

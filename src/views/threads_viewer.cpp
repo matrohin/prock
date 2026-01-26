@@ -298,30 +298,6 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
   }
 }
 
-static const char *get_state_tooltip(char state) {
-  switch (state) {
-  case 'R':
-    return "Running";
-  case 'S':
-    return "Sleeping (interruptible)";
-  case 'D':
-    return "Disk sleep (uninterruptible)";
-  case 'Z':
-    return "Zombie";
-  case 'T':
-    return "Stopped (signal)";
-  case 't':
-    return "Tracing stop";
-  case 'X':
-  case 'x':
-    return "Dead";
-  case 'I':
-    return "Idle";
-  default:
-    return nullptr;
-  }
-}
-
 void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                          const State & /*state*/) {
   ZoneScoped;

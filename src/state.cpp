@@ -36,6 +36,7 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
       }
       result.mem_resident_bytes =
           new_stat.statm_resident * old_state.system.mem_page_size;
+      result.mem_virtual_bytes = new_stat.vsize;
 
       // Compute I/O rates in KB/s
       if (time_delta_secs > 0) {

@@ -29,14 +29,16 @@ enum BriefTableColumnId {
 
 struct BriefTableLine {
   int pid;
-  size_t state_index;
-};
+  int ppid;
+  const char *comm;
+  char state;
+  long num_threads;
 
-struct BriefTreeNode {
-  int pid;
-  size_t state_index;
-  BriefTreeNode *first_child;
-  BriefTreeNode *next_sibling;
+  ProcessDerivedStat derived_stat;
+
+  int64_t first_seen_ns;
+  int64_t death_time_ns;
+  int tree_depth; // 0 for root, incremented for children (used in tree mode)
 };
 
 struct BriefTableState {
@@ -57,11 +59,4 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 // Pure logic functions (exposed for testing)
 size_t binary_search_pid(const Array<ProcessStat> &stats, int pid);
 
-void sort_brief_table_lines(BriefTableState &my_state,
-                            const StateSnapshot &state);
-
-BriefTreeNode *build_process_tree(BumpArena &arena,
-                                  const Array<BriefTableLine> &lines,
-                                  const StateSnapshot &snapshot,
-                                  BriefTableColumnId sorted_by,
-                                  ImGuiSortDirection sorted_order);
+void sort_brief_table_lines(BriefTableState &my_state);

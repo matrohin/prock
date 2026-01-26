@@ -21,155 +21,120 @@
 #include <cstring>
 #include <signal.h>
 
+// Highlight durations (must match brief_table_logic.cpp)
+static constexpr int64_t NEW_PROCESS_HIGHLIGHT_NS = 2'000'000'000; // 2 seconds
+
+// Highlight colors (RGBA, values 0-255)
+// TODO: Change colors based on dark/light themes
+static constexpr ImU32 NEW_PROCESS_COLOR = IM_COL32(0, 140, 0, 60);
+static constexpr ImU32 DEAD_PROCESS_COLOR = IM_COL32(180, 50, 50, 60);
+
 const char *PROCESS_COPY_HEADER =
     "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
     "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tNet Recv (KB/s)\tNet "
     "Send (KB/s)\n";
 
-static void open_all_windows(const int pid, ViewState &view_state,
-                             const ProcessStat &stat) {
+static void open_all_windows(const int pid, const char *comm,
+                             ViewState &view_state) {
   const ImGuiID dock_id =
-      process_host_open(view_state.process_host_state, pid, stat.comm);
+      process_host_open(view_state.process_host_state, pid, comm);
   if (dock_id == 0) return;
-  cpu_chart_add(view_state.cpu_chart_state, pid, stat.comm, dock_id);
-  mem_chart_add(view_state.mem_chart_state, pid, stat.comm, dock_id);
-  io_chart_add(view_state.io_chart_state, pid, stat.comm, dock_id);
-  net_chart_add(view_state.net_chart_state, pid, stat.comm, dock_id);
+  cpu_chart_add(view_state.cpu_chart_state, pid, comm, dock_id);
+  mem_chart_add(view_state.mem_chart_state, pid, comm, dock_id);
+  io_chart_add(view_state.io_chart_state, pid, comm, dock_id);
+  net_chart_add(view_state.net_chart_state, pid, comm, dock_id);
   library_viewer_request(view_state.library_viewer_state, *view_state.sync, pid,
-                         stat.comm, dock_id);
+                         comm, dock_id);
   environ_viewer_request(view_state.environ_viewer_state, *view_state.sync, pid,
-                         stat.comm, dock_id);
+                         comm, dock_id);
   threads_viewer_open(view_state.threads_viewer_state, *view_state.sync, pid,
-                      stat.comm, dock_id);
+                      comm, dock_id);
   socket_viewer_request(view_state.socket_viewer_state, *view_state.sync, pid,
-                        stat.comm, dock_id);
+                        comm, dock_id);
 }
 
-static void copy_process_row(const ProcessStat &stat,
-                             const ProcessDerivedStat &derived) {
+static void copy_process_row(const BriefTableLine &line) {
+  const ProcessDerivedStat &derived = line.derived_stat;
   char buf[512];
   snprintf(buf, sizeof(buf),
            "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%.1f\t"
            "%.1f",
-           PROCESS_COPY_HEADER, stat.pid, stat.comm, stat.state,
-           stat.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
+           PROCESS_COPY_HEADER, line.pid, line.comm, line.state,
+           line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
            derived.cpu_user_perc, derived.cpu_kernel_perc,
-           derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0,
-           derived.io_read_kb_per_sec, derived.io_write_kb_per_sec,
-           derived.net_recv_kb_per_sec, derived.net_send_kb_per_sec);
+           derived.mem_resident_bytes / 1024.0,
+           derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
+           derived.io_write_kb_per_sec, derived.net_recv_kb_per_sec,
+           derived.net_send_kb_per_sec);
   ImGui::SetClipboardText(buf);
 }
 
 static void copy_all_processes(BumpArena &arena,
-                               const BriefTableState &my_state,
-                               const StateSnapshot &snapshot) {
+                               const BriefTableState &my_state) {
   // Header + all rows
-  size_t buf_size = 256 + my_state.lines.size * 256;
+  const size_t buf_size = 256 + my_state.lines.size * 256;
   char *buf = arena.alloc_string(buf_size);
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", PROCESS_COPY_HEADER);
 
   for (size_t i = 0; i < my_state.lines.size; ++i) {
     const BriefTableLine &line = my_state.lines.data[i];
-    const ProcessStat &stat = snapshot.stats.data[line.state_index];
-    const ProcessDerivedStat &derived =
-        snapshot.derived_stats.data[line.state_index];
+    const ProcessDerivedStat &derived = line.derived_stat;
     ptr += snprintf(ptr, buf_size - (ptr - buf),
                     "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%."
                     "1f\t%.1f\t%.1f\n",
-                    stat.pid, stat.comm, stat.state, stat.num_threads,
+                    line.pid, line.comm, line.state, line.num_threads,
                     derived.cpu_user_perc + derived.cpu_kernel_perc,
                     derived.cpu_user_perc, derived.cpu_kernel_perc,
-                    derived.mem_resident_bytes / 1024.0, stat.vsize / 1024.0,
+                    derived.mem_resident_bytes / 1024.0,
+                    derived.mem_virtual_bytes / 1024.0,
                     derived.io_read_kb_per_sec, derived.io_write_kb_per_sec,
                     derived.net_recv_kb_per_sec, derived.net_send_kb_per_sec);
   }
   ImGui::SetClipboardText(buf);
 }
 
-// Returns true if this node, any sibling, or any descendant matches the filter
-static bool tree_node_has_match(const BriefTreeNode *node,
-                                const ImGuiTextFilter &filter,
-                                const StateSnapshot &snapshot) {
-  for (const BriefTreeNode *n = node; n; n = n->next_sibling) {
-    const ProcessStat &stat = snapshot.stats.data[n->state_index];
-    if (filter.PassFilter(stat.comm)) return true;
-
-    // Check children
-    if (n->first_child &&
-        tree_node_has_match(n->first_child, filter, snapshot)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static const char *get_state_tooltip(const ProcessStat &stat) {
-  switch (stat.state) {
-  case 'R':
-    return "Running";
-  case 'S':
-    return "Sleeping (interruptible)";
-  case 'D':
-    return "Disk sleep (uninterruptible)";
-  case 'Z':
-    return "Zombie";
-  case 'T':
-    return "Stopped (signal)";
-  case 't':
-    return "Tracing stop";
-  case 'X':
-  case 'x':
-    return "Dead";
-  case 'I':
-    return "Idle";
-  default:
-    return nullptr;
-  }
-}
-
 static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
-                                    const State &state,
-                                    BriefTableState &my_state, const int pid,
-                                    const ProcessStat &stat,
-                                    const ProcessDerivedStat &derived_stat,
+                                    BriefTableState &my_state,
+                                    const BriefTableLine &line,
                                     const char *label) {
+  const int pid = line.pid;
   if (ImGui::BeginPopupContextItem(label)) {
     my_state.selected_pid = pid;
     if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-      copy_process_row(stat, derived_stat);
+      copy_process_row(line);
     }
     if (ImGui::MenuItem("Copy All")) {
-      copy_all_processes(ctx.frame_arena, my_state, state.snapshot);
+      copy_all_processes(ctx.frame_arena, my_state);
     }
     ImGui::Separator();
     if (ImGui::MenuItem("CPU Chart")) {
-      cpu_chart_add(view_state.cpu_chart_state, pid, stat.comm);
+      cpu_chart_add(view_state.cpu_chart_state, pid, line.comm);
     }
     if (ImGui::MenuItem("Memory Chart")) {
-      mem_chart_add(view_state.mem_chart_state, pid, stat.comm);
+      mem_chart_add(view_state.mem_chart_state, pid, line.comm);
     }
     if (ImGui::MenuItem("I/O Chart")) {
-      io_chart_add(view_state.io_chart_state, pid, stat.comm);
+      io_chart_add(view_state.io_chart_state, pid, line.comm);
     }
     if (ImGui::MenuItem("Network Chart")) {
-      net_chart_add(view_state.net_chart_state, pid, stat.comm);
+      net_chart_add(view_state.net_chart_state, pid, line.comm);
     }
     if (ImGui::MenuItem("Show Loaded Libraries")) {
       library_viewer_request(view_state.library_viewer_state, *view_state.sync,
-                             pid, stat.comm);
+                             pid, line.comm);
     }
     if (ImGui::MenuItem("Show Environment")) {
       environ_viewer_request(view_state.environ_viewer_state, *view_state.sync,
-                             pid, stat.comm);
+                             pid, line.comm);
     }
     if (ImGui::MenuItem("Show Threads")) {
       threads_viewer_open(view_state.threads_viewer_state, *view_state.sync,
-                          pid, stat.comm);
+                          pid, line.comm);
     }
     if (ImGui::MenuItem("Show Sockets")) {
       socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
-                            pid, stat.comm);
+                            pid, line.comm);
     }
     ImGui::Separator();
     if (ImGui::MenuItem("Kill Process", "Del") ||
@@ -190,19 +155,19 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
   }
 }
 
-static void data_columns_draw(const ProcessStat &stat,
-                              const ProcessDerivedStat &derived_stat) {
+static void data_columns_draw(const BriefTableLine &line) {
+  const ProcessDerivedStat &derived_stat = line.derived_stat;
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Name))
-    ImGui::Text("%s", stat.comm);
+    ImGui::Text("%s", line.comm);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_State)) {
-    ImGui::Text("%c", stat.state);
+    ImGui::Text("%c", line.state);
     if (ImGui::IsItemHovered()) {
-      const char *desc = get_state_tooltip(stat);
+      const char *desc = get_state_tooltip(line.state);
       if (desc) ImGui::SetTooltip("%s", desc);
     }
   }
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads))
-    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%ld", stat.num_threads);
+    ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%ld", line.num_threads);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc))
     ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
                        derived_stat.cpu_user_perc +
@@ -220,7 +185,7 @@ static void data_columns_draw(const ProcessStat &stat,
   }
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes)) {
     char buf[32];
-    format_memory_bytes(stat.vsize, buf, sizeof(buf));
+    format_memory_bytes(derived_stat.mem_virtual_bytes, buf, sizeof(buf));
     ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%s", buf);
   }
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoReadKbPerSec))
@@ -235,82 +200,6 @@ static void data_columns_draw(const ProcessStat &stat,
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_NetSendKbPerSec))
     ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
                        derived_stat.net_send_kb_per_sec);
-}
-
-static void draw_tree_nodes(FrameContext &ctx, ViewState &view_state,
-                            const State &state, BriefTreeNode *node,
-                            BriefTableState &my_state,
-                            const ImGuiTextFilter &filter) {
-  const bool filter_active = filter.IsActive();
-
-  for (BriefTreeNode *n = node; n; n = n->next_sibling) {
-    const ProcessStat &stat = state.snapshot.stats.data[n->state_index];
-    const ProcessDerivedStat &derived_stat =
-        state.snapshot.derived_stats.data[n->state_index];
-    const bool has_children = n->first_child != nullptr;
-    const bool is_selected = my_state.selected_pid == n->pid;
-
-    // Filter logic: skip if no match and no matching descendants
-    bool node_matches = filter.PassFilter(stat.comm);
-    bool has_matching_descendant = false;
-    if (filter_active && !node_matches && has_children) {
-      has_matching_descendant =
-          tree_node_has_match(n->first_child, filter, state.snapshot);
-    }
-    if (filter_active && !node_matches && !has_matching_descendant) {
-      continue;
-    }
-
-    // Gray out non-matching parents that have matching descendants
-    bool should_gray =
-        filter_active && !node_matches && has_matching_descendant;
-    if (should_gray) {
-      ImGui::PushStyleColor(ImGuiCol_Text,
-                            ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-    }
-
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns |
-                               ImGuiTreeNodeFlags_OpenOnArrow |
-                               ImGuiTreeNodeFlags_DefaultOpen;
-    if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
-    if (!has_children)
-      flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-    char label[32];
-    snprintf(label, sizeof(label), "%d", n->pid);
-    const bool open = ImGui::TreeNodeEx(label, flags);
-
-    // Handle selection on click or keyboard navigation
-    if ((ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) ||
-        ImGui::IsItemFocused()) {
-      my_state.selected_pid = n->pid;
-    }
-
-    // Double-click to open process detail
-    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) &&
-        !ImGui::IsItemToggledOpen()) {
-      open_all_windows(n->pid, view_state, stat);
-    }
-
-    table_context_menu_draw(ctx, view_state, state, my_state, n->pid, stat,
-                            derived_stat, label);
-
-    data_columns_draw(stat, derived_stat);
-
-    // Pop gray style before recursing so children aren't affected
-    if (should_gray) {
-      ImGui::PopStyleColor();
-    }
-
-    // Recurse for children
-    if (open && has_children) {
-      draw_tree_nodes(ctx, view_state, state, n->first_child, my_state, filter);
-      ImGui::TreePop();
-    }
-  }
 }
 
 void brief_table_draw(FrameContext &ctx, ViewState &view_state,
@@ -392,84 +281,74 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         my_state.sorted_by =
             static_cast<BriefTableColumnId>(sort_specs->Specs->ColumnUserID);
         my_state.sorted_order = sort_specs->Specs->SortDirection;
-        sort_brief_table_lines(my_state, state.snapshot);
+        sort_brief_table_lines(my_state);
         sort_specs->SpecsDirty = false;
       }
     }
 
-    // Build tree on demand when in tree mode
-    BriefTreeNode *tree_roots = nullptr;
-    if (my_state.tree_mode) {
-      tree_roots =
-          build_process_tree(ctx.frame_arena, my_state.lines, state.snapshot,
-                             my_state.sorted_by, my_state.sorted_order);
-    }
+    // Flat mode rendering
+    const int64_t now_ns = state.snapshot.at.time_since_epoch().count();
 
-    if (my_state.tree_mode && tree_roots) {
-      // Tree mode rendering
-      draw_tree_nodes(ctx, view_state, state, tree_roots, my_state, filter);
-    } else {
-      // Flat mode rendering
-      for (size_t i = 0; i < my_state.lines.size; ++i) {
-        const BriefTableLine &line = my_state.lines.data[i];
-        // NOLINTNEXTLINE
-        const ProcessStat &stat = state.snapshot.stats.data[line.state_index];
+    for (size_t i = 0; i < my_state.lines.size; ++i) {
+      const BriefTableLine &line = my_state.lines.data[i];
+      const bool is_dead = line.death_time_ns != 0;
+      const bool is_new =
+          !is_dead && now_ns - line.first_seen_ns < NEW_PROCESS_HIGHLIGHT_NS;
 
-        // Skip non-matching processes when filter is active
-        if (!filter.PassFilter(stat.comm)) continue;
+      char label[32];
+      snprintf(label, sizeof(label), "%d", line.pid);
 
-        ImGui::TableNextRow();
-        const ProcessDerivedStat &derived_stat =
-            state.snapshot.derived_stats.data[line.state_index];
+      // Skip non-matching processes when filter is active
+      if (!filter.PassFilter(line.comm) && !filter.PassFilter(label)) continue;
 
-        {
-          const bool is_selected = (my_state.selected_pid == line.pid);
-          ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
-          char label[32];
-          snprintf(label, sizeof(label), "%d", line.pid);
-          if (ImGui::Selectable(label, is_selected,
-                                ImGuiSelectableFlags_SpanAllColumns) ||
-              ImGui::IsItemFocused()) {
-            my_state.selected_pid = line.pid;
-          }
+      ImGui::TableNextRow();
 
-          // Double-click to open process detail
-          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-            open_all_windows(line.pid, view_state, stat);
-          }
-
-          table_context_menu_draw(ctx, view_state, state, my_state, line.pid,
-                                  stat, derived_stat, label);
-        }
-        data_columns_draw(stat, derived_stat);
+      // Apply row highlighting
+      if (is_dead) {
+        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, DEAD_PROCESS_COLOR);
+      } else if (is_new) {
+        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, NEW_PROCESS_COLOR);
       }
+
+      const bool is_selected = my_state.selected_pid == line.pid;
+      ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
+
+      if (ImGui::Selectable(label, is_selected,
+                            ImGuiSelectableFlags_SpanAllColumns) ||
+          ImGui::IsItemFocused()) {
+        my_state.selected_pid = line.pid;
+      }
+
+      if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+        open_all_windows(line.pid, line.comm, view_state);
+      }
+
+      table_context_menu_draw(ctx, view_state, my_state, line, label);
+      data_columns_draw(line);
     }
 
     ImGui::EndTable();
   }
 
-  // Ctrl+C to copy selected row
-  if (my_state.selected_pid > 0 &&
-      ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-    for (size_t i = 0; i < my_state.lines.size; ++i) {
-      if (my_state.lines.data[i].pid == my_state.selected_pid) {
-        // NOLINTNEXTLINE
-        const ProcessStat &stat =
-            state.snapshot.stats.data[my_state.lines.data[i].state_index];
-        const ProcessDerivedStat &derived =
-            state.snapshot.derived_stats
-                .data[my_state.lines.data[i].state_index];
-        copy_process_row(stat, derived);
-        break;
+  // Shortcuts for per-process actions:
+  if (my_state.selected_pid > 0) {
+    // Ctrl+C to copy selected row
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+      for (size_t i = 0; i < my_state.lines.size; ++i) {
+        if (my_state.lines.data[i].pid == my_state.selected_pid) {
+          copy_process_row(my_state.lines.data[i]);
+          break;
+        }
       }
     }
-  }
 
-  // Del key to kill selected process
-  if (my_state.selected_pid > 0 && ImGui::Shortcut(ImGuiKey_Delete)) {
-    if (kill(my_state.selected_pid, SIGTERM) != 0) {
-      snprintf(my_state.kill_error, sizeof(my_state.kill_error),
-               "Failed to kill %d: %s", my_state.selected_pid, strerror(errno));
+    // Del key to kill selected process
+    if (my_state.selected_pid > 0 && ImGui::Shortcut(ImGuiKey_Delete)) {
+      if (kill(my_state.selected_pid, SIGTERM) != 0) {
+        snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                 "Failed to kill %d: %s", my_state.selected_pid,
+                 strerror(errno));
+      }
     }
   }
 

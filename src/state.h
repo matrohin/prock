@@ -15,6 +15,7 @@ struct ProcessDerivedStat {
   double cpu_user_perc;
   double cpu_kernel_perc;
   double mem_resident_bytes;
+  double mem_virtual_bytes;
   double io_read_kb_per_sec;
   double io_write_kb_per_sec;
   double net_recv_kb_per_sec;
