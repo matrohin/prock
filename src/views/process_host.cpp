@@ -71,8 +71,10 @@ void process_host_draw(ViewState &view_state) {
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)) {
         my_state.focused_pid = win.pid;
       }
-      ImGui::DockSpace(win.dockspace_id, ImVec2(0, 0), ImGuiDockNodeFlags_None);
     }
+    // DockSpace must be called even when Begin() returns false (window not
+    // visible, e.g. docked as inactive tab) to maintain docking relationships.
+    ImGui::DockSpace(win.dockspace_id, ImVec2(0, 0), ImGuiDockNodeFlags_None);
     ImGui::End();
 
     if (should_be_opened) {
