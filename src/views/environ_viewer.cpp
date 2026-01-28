@@ -11,18 +11,16 @@
 #include <cstring>
 #include <unistd.h>
 
-namespace {
-
 const char *ENVIRON_COPY_HEADER = "Name\tValue\n";
 
-void copy_environ_row(const EnvironEntry &entry) {
+static void copy_environ_row(const EnvironEntry &entry) {
   char buf[4400];
   snprintf(buf, sizeof(buf), "%s%s\t%s", ENVIRON_COPY_HEADER, entry.name,
            entry.value);
   ImGui::SetClipboardText(buf);
 }
 
-void copy_path_segment(const char *start, const char *end) {
+static void copy_path_segment(const char *start, const char *end) {
   size_t len = end - start;
   char buf[4096];
   if (len >= sizeof(buf)) len = sizeof(buf) - 1;
@@ -31,8 +29,8 @@ void copy_path_segment(const char *start, const char *end) {
   ImGui::SetClipboardText(buf);
 }
 
-void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
-  size_t buf_size = 128 + win.entries.size * 4400;
+static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
+  const size_t buf_size = 128 + win.entries.size * 4400;
   char *buf = arena.alloc_string(buf_size);
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", ENVIRON_COPY_HEADER);
@@ -46,7 +44,7 @@ void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
 }
 
 // Returns true if value looks like a PATH-style variable (multiple colon-separated paths)
-bool is_expandable_value(const char *value, size_t len) {
+static bool is_expandable_value(const char *value, size_t len) {
   if (len < 10) return false;  // Too short to benefit from expansion
   int colons = 0;
   for (size_t i = 0; i < len; ++i) {
@@ -58,7 +56,7 @@ bool is_expandable_value(const char *value, size_t len) {
   return false;
 }
 
-void sort_environ(EnvironViewerWindow &win) {
+static void sort_environ(EnvironViewerWindow &win) {
   if (win.entries.size == 0) return;
 
   const auto compare = [&](const EnvironEntry &a, const EnvironEntry &b) {
@@ -83,7 +81,11 @@ void sort_environ(EnvironViewerWindow &win) {
   }
 }
 
-} // unnamed namespace
+static void send_environ_request(Sync &sync, const int pid) {
+  const EnvironRequest req = {pid};
+  sync.on_demand_reader.environ_request_queue.push(req);
+  sync.on_demand_reader.library_cv.notify_one();
+}
 
 void environ_viewer_request(EnvironViewerState &state, Sync &sync,
                             const int pid, const char *comm,
@@ -99,9 +101,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   win->selected_index = -1;
   win->selected_child_index = -1;
 
-  EnvironRequest req = {pid};
-  sync.environ_request_queue.push(req);
-  sync.library_cv.notify_one();
+  send_environ_request(sync, pid);
 
   common_views_sort_added(state.windows);
 }
@@ -109,7 +109,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
 void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
   // Process responses
   EnvironResponse response;
-  while (sync.environ_response_queue.pop(response)) {
+  while (sync.on_demand_reader.environ_response_queue.pop(response)) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
       EnvironViewerWindow &win = state.windows.data()[i];
       if (win.pid == response.pid) {
@@ -207,9 +207,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
           win.status = eEnvironViewerStatus_Loading;
-          EnvironRequest req = {win.pid};
-          view_state.sync->environ_request_queue.push(req);
-          view_state.sync->library_cv.notify_one();
+          send_environ_request(*view_state.sync, win.pid);
         }
         if (ImGui::BeginTable("Environment", eEnvironViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {

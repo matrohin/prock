@@ -25,7 +25,9 @@
 #include "base.cpp"
 #include "sources/environ_reader.cpp"
 #include "sources/library_reader.cpp"
+#include "sources/on_demand_reader.cpp"
 #include "sources/process_stat.cpp"
+#include "sources/socket_reader.cpp"
 #include "state.cpp"
 #include "tracy/Tracy.hpp"
 #include "views/brief_table.cpp"
@@ -40,12 +42,12 @@
 #include "views/net_chart.cpp"
 #include "views/process_host.cpp"
 #include "views/process_window_flags.cpp"
-#include "views/system_cpu_chart.cpp"
-#include "views/threads_viewer.cpp"
 #include "views/socket_viewer.cpp"
+#include "views/system_cpu_chart.cpp"
 #include "views/system_io_chart.cpp"
 #include "views/system_mem_chart.cpp"
 #include "views/system_net_chart.cpp"
+#include "views/threads_viewer.cpp"
 
 // See https://github.com/ocornut/imgui/issues/1206
 // Sometimes imgui needs second frame update to handle some UI without delays.
@@ -54,7 +56,8 @@ static int g_needs_updates = 0;
 static float g_applied_zoom_scale = 1.0f;
 static bool g_applied_dark_mode = false;
 static float g_monitor_scale = 1.0f;
-static ImGuiStyle g_base_style;  // Style after theme + monitor scale, before zoom
+static ImGuiStyle
+    g_base_style; // Style after theme + monitor scale, before zoom
 void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
                                int /*action*/, int /*mods*/) {
   g_needs_updates = 2;
@@ -435,7 +438,7 @@ int main(int, char **) {
 
   std::thread proc_reader_thread{[&sync] {
     pthread_setname_np(pthread_self(), "proc_reader");
-    library_reader_thread(sync);
+    on_demand_reader_loop(sync);
   }};
 
   while (!glfwWindowShouldClose(window)) {
@@ -512,7 +515,7 @@ int main(int, char **) {
   // Cleanup
   sync.quit.store(true);
   sync.quit_cv.notify_one();
-  sync.library_cv.notify_one();
+  sync.on_demand_reader.library_cv.notify_one();
   gathering_thread.join();
   proc_reader_thread.join();
 

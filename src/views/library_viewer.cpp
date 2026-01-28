@@ -65,6 +65,12 @@ static void sort_libraries(LibraryViewerWindow &win) {
   }
 }
 
+static void send_library_request(Sync &sync, const int pid) {
+  const LibraryRequest req = {pid};
+  sync.on_demand_reader.library_request_queue.push(req);
+  sync.on_demand_reader.library_cv.notify_one();
+}
+
 void library_viewer_request(LibraryViewerState &state, Sync &sync,
                             const int pid, const char *comm,
                             const ImGuiID dock_id) {
@@ -77,9 +83,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_index = -1;
 
-  LibraryRequest req = {pid};
-  sync.library_request_queue.push(req);
-  sync.library_cv.notify_one();
+  send_library_request(sync, pid);
 
   common_views_sort_added(state.windows);
 }
@@ -87,7 +91,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
 void library_viewer_update(LibraryViewerState &state, Sync &sync) {
   // Process responses
   LibraryResponse response;
-  while (sync.library_response_queue.pop(response)) {
+  while (sync.on_demand_reader.library_response_queue.pop(response)) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
       LibraryViewerWindow &win = state.windows.data()[i];
       if (win.pid == response.pid) {
@@ -187,9 +191,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
           win.status = eLibraryViewerStatus_Loading;
-          LibraryRequest req = {win.pid};
-          view_state.sync->library_request_queue.push(req);
-          view_state.sync->library_cv.notify_one();
+          send_library_request(*view_state.sync, win.pid);
         }
         if (ImGui::BeginTable("Libraries", eLibraryViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {

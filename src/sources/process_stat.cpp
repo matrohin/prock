@@ -4,8 +4,8 @@
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
-#include <linux/inet_diag.h>
 #include <dirent.h>
+#include <linux/inet_diag.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/sock_diag.h>
@@ -79,7 +79,7 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
         SocketEntry *entry = result.emplace_back(arena, wasted);
         entry->inode = inode;
         entry->protocol = q.socket_protocol;
-        entry->state = diag->idiag_state;
+        entry->state = static_cast<TcpState>(diag->idiag_state);
         entry->tx_queue = diag->idiag_wqueue;
         entry->rx_queue = diag->idiag_rqueue;
         entry->bytes_received = 0;
@@ -146,7 +146,8 @@ static void read_process_socket_inodes(const int pid,
     char full_path[512];
     snprintf(full_path, sizeof(full_path), "%s/%s", fd_path, entry->d_name);
 
-    const ssize_t link_len = readlink(full_path, link_buf, sizeof(link_buf) - 1);
+    const ssize_t link_len =
+        readlink(full_path, link_buf, sizeof(link_buf) - 1);
     if (link_len <= 0) continue;
     link_buf[link_len] = '\0';
 
@@ -626,10 +627,11 @@ static Array<ProcessStat> read_process_threads(const int pid,
     char comm_path[128];
     snprintf(stat_path, sizeof(stat_path), "/proc/%d/task/%d/stat", pid, tid);
     snprintf(statm_path, sizeof(statm_path), "/proc/%d/statm",
-             pid);  // statm is shared across threads
+             pid); // statm is shared across threads
     snprintf(comm_path, sizeof(comm_path), "/proc/%d/task/%d/comm", pid, tid);
 
-    if (read_thread_stat(tid, stat_path, statm_path, comm_path, arena, it_result)) {
+    if (read_thread_stat(tid, stat_path, statm_path, comm_path, arena,
+                         it_result)) {
       ++it_result;
     }
     it = it->next;
@@ -637,10 +639,9 @@ static Array<ProcessStat> read_process_threads(const int pid,
   result.size = it_result - result.data;
 
   // Sort by TID
-  std::sort(result.data, result.data + result.size,
-            [](const ProcessStat &a, const ProcessStat &b) {
-              return a.pid < b.pid;
-            });
+  std::sort(
+      result.data, result.data + result.size,
+      [](const ProcessStat &a, const ProcessStat &b) { return a.pid < b.pid; });
 
   return result;
 }
@@ -742,10 +743,9 @@ void gather(GatheringState &state, Sync &sync) {
 
   state.last_update = SteadyClock::now();
   const SystemTimePoint system_now = SystemClock::now();
-  const bool pushed = sync.update_queue.push(
-      UpdateSnapshot{arena, process_stats, cpu_stats, mem_info, disk_io_stats,
-                     net_io_stats, thread_snapshots, state.last_update,
-                     system_now});
+  const bool pushed = sync.update_queue.push(UpdateSnapshot{
+      arena, process_stats, cpu_stats, mem_info, disk_io_stats, net_io_stats,
+      thread_snapshots, state.last_update, system_now});
   if (!pushed) {
     arena.destroy();
   }

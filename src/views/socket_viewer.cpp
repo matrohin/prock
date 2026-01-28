@@ -12,36 +12,52 @@
 
 static const char *tcp_state_name(const int state) {
   switch (state) {
-  case eTcpState_ESTABLISHED: return "ESTABLISHED";
-  case eTcpState_SYN_SENT: return "SYN_SENT";
-  case eTcpState_SYN_RECV: return "SYN_RECV";
-  case eTcpState_FIN_WAIT1: return "FIN_WAIT1";
-  case eTcpState_FIN_WAIT2: return "FIN_WAIT2";
-  case eTcpState_TIME_WAIT: return "TIME_WAIT";
-  case eTcpState_CLOSE: return "CLOSE";
-  case eTcpState_CLOSE_WAIT: return "CLOSE_WAIT";
-  case eTcpState_LAST_ACK: return "LAST_ACK";
-  case eTcpState_LISTEN: return "LISTEN";
-  case eTcpState_CLOSING: return "CLOSING";
-  default: return "UNKNOWN";
+  case eTcpState_ESTABLISHED:
+    return "ESTABLISHED";
+  case eTcpState_SYN_SENT:
+    return "SYN_SENT";
+  case eTcpState_SYN_RECV:
+    return "SYN_RECV";
+  case eTcpState_FIN_WAIT1:
+    return "FIN_WAIT1";
+  case eTcpState_FIN_WAIT2:
+    return "FIN_WAIT2";
+  case eTcpState_TIME_WAIT:
+    return "TIME_WAIT";
+  case eTcpState_CLOSE:
+    return "CLOSE";
+  case eTcpState_CLOSE_WAIT:
+    return "CLOSE_WAIT";
+  case eTcpState_LAST_ACK:
+    return "LAST_ACK";
+  case eTcpState_LISTEN:
+    return "LISTEN";
+  case eTcpState_CLOSING:
+    return "CLOSING";
+  default:
+    return "UNKNOWN";
   }
 }
 
 static const char *protocol_name(const int protocol) {
   switch (protocol) {
-  case eSocketProtocol_TCP: return "TCP";
-  case eSocketProtocol_UDP: return "UDP";
-  case eSocketProtocol_TCP6: return "TCP6";
-  case eSocketProtocol_UDP6: return "UDP6";
-  default: return "???";
+  case eSocketProtocol_TCP:
+    return "TCP";
+  case eSocketProtocol_UDP:
+    return "UDP";
+  case eSocketProtocol_TCP6:
+    return "TCP6";
+  case eSocketProtocol_UDP6:
+    return "UDP6";
+  default:
+    return "???";
   }
 }
 
 // Format IPv4 address from network byte order
 static void format_ipv4(char *buf, size_t buf_size, unsigned int ip,
                         unsigned short port) {
-  snprintf(buf, buf_size, "%u.%u.%u.%u:%u",
-           (ip >> 0) & 0xFF, (ip >> 8) & 0xFF,
+  snprintf(buf, buf_size, "%u.%u.%u.%u:%u", (ip >> 0) & 0xFF, (ip >> 8) & 0xFF,
            (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
 }
 
@@ -51,18 +67,24 @@ static void format_ipv6(char *buf, size_t buf_size, const unsigned char *ip,
   // Check for IPv4-mapped IPv6 (::ffff:x.x.x.x)
   bool is_v4_mapped = true;
   for (int i = 0; i < 10; ++i) {
-    if (ip[i] != 0) { is_v4_mapped = false; break; }
+    if (ip[i] != 0) {
+      is_v4_mapped = false;
+      break;
+    }
   }
   if (is_v4_mapped && ip[10] == 0xFF && ip[11] == 0xFF) {
-    snprintf(buf, buf_size, "::ffff:%u.%u.%u.%u:%u",
-             ip[12], ip[13], ip[14], ip[15], port);
+    snprintf(buf, buf_size, "::ffff:%u.%u.%u.%u:%u", ip[12], ip[13], ip[14],
+             ip[15], port);
     return;
   }
 
   // Check for loopback (::1)
   bool is_loopback = true;
   for (int i = 0; i < 15; ++i) {
-    if (ip[i] != 0) { is_loopback = false; break; }
+    if (ip[i] != 0) {
+      is_loopback = false;
+      break;
+    }
   }
   if (is_loopback && ip[15] == 1) {
     snprintf(buf, buf_size, "::1:%u", port);
@@ -72,7 +94,10 @@ static void format_ipv6(char *buf, size_t buf_size, const unsigned char *ip,
   // Check for all zeros (::)
   bool is_any = true;
   for (int i = 0; i < 16; ++i) {
-    if (ip[i] != 0) { is_any = false; break; }
+    if (ip[i] != 0) {
+      is_any = false;
+      break;
+    }
   }
   if (is_any) {
     snprintf(buf, buf_size, ":::%u", port);
@@ -81,9 +106,10 @@ static void format_ipv6(char *buf, size_t buf_size, const unsigned char *ip,
 
   // Full IPv6 format (simplified)
   snprintf(buf, buf_size,
-           "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%u",
-           ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7],
-           ip[8], ip[9], ip[10], ip[11], ip[12], ip[13], ip[14], ip[15], port);
+           "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%"
+           "02x%02x:%u",
+           ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7], ip[8], ip[9],
+           ip[10], ip[11], ip[12], ip[13], ip[14], ip[15], port);
 }
 
 static void format_address(char *buf, size_t buf_size, const SocketEntry &sock,
@@ -174,6 +200,12 @@ static void sort_sockets(SocketViewerWindow &win) {
   }
 }
 
+static void send_socket_request(Sync &sync, const int pid) {
+  const SocketRequest req = {pid};
+  sync.on_demand_reader.socket_request_queue.push(req);
+  sync.on_demand_reader.library_cv.notify_one();
+}
+
 void socket_viewer_request(SocketViewerState &state, Sync &sync, const int pid,
                            const char *comm, const ImGuiID dock_id) {
   SocketViewerWindow *win =
@@ -185,9 +217,7 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const int pid,
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_index = -1;
 
-  SocketRequest req = {pid};
-  sync.socket_request_queue.push(req);
-  sync.library_cv.notify_one();
+  send_socket_request(sync, pid);
 
   common_views_sort_added(state.windows);
 }
@@ -195,14 +225,14 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const int pid,
 void socket_viewer_update(SocketViewerState &state, Sync &sync) {
   // Process responses
   SocketResponse response;
-  while (sync.socket_response_queue.pop(response)) {
+  while (sync.on_demand_reader.socket_response_queue.pop(response)) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
       SocketViewerWindow &win = state.windows.data()[i];
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eSocketViewerStatus_Ready;
-          win.sockets =
-              Array<SocketEntry>::create(state.cur_arena, response.sockets.size);
+          win.sockets = Array<SocketEntry>::create(state.cur_arena,
+                                                   response.sockets.size);
           memcpy(win.sockets.data, response.sockets.data,
                  response.sockets.size * sizeof(SocketEntry));
         } else {
@@ -259,8 +289,9 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                "Sockets: %s (%d) - Loading...###Sockets%d", win.process_name,
                win.pid, win.pid);
     } else {
-      snprintf(title, sizeof(title), "Sockets: %s (%d) - %zu sockets###Sockets%d",
-               win.process_name, win.pid, win.sockets.size, win.pid);
+      snprintf(title, sizeof(title),
+               "Sockets: %s (%d) - %zu sockets###Sockets%d", win.process_name,
+               win.pid, win.sockets.size, win.pid);
     }
 
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
@@ -279,9 +310,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
           win.status = eSocketViewerStatus_Loading;
-          SocketRequest req = {win.pid};
-          view_state.sync->socket_request_queue.push(req);
-          view_state.sync->library_cv.notify_one();
+          send_socket_request(*view_state.sync, win.pid);
         }
 
         if (win.sockets.size == 0) {
@@ -324,7 +353,8 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                      tcp_state_name(sock.state));
             if (!filter.PassFilter(filter_str)) continue;
 
-            const bool is_selected = (win.selected_index == static_cast<int>(j));
+            const bool is_selected =
+                (win.selected_index == static_cast<int>(j));
             ImGui::TableNextRow();
 
             // Protocol

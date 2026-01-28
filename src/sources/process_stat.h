@@ -185,7 +185,44 @@ struct GatheringState {
 };
 
 struct Sync;
-struct SocketEntry;
+
+enum SocketProtocol {
+  eSocketProtocol_TCP,
+  eSocketProtocol_UDP,
+  eSocketProtocol_TCP6,
+  eSocketProtocol_UDP6,
+};
+
+enum TcpState {
+  eTcpState_ESTABLISHED = 1,
+  eTcpState_SYN_SENT = 2,
+  eTcpState_SYN_RECV = 3,
+  eTcpState_FIN_WAIT1 = 4,
+  eTcpState_FIN_WAIT2 = 5,
+  eTcpState_TIME_WAIT = 6,
+  eTcpState_CLOSE = 7,
+  eTcpState_CLOSE_WAIT = 8,
+  eTcpState_LAST_ACK = 9,
+  eTcpState_LISTEN = 10,
+  eTcpState_CLOSING = 11,
+};
+
+struct SocketEntry {
+  unsigned long inode;
+  SocketProtocol protocol;
+  TcpState state;
+  unsigned int local_ip;
+  unsigned short local_port;
+  unsigned int remote_ip;
+  unsigned short remote_port;
+  unsigned int tx_queue;
+  unsigned int rx_queue;
+  unsigned char local_ip6[16];
+  unsigned char remote_ip6[16];
+  // TCP info (only valid for TCP sockets)
+  unsigned long long bytes_received;
+  unsigned long long bytes_sent;
+};
 
 void gather(GatheringState &state, Sync &sync);
 

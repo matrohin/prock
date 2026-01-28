@@ -1,7 +1,7 @@
 #include "environ_reader.h"
 
 #include "base.h"
-#include "sync.h"
+
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
@@ -9,8 +9,11 @@
 #include <cstdio>
 #include <cstring>
 
-EnvironResponse read_process_environ(const int pid) {
+EnvironResponse read_process_environ(const EnvironRequest &request) {
   ZoneScoped;
+
+  const int pid = request.pid;
+
   EnvironResponse response = {};
   response.pid = pid;
   response.owner_arena = BumpArena::create();
@@ -30,11 +33,11 @@ EnvironResponse read_process_environ(const int pid) {
 
   char buf[4096];
   size_t total_read = 0;
-  char *accumulated = nullptr;
+  const char *accumulated = nullptr;
   size_t accumulated_size = 0;
 
   while ((total_read = fread(buf, 1, sizeof(buf), file)) > 0) {
-    size_t new_size = accumulated_size + total_read;
+    const size_t new_size = accumulated_size + total_read;
     char *new_buf = response.owner_arena.alloc_string(new_size + 1);
     if (accumulated) {
       memcpy(new_buf, accumulated, accumulated_size);
@@ -57,7 +60,7 @@ EnvironResponse read_process_environ(const int pid) {
   const char *end = accumulated + accumulated_size;
 
   while (ptr < end) {
-    size_t len = strlen(ptr);
+    const size_t len = strlen(ptr);
     if (len == 0) {
       ++ptr;
       continue;
@@ -68,12 +71,12 @@ EnvironResponse read_process_environ(const int pid) {
     if (eq) {
       EnvironEntry *entry = entries.emplace_back(response.owner_arena, wasted);
 
-      size_t name_len = eq - ptr;
+      const size_t name_len = eq - ptr;
       entry->name = response.owner_arena.alloc_string_copy(ptr, name_len);
       entry->name_len = name_len;
 
       const char *value_start = eq + 1;
-      size_t value_len = len - (value_start - ptr);
+      const size_t value_len = len - (value_start - ptr);
       entry->value = response.owner_arena.alloc_string_copy(value_start, value_len);
       entry->value_len = value_len;
     }

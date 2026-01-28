@@ -1,5 +1,21 @@
 #pragma once
 
-struct EnvironResponse;
+struct EnvironEntry {
+  const char *name;
+  const char *value;
+  size_t name_len;
+  size_t value_len;
+};
 
-EnvironResponse read_process_environ(int pid);
+struct EnvironRequest {
+  int pid;
+};
+
+struct EnvironResponse {
+  int pid;
+  int error_code; // 0=success, errno otherwise
+  BumpArena owner_arena;
+  Array<EnvironEntry> entries;
+};
+
+EnvironResponse read_process_environ(const EnvironRequest &request);
