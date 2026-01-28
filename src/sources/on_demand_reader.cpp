@@ -9,6 +9,7 @@
 
 void on_demand_reader_loop(Sync &sync) {
   OnDemandReaderSync &my_sync = sync.on_demand_reader;
+  BumpArena temp_arena;
   while (!sync.quit.load()) {
     LibraryRequest lib_request;
     EnvironRequest env_request;
@@ -24,33 +25,33 @@ void on_demand_reader_loop(Sync &sync) {
     }
     if (sync.quit.load()) break;
 
-    bool has_any_updates = false;
-
     while (my_sync.library_request_queue.pop(lib_request)) {
-      LibraryResponse response = read_process_libraries(lib_request);
+      LibraryResponse response =
+          read_process_libraries(temp_arena, lib_request);
       if (!my_sync.library_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
-      has_any_updates = true;
     }
 
     while (my_sync.environ_request_queue.pop(env_request)) {
-      EnvironResponse response = read_process_environ(env_request);
+      EnvironResponse response = read_process_environ(temp_arena, env_request);
       if (!my_sync.environ_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
-      has_any_updates = true;
     }
 
     while (my_sync.socket_request_queue.pop(sock_request)) {
-      SocketResponse response = read_process_sockets(sock_request);
+      SocketResponse response = read_process_sockets(temp_arena, sock_request);
       if (!my_sync.socket_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
-      has_any_updates = true;
     }
-    if (has_any_updates) {
-      glfwPostEmptyEvent();
+
+    glfwPostEmptyEvent();
+    if (temp_arena.cur_slab &&
+        (temp_arena.cur_slab->prev ||
+         temp_arena.cur_slab->left_size < SLAB_SIZE / 10)) {
+      temp_arena.destroy();
     }
   }
 }

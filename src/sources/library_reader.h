@@ -19,4 +19,5 @@ struct LibraryResponse {
   Array<LibraryEntry> libraries;
 };
 
-LibraryResponse read_process_libraries(const LibraryRequest &request);
+LibraryResponse read_process_libraries(BumpArena &temp_arena,
+                                       const LibraryRequest &request);

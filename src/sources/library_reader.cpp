@@ -11,7 +11,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 
-LibraryResponse read_process_libraries(const LibraryRequest &request) {
+LibraryResponse read_process_libraries(BumpArena &temp_arena, const LibraryRequest &request) {
   ZoneScoped;
 
   const int pid = request.pid;
@@ -63,7 +63,7 @@ LibraryResponse read_process_libraries(const LibraryRequest &request) {
     }
     if (found) continue;
 
-    LibraryEntry *entry = entries.emplace_back(response.owner_arena, wasted);
+    LibraryEntry *entry = entries.emplace_back(temp_arena, wasted);
     size_t path_len = strlen(pathname);
     entry->path = response.owner_arena.alloc_string_copy(pathname, path_len);
     entry->path_len = path_len;

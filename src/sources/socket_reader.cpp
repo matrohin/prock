@@ -41,7 +41,8 @@ static size_t collect_socket_inodes(const int pid, unsigned long *inodes,
   return count;
 }
 
-SocketResponse read_process_sockets(const SocketRequest &request) {
+SocketResponse read_process_sockets(BumpArena &temp_arena,
+                                    const SocketRequest &request) {
   ZoneScoped;
 
   const int pid = request.pid;
@@ -67,7 +68,6 @@ SocketResponse read_process_sockets(const SocketRequest &request) {
   std::sort(inodes, inodes + inode_count);
 
   // Query all sockets via netlink (sorted by inode)
-  BumpArena temp_arena = BumpArena::create();
   const Array<SocketEntry> all_sockets = query_sockets_netlink(temp_arena);
 
   // Filter to only sockets belonging to this process
@@ -89,7 +89,6 @@ SocketResponse read_process_sockets(const SocketRequest &request) {
     }
   }
 
-  temp_arena.destroy();
   response.error_code = 0;
   return response;
 }

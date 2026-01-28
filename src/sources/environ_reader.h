@@ -18,4 +18,5 @@ struct EnvironResponse {
   Array<EnvironEntry> entries;
 };
 
-EnvironResponse read_process_environ(const EnvironRequest &request);
+EnvironResponse read_process_environ(BumpArena &temp_arena,
+                                     const EnvironRequest &request);

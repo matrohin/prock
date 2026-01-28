@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <cstring>
 
-EnvironResponse read_process_environ(const EnvironRequest &request) {
+EnvironResponse read_process_environ(BumpArena &temp_arena, const EnvironRequest &request) {
   ZoneScoped;
 
   const int pid = request.pid;
@@ -69,7 +69,7 @@ EnvironResponse read_process_environ(const EnvironRequest &request) {
     // Find the '=' separator
     const char *eq = strchr(ptr, '=');
     if (eq) {
-      EnvironEntry *entry = entries.emplace_back(response.owner_arena, wasted);
+      EnvironEntry *entry = entries.emplace_back(temp_arena, wasted);
 
       const size_t name_len = eq - ptr;
       entry->name = response.owner_arena.alloc_string_copy(ptr, name_len);

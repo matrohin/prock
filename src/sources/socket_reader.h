@@ -14,4 +14,5 @@ struct SocketResponse {
   Array<SocketEntry> sockets;
 };
 
-SocketResponse read_process_sockets(const SocketRequest &request);
+SocketResponse read_process_sockets(BumpArena &temp_arena,
+                                    const SocketRequest &request);
