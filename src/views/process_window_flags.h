@@ -10,6 +10,7 @@ enum ProcessWindowFlags_ {
   eProcessWindowFlags_None = 0,
   eProcessWindowFlags_CloseRequested = 1 << 0,
   eProcessWindowFlags_RedockRequested = 1 << 1,
+  eProcessWindowFlags_NoFocusOnAppearing = 1 << 2,
 };
 
 template <class T>

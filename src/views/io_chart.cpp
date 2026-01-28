@@ -61,7 +61,12 @@ void io_chart_draw(ViewState &view_state) {
                                           chart.flags, chart.label);
 
     bool should_be_opened = true;
-    if (ImGui::Begin(chart.label, &should_be_opened, COMMON_VIEW_FLAGS)) {
+    ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS;
+    if (chart.flags & eProcessWindowFlags_NoFocusOnAppearing) {
+      win_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
+      chart.flags &= ~eProcessWindowFlags_NoFocusOnAppearing;
+    }
+    if (ImGui::Begin(chart.label, &should_be_opened, win_flags)) {
       process_window_check_close(chart.flags, should_be_opened);
 
       push_fit_with_padding();
@@ -113,7 +118,7 @@ void io_chart_draw(ViewState &view_state) {
 }
 
 void io_chart_add(IoChartState &my_state, const int pid, const char *comm,
-                  const ImGuiID dock_id) {
+                  const ImGuiID dock_id, const ProcessWindowFlags extra_flags) {
   if (common_charts_contains_pid(my_state.charts, pid)) {
     return;
   }
@@ -122,7 +127,7 @@ void io_chart_add(IoChartState &my_state, const int pid, const char *comm,
       *my_state.charts.emplace_back(my_state.cur_arena, my_state.wasted_bytes);
   data.pid = pid;
   data.dock_id = dock_id;
-  data.flags |= eProcessWindowFlags_RedockRequested;
+  data.flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   snprintf(data.label, sizeof(data.label), "I/O Usage: %s (%d)", comm, pid);
 
   common_views_sort_added(my_state.charts);

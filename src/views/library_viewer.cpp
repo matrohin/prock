@@ -73,13 +73,14 @@ static void send_library_request(Sync &sync, const int pid) {
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync,
                             const int pid, const char *comm,
-                            const ImGuiID dock_id) {
+                            const ImGuiID dock_id,
+                            const ProcessWindowFlags extra_flags) {
   LibraryViewerWindow *win =
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
   win->status = eLibraryViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
-  win->flags |= eProcessWindowFlags_RedockRequested;
+  win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_index = -1;
 
@@ -179,7 +180,12 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                           title);
 
     bool should_be_opened = true;
-    if (ImGui::Begin(title, &should_be_opened, COMMON_VIEW_FLAGS)) {
+    ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS;
+    if (win.flags & eProcessWindowFlags_NoFocusOnAppearing) {
+      win_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
+      win.flags &= ~eProcessWindowFlags_NoFocusOnAppearing;
+    }
+    if (ImGui::Begin(title, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 
       // Content area - show previous data while loading, or error message

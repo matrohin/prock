@@ -39,18 +39,19 @@ static void open_all_windows(const int pid, const char *comm,
   const ImGuiID dock_id =
       process_host_open(view_state.process_host_state, pid, comm);
   if (dock_id == 0) return;
+  constexpr ProcessWindowFlags no_focus = eProcessWindowFlags_NoFocusOnAppearing;
   cpu_chart_add(view_state.cpu_chart_state, pid, comm, dock_id);
-  mem_chart_add(view_state.mem_chart_state, pid, comm, dock_id);
-  io_chart_add(view_state.io_chart_state, pid, comm, dock_id);
-  net_chart_add(view_state.net_chart_state, pid, comm, dock_id);
+  mem_chart_add(view_state.mem_chart_state, pid, comm, dock_id, no_focus);
+  io_chart_add(view_state.io_chart_state, pid, comm, dock_id, no_focus);
+  net_chart_add(view_state.net_chart_state, pid, comm, dock_id, no_focus);
   library_viewer_request(view_state.library_viewer_state, *view_state.sync, pid,
-                         comm, dock_id);
+                         comm, dock_id, no_focus);
   environ_viewer_request(view_state.environ_viewer_state, *view_state.sync, pid,
-                         comm, dock_id);
+                         comm, dock_id, no_focus);
   threads_viewer_open(view_state.threads_viewer_state, *view_state.sync, pid,
-                      comm, dock_id);
+                      comm, dock_id, no_focus);
   socket_viewer_request(view_state.socket_viewer_state, *view_state.sync, pid,
-                        comm, dock_id);
+                        comm, dock_id, no_focus);
 }
 
 static void copy_process_row(const BriefTableLine &line) {

@@ -140,7 +140,8 @@ static bool pid_still_needed(const ThreadsViewerState &state, int pid,
 }
 
 void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
-                         const char *comm, const ImGuiID dock_id) {
+                         const char *comm, const ImGuiID dock_id,
+                         const ProcessWindowFlags extra_flags) {
   // Check if window already exists for this PID
   for (size_t i = 0; i < state.windows.size(); ++i) {
     if (state.windows.data()[i].pid == pid) {
@@ -156,7 +157,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
   win->pid = pid;
   win->dock_id = dock_id;
-  win->flags |= eProcessWindowFlags_RedockRequested;
+  win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   win->status = eThreadsViewerStatus_Loading;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_tid = -1;
@@ -328,7 +329,12 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                                           title);
 
     bool should_be_opened = true;
-    if (ImGui::Begin(title, &should_be_opened, COMMON_VIEW_FLAGS)) {
+    ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS;
+    if (win.flags & eProcessWindowFlags_NoFocusOnAppearing) {
+      win_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
+      win.flags &= ~eProcessWindowFlags_NoFocusOnAppearing;
+    }
+    if (ImGui::Begin(title, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 
       if (win.status == eThreadsViewerStatus_Error) {

@@ -49,6 +49,7 @@ struct ViewState;
 struct State;
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync, int pid,
-                            const char *comm, ImGuiID dock_id = 0);
+                            const char *comm, ImGuiID dock_id = 0,
+                            ProcessWindowFlags extra_flags = 0);
 void library_viewer_update(LibraryViewerState &state, Sync &sync);
 void library_viewer_draw(FrameContext &ctx, ViewState &view_state);

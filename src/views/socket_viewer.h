@@ -51,6 +51,7 @@ struct FrameContext;
 struct ViewState;
 
 void socket_viewer_request(SocketViewerState &state, Sync &sync, int pid,
-                           const char *comm, ImGuiID dock_id = 0);
+                           const char *comm, ImGuiID dock_id = 0,
+                           ProcessWindowFlags extra_flags = 0);
 void socket_viewer_update(SocketViewerState &state, Sync &sync);
 void socket_viewer_draw(FrameContext &ctx, ViewState &view_state);

@@ -21,7 +21,7 @@ void net_chart_update(NetChartState &my_state, const State &state);
 void net_chart_draw(ViewState &view_state);
 
 void net_chart_add(NetChartState &my_state, int pid, const char *comm,
-                   ImGuiID dock_id = 0);
+                   ImGuiID dock_id = 0, ProcessWindowFlags extra_flags = 0);
 void net_chart_close_if_docked_in(NetChartState &my_state, int pid,
                                   ImGuiID dockspace_id);
 void net_chart_restore_layout_by_pid(NetChartState &my_state, int pid);

@@ -49,7 +49,8 @@ struct ViewState;
 struct State;
 
 void environ_viewer_request(EnvironViewerState &state, Sync &sync, int pid,
-                            const char *comm, ImGuiID dock_id = 0);
+                            const char *comm, ImGuiID dock_id = 0,
+                            ProcessWindowFlags extra_flags = 0);
 void environ_viewer_update(EnvironViewerState &state, Sync &sync);
 void environ_viewer_draw(FrameContext &ctx, ViewState &view_state);
 void environ_viewer_close_if_docked_in(EnvironViewerState &state, int pid,
