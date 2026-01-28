@@ -8,6 +8,7 @@ struct PreferencesState {
   float zoom_scale = 1.0f;  // UI zoom: 0.75 to 2.0
   char font_path[512] = {};  // Custom TTF font path, empty = default
   bool font_needs_reload = false;  // Signal to reload font atlas
+  bool show_debug_fps = false;  // Toggle with F3
 };
 
 struct ViewState;

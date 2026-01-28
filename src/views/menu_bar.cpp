@@ -97,7 +97,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Separator();
 
     ImGui::SetNextItemWidth(100);
-    ImGui::SliderInt("Target FPS", &prefs.target_fps, 15, 144);
+    ImGui::SliderInt("Target FPS", &prefs.target_fps, 15, 60);
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -153,6 +153,19 @@ void menu_bar_draw(ViewState &view_state) {
       }
       ImGui::EndMenu();
     }
+
+    // Draw FPS on the right side if debug mode enabled (toggle with F3)
+    if (view_state.preferences_state.show_debug_fps) {
+      char fps_text[32];
+      snprintf(fps_text, sizeof(fps_text), "%.1f FPS",
+               static_cast<double>(ImGui::GetIO().Framerate));
+      float text_width = ImGui::CalcTextSize(fps_text).x;
+      float menu_bar_width = ImGui::GetWindowWidth();
+      float spacing = ImGui::GetStyle().ItemSpacing.x;
+      ImGui::SameLine(menu_bar_width - text_width - spacing);
+      ImGui::TextDisabled("%s", fps_text);
+    }
+
     ImGui::EndMenuBar();
   }
 

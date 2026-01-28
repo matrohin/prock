@@ -331,7 +331,7 @@ int main(int, char **) {
     return 1;
   }
   glfwMakeContextCurrent(window);
-  glfwSwapInterval(1); // Enable vsync
+  glfwSwapInterval(0);
 
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -440,7 +440,6 @@ int main(int, char **) {
 
   while (!glfwWindowShouldClose(window)) {
     FrameMark;
-    auto frame_start = SteadyClock::now();
 
     if (g_needs_updates > 0) {
       glfwPollEvents();
@@ -449,6 +448,13 @@ int main(int, char **) {
       glfwWaitEvents();
     }
 
+    // F3 toggles debug FPS display
+    if (ImGui::IsKeyPressed(ImGuiKey_F3, false)) {
+      view_state.preferences_state.show_debug_fps =
+          !view_state.preferences_state.show_debug_fps;
+    }
+
+    auto frame_start = SteadyClock::now();
     FrameMarkStart(MAIN_FRAME);
     if (update(state, view_state, sync)) {
       g_needs_updates = 2;
