@@ -91,7 +91,10 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
                             const int pid, const char *comm,
                             const ImGuiID dock_id,
                             const ProcessWindowFlags extra_flags) {
-  // Create new window
+  if (process_window_focus(state.windows, pid)) {
+    return;
+  }
+
   EnvironViewerWindow *win =
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
   win->status = eEnvironViewerStatus_Loading;
@@ -402,6 +405,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
       }
     }
+    process_window_handle_focus(win.flags);
     ImGui::End();
 
     if (should_be_opened) {

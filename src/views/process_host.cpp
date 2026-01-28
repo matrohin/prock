@@ -39,9 +39,8 @@ void process_host_restore_layout(ViewState &view_state, const int pid) {
 
 ImGuiID process_host_open(ProcessHostState &state, const int pid,
                           const char *comm) {
-  for (size_t i = 0; i < state.windows.size(); ++i) {
-    ProcessHostWindow &win = state.windows.data()[i];
-    if (win.pid == pid) return 0;
+  if (process_window_focus(state.windows, pid)) {
+    return 0;
   }
 
   ProcessHostWindow *win =
@@ -50,8 +49,11 @@ ImGuiID process_host_open(ProcessHostState &state, const int pid,
   snprintf(win->title, sizeof(win->title), "Process: %s (%d)###ProcHost%d",
            comm, pid, pid);
   win->dockspace_id = ImGui::GetID(win->title);
+  const ImGuiID dock_id = win->dockspace_id;
 
-  return win->dockspace_id;
+  common_views_sort_added(state.windows);
+
+  return dock_id;
 }
 
 void process_host_draw(ViewState &view_state) {
@@ -64,7 +66,7 @@ void process_host_draw(ViewState &view_state) {
     if (last != i) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
-    const ProcessHostWindow &win = my_state.windows.data()[last];
+    ProcessHostWindow &win = my_state.windows.data()[last];
     view_state.cascade.next_if_new(win.title);
 
     if (ImGui::Begin(win.title, &should_be_opened, COMMON_VIEW_FLAGS)) {
@@ -75,6 +77,7 @@ void process_host_draw(ViewState &view_state) {
     // DockSpace must be called even when Begin() returns false (window not
     // visible, e.g. docked as inactive tab) to maintain docking relationships.
     ImGui::DockSpace(win.dockspace_id, ImVec2(0, 0), ImGuiDockNodeFlags_None);
+    process_window_handle_focus(win.flags);
     ImGui::End();
 
     if (should_be_opened) {

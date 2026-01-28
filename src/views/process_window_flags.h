@@ -11,6 +11,7 @@ enum ProcessWindowFlags_ {
   eProcessWindowFlags_CloseRequested = 1 << 0,
   eProcessWindowFlags_RedockRequested = 1 << 1,
   eProcessWindowFlags_NoFocusOnAppearing = 1 << 2,
+  eProcessWindowFlags_FocusRequested = 1 << 3,
 };
 
 template <class T>
@@ -35,8 +36,24 @@ void process_window_redock(GrowingArray<T> &windows, const int pid) {
   }
 }
 
+// Returns true if window exists and was marked for focus, false if not found
+template <class T>
+bool process_window_focus(GrowingArray<T> &windows, const int pid) {
+  T *data = windows.data();
+  const size_t size = windows.size();
+  const size_t i = bin_search_exact(
+      size, [data](const size_t mid) { return data[mid].pid; }, pid);
+  if (i < size) {
+    data[i].flags |= eProcessWindowFlags_FocusRequested;
+    return true;
+  }
+  return false;
+}
+
 void process_window_check_close(ProcessWindowFlags &flags,
                                 bool &should_be_opened);
+
+void process_window_handle_focus(ProcessWindowFlags &flags);
 
 void process_window_handle_docking_and_pos(ViewState &view_state,
                                             ImGuiID dock_id,

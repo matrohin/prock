@@ -96,6 +96,7 @@ void cpu_chart_draw(ViewState &view_state) {
 
       pop_fit_with_padding();
     }
+    process_window_handle_focus(chart.flags);
     ImGui::End();
 
     if (should_be_opened) {
@@ -111,7 +112,7 @@ void cpu_chart_draw(ViewState &view_state) {
 
 void cpu_chart_add(CpuChartState &my_state, const int pid, const char *comm,
                    const ImGuiID dock_id) {
-  if (common_charts_contains_pid(my_state.charts, pid)) {
+  if (process_window_focus(my_state.charts, pid)) {
     return;
   }
 

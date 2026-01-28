@@ -10,6 +10,13 @@ void process_window_check_close(ProcessWindowFlags &flags,
   }
 }
 
+void process_window_handle_focus(ProcessWindowFlags &flags) {
+  if (flags & eProcessWindowFlags_FocusRequested) {
+    ImGui::SetWindowFocus();
+    flags &= ~eProcessWindowFlags_FocusRequested;
+  }
+}
+
 void process_window_handle_docking_and_pos(ViewState &view_state,
                                            const ImGuiID dock_id,
                                            ProcessWindowFlags &flags,

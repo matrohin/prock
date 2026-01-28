@@ -209,6 +209,10 @@ static void send_socket_request(Sync &sync, const int pid) {
 void socket_viewer_request(SocketViewerState &state, Sync &sync, const int pid,
                            const char *comm, const ImGuiID dock_id,
                            const ProcessWindowFlags extra_flags) {
+  if (process_window_focus(state.windows, pid)) {
+    return;
+  }
+
   SocketViewerWindow *win =
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
   win->status = eSocketViewerStatus_Loading;
@@ -426,6 +430,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
       }
     }
+    process_window_handle_focus(win.flags);
     ImGui::End();
     if (should_be_opened) {
       ++last;

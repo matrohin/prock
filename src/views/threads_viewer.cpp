@@ -142,11 +142,8 @@ static bool pid_still_needed(const ThreadsViewerState &state, int pid,
 void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
                          const char *comm, const ImGuiID dock_id,
                          const ProcessWindowFlags extra_flags) {
-  // Check if window already exists for this PID
-  for (size_t i = 0; i < state.windows.size(); ++i) {
-    if (state.windows.data()[i].pid == pid) {
-      return;  // Already open
-    }
+  if (process_window_focus(state.windows, pid)) {
+    return;
   }
 
   if (!add_watched_pid(sync, pid)) {
@@ -443,6 +440,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
         ImGui::TextDisabled("No thread data available yet...");
       }
     }
+    process_window_handle_focus(win.flags);
     ImGui::End();
 
     if (should_be_opened) {

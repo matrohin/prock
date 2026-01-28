@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base.h"
+#include "views/process_window_flags.h"
 
 #include "imgui.h"
 
@@ -9,6 +10,7 @@ struct ProcessHostWindow {
   ImGuiID dockspace_id;
   char title[64];
   bool open;
+  ProcessWindowFlags flags;
 };
 
 struct ProcessHostState {

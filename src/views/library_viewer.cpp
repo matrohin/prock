@@ -75,6 +75,10 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
                             const int pid, const char *comm,
                             const ImGuiID dock_id,
                             const ProcessWindowFlags extra_flags) {
+  if (process_window_focus(state.windows, pid)) {
+    return;
+  }
+
   LibraryViewerWindow *win =
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
   win->status = eLibraryViewerStatus_Loading;
@@ -284,6 +288,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
       }
     }
+    process_window_handle_focus(win.flags);
     ImGui::End();
     if (should_be_opened) {
       ++last;
