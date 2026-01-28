@@ -208,6 +208,11 @@ template <class T> struct GrowingArray {
   T last_or(T def) const {
     return cur_size > 0 ? inner.data[cur_size - 1] : def;
   }
+
+  T *begin() { return data(); }
+  T *end() { return data() + size(); }
+
+  Array<T> to_array() { return {data(), size()}; }
 };
 
 

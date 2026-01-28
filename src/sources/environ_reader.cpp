@@ -9,7 +9,8 @@
 #include <cstdio>
 #include <cstring>
 
-EnvironResponse read_process_environ(BumpArena &temp_arena, const EnvironRequest &request) {
+EnvironResponse read_process_environ(BumpArena &temp_arena,
+                                     const EnvironRequest &request) {
   ZoneScoped;
 
   const int pid = request.pid;
@@ -77,7 +78,8 @@ EnvironResponse read_process_environ(BumpArena &temp_arena, const EnvironRequest
 
       const char *value_start = eq + 1;
       const size_t value_len = len - (value_start - ptr);
-      entry->value = response.owner_arena.alloc_string_copy(value_start, value_len);
+      entry->value =
+          response.owner_arena.alloc_string_copy(value_start, value_len);
       entry->value_len = value_len;
     }
 
@@ -85,7 +87,7 @@ EnvironResponse read_process_environ(BumpArena &temp_arena, const EnvironRequest
   }
 
   // Sort alphabetically by name
-  std::sort(entries.data(), entries.data() + entries.size(),
+  std::sort(entries.begin(), entries.end(),
             [](const EnvironEntry &a, const EnvironEntry &b) {
               return strcmp(a.name, b.name) < 0;
             });

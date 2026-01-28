@@ -120,12 +120,12 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
   close(fd);
 
   // Sort by inode for binary search
-  std::sort(result.data(), result.data() + result.size(),
+  std::sort(result.begin(), result.end(),
             [](const SocketEntry &a, const SocketEntry &b) {
               return a.inode < b.inode;
             });
 
-  return {result.data(), result.size()};
+  return result.to_array();
 }
 
 // Read socket inodes owned by a process from /proc/[pid]/fd/

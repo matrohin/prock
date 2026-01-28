@@ -11,7 +11,8 @@
 #include <limits.h>
 #include <sys/stat.h>
 
-LibraryResponse read_process_libraries(BumpArena &temp_arena, const LibraryRequest &request) {
+LibraryResponse read_process_libraries(BumpArena &temp_arena,
+                                       const LibraryRequest &request) {
   ZoneScoped;
 
   const int pid = request.pid;
@@ -81,7 +82,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena, const LibraryReque
   fclose(file);
 
   // Sort alphabetically by path
-  std::sort(entries.data(), entries.data() + entries.size(),
+  std::sort(entries.begin(), entries.end(),
             [](const LibraryEntry &a, const LibraryEntry &b) {
               return strcmp(a.path, b.path) < 0;
             });
