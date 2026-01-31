@@ -54,7 +54,7 @@
 // Reproducible example: context menus
 static int g_needs_updates = 0;
 static float g_applied_zoom_scale = 1.0f;
-static bool g_applied_dark_mode = false;
+static Theme g_applied_theme = Theme::Light;
 static float g_monitor_scale = 1.0f;
 static ImGuiStyle
     g_base_style; // Style after theme + monitor scale, before zoom
@@ -84,8 +84,10 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     view_state->system_cpu_chart_state.show_per_core = (val != 0);
   } else if (sscanf(line, "Stacked=%d", &val) == 1) {
     view_state->system_cpu_chart_state.stacked = (val != 0);
-  } else if (sscanf(line, "DarkMode=%d", &val) == 1) {
-    view_state->preferences_state.dark_mode = (val != 0);
+  } else if (sscanf(line, "Theme=%d", &val) == 1) {
+    if (val >= 0 && val < static_cast<int>(Theme::COUNT)) {
+      view_state->preferences_state.theme = static_cast<Theme>(val);
+    }
   } else if (sscanf(line, "UpdatePeriod=%f", &fval) == 1) {
     view_state->preferences_state.update_period = fval;
   } else if (sscanf(line, "TargetFPS=%d", &val) == 1) {
@@ -119,8 +121,8 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   buf->append("\n");
 
   buf->appendf("[%s][Preferences]\n", handler->TypeName);
-  buf->appendf("DarkMode=%d\n",
-               static_cast<int>(view_state->preferences_state.dark_mode));
+  buf->appendf("Theme=%d\n",
+               static_cast<int>(view_state->preferences_state.theme));
   buf->appendf("UpdatePeriod=%.2f\n",
                view_state->preferences_state.update_period);
   buf->appendf("TargetFPS=%d\n", view_state->preferences_state.target_fps);
@@ -387,16 +389,15 @@ int main(int, char **) {
     ImGui::LoadIniSettingsFromDisk(io.IniFilename);
   }
 
-  if (view_state.preferences_state.dark_mode) {
-    ImGui::StyleColorsDark();
-  } else {
-    ImGui::StyleColorsLight();
-  }
+  apply_theme(view_state.preferences_state.theme);
 
   // Apply monitor scale and save as base style (before zoom)
   ImGuiStyle &style = ImGui::GetStyle();
   style.ScaleAllSizes(main_scale);
   style.WindowRounding = 0.0f;
+  style.AntiAliasedLines = true;
+  style.AntiAliasedLinesUseTex = true;
+  style.AntiAliasedFill = true;
   g_base_style = style;
 
   // Apply zoom on top of base style
@@ -404,7 +405,7 @@ int main(int, char **) {
   style.ScaleAllSizes(zoom);
   io.FontGlobalScale = zoom;
   g_applied_zoom_scale = zoom;
-  g_applied_dark_mode = view_state.preferences_state.dark_mode;
+  g_applied_theme = view_state.preferences_state.theme;
 
   ImPlot::GetStyle().UseLocalTime = true;
 
@@ -471,14 +472,10 @@ int main(int, char **) {
     }
 
     // Update base style colors if theme changed
-    const bool new_dark_mode = view_state.preferences_state.dark_mode;
-    if (g_applied_dark_mode != new_dark_mode) {
-      if (new_dark_mode) {
-        ImGui::StyleColorsDark(&g_base_style);
-      } else {
-        ImGui::StyleColorsLight(&g_base_style);
-      }
-      g_applied_dark_mode = new_dark_mode;
+    const Theme new_theme = view_state.preferences_state.theme;
+    if (g_applied_theme != new_theme) {
+      apply_theme(new_theme, &g_base_style);
+      g_applied_theme = new_theme;
     }
 
     // Apply zoom scale if changed

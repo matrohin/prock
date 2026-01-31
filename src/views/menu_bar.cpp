@@ -6,14 +6,6 @@
 #include "imgui.h"
 #include "tracy/Tracy.hpp"
 
-static void apply_theme(const bool dark_mode) {
-  if (dark_mode) {
-    ImGui::StyleColorsDark();
-  } else {
-    ImGui::StyleColorsLight();
-  }
-}
-
 static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
 static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
                                       "1s",     "2s",    "5s"};
@@ -35,13 +27,20 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Text("Appearance");
     ImGui::Separator();
 
-    if (ImGui::RadioButton("Light Mode", !prefs.dark_mode)) {
-      prefs.dark_mode = false;
-      apply_theme(prefs.dark_mode);
-    }
-    if (ImGui::RadioButton("Dark Mode", prefs.dark_mode)) {
-      prefs.dark_mode = true;
-      apply_theme(prefs.dark_mode);
+    ImGui::SetNextItemWidth(120);
+    if (ImGui::BeginCombo("Theme", theme_name(prefs.theme))) {
+      for (int i = 0; i < static_cast<int>(Theme::COUNT); i++) {
+        Theme t = static_cast<Theme>(i);
+        bool is_selected = (prefs.theme == t);
+        if (ImGui::Selectable(theme_name(t), is_selected)) {
+          prefs.theme = t;
+          apply_theme(prefs.theme);
+        }
+        if (is_selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
     }
 
     ImGui::Spacing();

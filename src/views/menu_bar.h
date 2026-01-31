@@ -1,7 +1,9 @@
 #pragma once
 
+#include "themes.h"
+
 struct PreferencesState {
-  bool dark_mode = false;
+  Theme theme = Theme::Light;
   bool show_preferences_modal = false;
   float update_period = 0.5f;  // seconds, 0 = paused
   int target_fps = 60;
