@@ -40,7 +40,9 @@ sudo apt install libwayland-dev libxkbcommon-dev xorg-dev libgles2-mesa-dev
 ```bash
 cmake --preset release
 cmake --build ./build/Release
+
 sudo cmake --install ./build/Release
+sudo cp ./src/prock/prock.desktop /usr/share/applications/
 ```
 
 ### Debug build & Run

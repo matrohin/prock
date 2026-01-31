@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Prock
+GenericName=Process Explorer
+Comment=Process Explorer for Linux
+Exec=prock
+Path=
+Icon=
+Terminal=false
+Type=Application
+Categories=Utility

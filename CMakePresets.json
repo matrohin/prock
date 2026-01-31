@@ -11,7 +11,7 @@
       "hidden": true,
       "cacheVariables": {
         "GLFW_BUILD_X11": "ON",
-        "GLFW_BUILD_WAYLAND": "OFF"
+        "GLFW_BUILD_WAYLAND": "OM"
       }
     },
     {
