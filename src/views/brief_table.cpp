@@ -24,6 +24,56 @@
 // Highlight durations (must match brief_table_logic.cpp)
 static constexpr int64_t NEW_PROCESS_HIGHLIGHT_NS = 2'000'000'000; // 2 seconds
 
+enum FilterResult {
+  FilterResult_NoMatch = 0,
+  FilterResult_Match = 1,
+  FilterResult_SubtreeMatch = 2,  // Token started with '+'
+};
+
+static FilterResult imgui_filter_pass_filter_ext(const ImGuiTextFilter &filter,
+                                                  const char *text) {
+  if (filter.Filters.empty())
+    return FilterResult_Match;
+
+  if (text == nullptr)
+    text = "";
+
+  FilterResult result = FilterResult_NoMatch;
+  for (int i = 0; i < filter.Filters.Size; i++) {
+    const ImGuiTextFilter::ImGuiTextRange &f = filter.Filters[i];
+    if (f.empty())
+      continue;
+
+    const char *filter_begin = f.b;
+    const char *filter_end = f.e;
+    bool is_subtree = false;
+
+    // Check for '+' prefix
+    if (filter_begin < filter_end && *filter_begin == '+') {
+      is_subtree = true;
+      filter_begin++;
+    }
+
+    if (filter_begin >= filter_end)
+      continue;
+
+    // Exclusion filter (-)
+    if (*filter_begin == '-') {
+      if (ImStristr(text, nullptr, filter_begin + 1, filter_end) != nullptr)
+        return FilterResult_NoMatch;
+      continue;
+    }
+
+    // Grep filter
+    if (ImStristr(text, nullptr, filter_begin, filter_end) != nullptr) {
+      if (is_subtree)
+        return FilterResult_SubtreeMatch;
+      result = FilterResult_Match;
+    }
+  }
+  return (filter.CountGrep > 0) ? result : FilterResult_Match;
+}
+
 // Highlight colors (RGBA, values 0-255)
 // TODO: Change colors based on dark/light themes
 static constexpr ImU32 NEW_PROCESS_COLOR = IM_COL32(0, 140, 0, 60);
@@ -108,6 +158,15 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     if (ImGui::MenuItem("Copy All")) {
       copy_all_processes(ctx.frame_arena, my_state);
     }
+    if (ImGui::MenuItem("Filter to subtree")) {
+      size_t len = strlen(my_state.filter_text);
+      // Append comma if filter not empty
+      if (len > 0 && len < sizeof(my_state.filter_text) - 2) {
+        my_state.filter_text[len++] = ',';
+      }
+      snprintf(my_state.filter_text + len, sizeof(my_state.filter_text) - len,
+               "+%s", line.comm);
+    }
     ImGui::Separator();
     if (ImGui::MenuItem("CPU Chart")) {
       cpu_chart_add(view_state.cpu_chart_state, pid, line.comm);
@@ -158,16 +217,47 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
 
 static void compute_filter_visibility(BriefTableState &my_state,
                                       const ImGuiTextFilter &filter) {
-  // First pass: mark direct matches (works for both tree and flat modes)
+  // First pass: mark direct matches
   for (size_t i = 0; i < my_state.lines.size; ++i) {
     BriefTableLine &line = my_state.lines.data[i];
-    char label[32];
-    snprintf(label, sizeof(label), "%d", line.pid);
-    line.filter_state =
-        (filter.PassFilter(line.comm) || filter.PassFilter(label)) ? 1 : 0;
+    char pid_str[32];
+    snprintf(pid_str, sizeof(pid_str), "%d", line.pid);
+
+    FilterResult name_result = imgui_filter_pass_filter_ext(filter, line.comm);
+    FilterResult pid_result = imgui_filter_pass_filter_ext(filter, pid_str);
+
+    // Take the "better" result (SubtreeMatch > Match > NoMatch)
+    FilterResult result = (name_result > pid_result) ? name_result : pid_result;
+
+    if (result == FilterResult_SubtreeMatch)
+      line.filter_state = 3;  // Subtree root
+    else if (result == FilterResult_Match)
+      line.filter_state = 1;  // Regular match
+    else
+      line.filter_state = 0;  // Hidden
   }
 
-  // Second pass (tree mode only): propagate visibility to ancestors
+  // Second pass: propagate subtree visibility to descendants
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (size_t i = 0; i < my_state.lines.size; ++i) {
+      BriefTableLine &line = my_state.lines.data[i];
+      if (line.filter_state != 0) continue;
+
+      // Check if parent is a subtree member
+      for (size_t j = 0; j < my_state.lines.size; ++j) {
+        if (my_state.lines.data[j].pid == line.ppid &&
+            my_state.lines.data[j].filter_state == 3) {
+          line.filter_state = 3;  // Subtree member
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Third pass (tree mode only): propagate visibility to ancestors
   // Iterate in REVERSE - in reverse DFS order, a shallower depth after a
   // deeper visible node means this node is an ancestor of that visible node
   if (my_state.tree_mode) {
