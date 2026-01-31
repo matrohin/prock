@@ -98,6 +98,9 @@ void net_chart_draw(ViewState &view_state) {
                          chart.send_kb_per_sec.data(),
                          chart.send_kb_per_sec.size());
 
+        chart_add_tooltip(TITLE_RECV, "Socket stats via netlink (INET_DIAG)");
+        chart_add_tooltip(TITLE_SEND, "Socket stats via netlink (INET_DIAG)");
+
         ImPlot::EndPlot();
       }
 

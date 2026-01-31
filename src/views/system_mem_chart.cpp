@@ -76,12 +76,8 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       ImPlot::PlotLine(TITLE_AVAILABLE, my_state.times.data(),
                        my_state.available.data(), my_state.available.size());
 
-      if (ImPlot::IsLegendEntryHovered(TITLE_USED)) {
-        ImGui::SetTooltip("Used = MemTotal - MemAvailable");
-      }
-      if (ImPlot::IsLegendEntryHovered(TITLE_AVAILABLE)) {
-        ImGui::SetTooltip("MemAvailable from /proc/meminfo");
-      }
+      chart_add_tooltip(TITLE_USED, "MemTotal - MemAvailable from /proc/meminfo");
+      chart_add_tooltip(TITLE_AVAILABLE, "MemAvailable from /proc/meminfo");
 
       ImPlot::EndPlot();
     }

@@ -89,6 +89,8 @@ void mem_chart_draw(ViewState &view_state) {
                          chart.mem_resident_kb.data(),
                          chart.mem_resident_kb.size());
 
+        chart_add_tooltip(TITLE_USED, "resident from /proc/[pid]/statm");
+
         ImPlot::EndPlot();
       }
 

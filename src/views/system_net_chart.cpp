@@ -75,6 +75,9 @@ void system_net_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
                        my_state.send_mb_per_sec.data(),
                        my_state.send_mb_per_sec.size());
 
+      chart_add_tooltip(TITLE_RECV, "receive bytes from /proc/net/dev");
+      chart_add_tooltip(TITLE_SEND, "transmit bytes from /proc/net/dev");
+
       ImPlot::EndPlot();
     }
 

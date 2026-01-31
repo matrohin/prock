@@ -73,6 +73,9 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
                        my_state.write_mb_per_sec.data(),
                        my_state.write_mb_per_sec.size());
 
+      chart_add_tooltip(TITLE_READ, "sectors read from /proc/diskstats");
+      chart_add_tooltip(TITLE_WRITE, "sectors written from /proc/diskstats");
+
       ImPlot::EndPlot();
     }
 

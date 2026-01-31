@@ -93,6 +93,9 @@ void cpu_chart_draw(ViewState &view_state) {
                          chart.cpu_total_perc.data(),
                          chart.cpu_total_perc.size());
 
+        chart_add_tooltip(TITLE_TOTAL, "utime + stime from /proc/[pid]/stat");
+        chart_add_tooltip(TITLE_KERNEL, "stime from /proc/[pid]/stat");
+
         ImPlot::EndPlot();
       }
 
