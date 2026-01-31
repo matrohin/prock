@@ -73,7 +73,12 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
                           ImPlotFlags_Crosshairs)) {
       setup_chart(my_state.times, format_percent);
 
-      ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
+      if (my_state.show_per_core && my_state.stacked) {
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, std::max(1, my_state.num_cores) * 100,
+                                ImPlotCond_Once);
+      } else {
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
+      }
 
       if (!my_state.show_per_core) {
         push_fill_alpha();

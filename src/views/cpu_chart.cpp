@@ -73,7 +73,9 @@ void cpu_chart_draw(ViewState &view_state) {
       if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
         setup_chart(chart.times, format_percent);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
+        const int num_cores = view_state.system_cpu_chart_state.num_cores;
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, std::max(1, num_cores) * 100,
+                                ImPlotCond_Once);
 
         push_fill_alpha();
         ImPlot::PlotShaded(TITLE_TOTAL, chart.times.data(),
