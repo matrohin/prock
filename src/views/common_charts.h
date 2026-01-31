@@ -16,6 +16,7 @@ constexpr const char *TITLE_WRITE = "Write";
 
 // Memory chart titles
 constexpr const char *TITLE_USED = "Used";
+constexpr const char *TITLE_AVAILABLE = "Available";
 
 // Net chart titles
 constexpr const char *TITLE_RECV = "Recv";

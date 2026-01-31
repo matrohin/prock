@@ -29,6 +29,8 @@ void system_mem_chart_update(SystemMemChartState &my_state,
       update_at;
   *my_state.used.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
       used_kb;
+  *my_state.available.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
+      mem.mem_available;
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -36,6 +38,7 @@ void system_mem_chart_update(SystemMemChartState &my_state,
 
     my_state.times.realloc(new_arena);
     my_state.used.realloc(new_arena);
+    my_state.available.realloc(new_arena);
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -64,13 +67,20 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       push_fill_alpha();
       ImPlot::PlotShaded(TITLE_USED, my_state.times.data(),
                          my_state.used.data(), my_state.used.size());
+      ImPlot::PlotShaded(TITLE_AVAILABLE, my_state.times.data(),
+                         my_state.available.data(), my_state.available.size());
       pop_fill_alpha();
 
       ImPlot::PlotLine(TITLE_USED, my_state.times.data(), my_state.used.data(),
                        my_state.used.size());
+      ImPlot::PlotLine(TITLE_AVAILABLE, my_state.times.data(),
+                       my_state.available.data(), my_state.available.size());
 
       if (ImPlot::IsLegendEntryHovered(TITLE_USED)) {
         ImGui::SetTooltip("Used = MemTotal - MemAvailable");
+      }
+      if (ImPlot::IsLegendEntryHovered(TITLE_AVAILABLE)) {
+        ImGui::SetTooltip("MemAvailable from /proc/meminfo");
       }
 
       ImPlot::EndPlot();

@@ -3,7 +3,8 @@
 struct SystemMemChartState {
   BumpArena cur_arena;
   GrowingArray<double> times;
-  GrowingArray<double> used; // Used memory in GB (Total - Available)
+  GrowingArray<double> used;      // Used memory in KB (Total - Available)
+  GrowingArray<double> available; // Available memory in KB
   size_t wasted_bytes;
   bool y_axis_fitted;
 };
