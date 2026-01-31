@@ -159,6 +159,7 @@ static void brief_table_line_init(BriefTableLine &new_line,
   new_line.num_threads = stat.num_threads;
 
   new_line.derived_stat = derived_stat;
+  new_line.filter_state = 0;
 }
 
 // Rebuilds lines in previous display order (with new processes appended)

@@ -39,6 +39,7 @@ struct BriefTableLine {
   int64_t first_seen_ns;
   int64_t death_time_ns;
   int tree_depth; // 0 for root, incremented for children (used in tree mode)
+  uint8_t filter_state; // 0=hidden, 1=matches filter, 2=ancestor of match (grayed)
 };
 
 struct BriefTableState {

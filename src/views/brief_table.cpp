@@ -156,6 +156,39 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
   }
 }
 
+static void compute_filter_visibility(BriefTableState &my_state,
+                                      const ImGuiTextFilter &filter) {
+  // First pass: mark direct matches (works for both tree and flat modes)
+  for (size_t i = 0; i < my_state.lines.size; ++i) {
+    BriefTableLine &line = my_state.lines.data[i];
+    char label[32];
+    snprintf(label, sizeof(label), "%d", line.pid);
+    line.filter_state =
+        (filter.PassFilter(line.comm) || filter.PassFilter(label)) ? 1 : 0;
+  }
+
+  // Second pass (tree mode only): propagate visibility to ancestors
+  // Iterate in REVERSE - in reverse DFS order, a shallower depth after a
+  // deeper visible node means this node is an ancestor of that visible node
+  if (my_state.tree_mode) {
+    int last_visible_depth = -1;
+    for (size_t i = my_state.lines.size; i-- > 0;) {
+      BriefTableLine &line = my_state.lines.data[i];
+      const int depth = line.tree_depth;
+
+      // If at shallower depth than last visible, this is an ancestor
+      if (depth < last_visible_depth && line.filter_state == 0) {
+        line.filter_state = 2; // ancestor
+      }
+
+      // Track depth of visible nodes
+      if (line.filter_state != 0) {
+        last_visible_depth = depth;
+      }
+    }
+  }
+}
+
 static void data_columns_draw(const BriefTableLine &line) {
   const ProcessDerivedStat &derived_stat = line.derived_stat;
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Name))
@@ -300,6 +333,11 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     int collapsed_at_depth = -1; // -1 means no collapsed parent; otherwise skip
                                  // children deeper than this
 
+    const bool filter_active = filter.IsActive();
+    if (filter_active) {
+      compute_filter_visibility(my_state, filter);
+    }
+
     for (size_t i = 0; i < my_state.lines.size; ++i) {
       const BriefTableLine &line = my_state.lines.data[i];
       const bool is_dead = line.death_time_ns != 0;
@@ -309,8 +347,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       char label[32];
       snprintf(label, sizeof(label), "%d", line.pid);
 
-      // Skip non-matching processes when filter is active
-      if (!filter.PassFilter(line.comm) && !filter.PassFilter(label)) continue;
+      // Skip hidden processes (filter_state computed for both tree and flat modes)
+      if (filter_active && line.filter_state == 0) continue;
 
       // In tree mode, handle collapsed parent tracking and TreePop
       if (my_state.tree_mode) {
@@ -344,11 +382,29 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       const bool is_selected = my_state.selected_pid == line.pid;
       ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
 
+      // Gray out ancestor processes that don't match filter but have matching
+      // descendants
+      const bool is_grayed = filter_active && line.filter_state == 2;
+      if (is_grayed) {
+        ImGui::PushStyleColor(ImGuiCol_Text,
+                              ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+      }
+
       if (my_state.tree_mode) {
-        // Check if this node has children (next line has greater depth)
-        const bool has_children =
-            (i + 1 < my_state.lines.size) &&
-            (my_state.lines.data[i + 1].tree_depth > line.tree_depth);
+        // Check if this node has children (next line has greater depth and
+        // visible)
+        bool has_children = false;
+        if (i + 1 < my_state.lines.size) {
+          // In filtered mode, we need to check for visible children
+          for (size_t j = i + 1; j < my_state.lines.size; ++j) {
+            const BriefTableLine &next = my_state.lines.data[j];
+            if (next.tree_depth <= line.tree_depth) break;
+            if (!filter_active || next.filter_state != 0) {
+              has_children = true;
+              break;
+            }
+          }
+        }
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns |
                                    ImGuiTreeNodeFlags_DefaultOpen |
@@ -391,6 +447,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
         table_context_menu_draw(ctx, view_state, my_state, line, label);
         data_columns_draw(line);
+      }
+
+      if (is_grayed) {
+        ImGui::PopStyleColor();
       }
     }
 
