@@ -114,7 +114,41 @@ inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
   if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
     ImGui::SetKeyboardFocusHere();
   }
+
+  // Get widget ID to check if it's active and to reload its buffer after modification
+  ImGuiID input_id = ImGui::GetID(id);
+  bool is_active = ImGui::GetActiveID() == input_id;
+  bool buffer_modified = false;
+
+  // Handle shortcuts when filter input is active (before drawing)
+  if (is_active) {
+    // Ctrl+W: delete last filter entry (word)
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_W, ImGuiInputFlags_RouteAlways)) {
+      size_t len = strlen(filter_text);
+      if (len > 0) {
+        // Trim trailing commas first
+        while (len > 0 && filter_text[len - 1] == ',') {
+          len--;
+        }
+        // Find the last comma (start of last word)
+        while (len > 0 && filter_text[len - 1] != ',') {
+          len--;
+        }
+        filter_text[len] = '\0';
+        buffer_modified = true;
+      }
+    }
+
+    // Tell ImGui to reload from user buffer if we modified it
+    if (buffer_modified) {
+      if (ImGuiInputTextState *state = ImGui::GetInputTextState(input_id)) {
+        state->ReloadUserBufAndMoveToEnd();
+      }
+    }
+  }
+
   ImGui::InputTextWithHint(id, "Filter", filter_text, filter_text_size);
+
   ImGuiTextFilter filter;
   if (filter_text[0] != '\0') {
     strncpy(filter.InputBuf, filter_text, sizeof(filter.InputBuf));

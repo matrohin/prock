@@ -24,6 +24,12 @@ static void draw_preferences_modal(PreferencesState &prefs) {
 
   if (ImGui::BeginPopupModal("Preferences", &prefs.show_preferences_modal,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
+    // Esc closes the preferences modal
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+      ImGui::CloseCurrentPopup();
+      prefs.show_preferences_modal = false;
+    }
+
     ImGui::Text("Appearance");
     ImGui::Separator();
 

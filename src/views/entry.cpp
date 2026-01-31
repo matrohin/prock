@@ -38,7 +38,6 @@ void views_update(ViewState &view_state, State &state) {
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   ZoneScoped;
   menu_bar_draw(view_state);
-  brief_table_draw(ctx, view_state, state);
   process_host_draw(view_state);
   cpu_chart_draw(view_state);
   mem_chart_draw(view_state);
@@ -52,6 +51,7 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   environ_viewer_draw(ctx, view_state);
   threads_viewer_draw(ctx, view_state, state);
   socket_viewer_draw(ctx, view_state);
+  brief_table_draw(ctx, view_state, state);
 }
 
 void views_process_thread_snapshots(ViewState &view_state, const State &state,
