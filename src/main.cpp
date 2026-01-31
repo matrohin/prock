@@ -208,8 +208,7 @@ static void draw_main_window(const ImGuiIO &io, const State &state,
       ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
-      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground |
-      ImGuiWindowFlags_MenuBar;
+      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar;
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
