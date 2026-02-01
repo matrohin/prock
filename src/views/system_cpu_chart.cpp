@@ -46,6 +46,21 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
         snapshot.cpu_perc.total.data[i + 1];
   }
 
+  // Find top CPU process
+  TopCpuProcess top = {0, {'\0'}, 0.0};
+  for (size_t i = 0; i < snapshot.stats.size; ++i) {
+    const ProcessDerivedStat &derived = snapshot.derived_stats.data[i];
+    double cpu = derived.cpu_user_perc + derived.cpu_kernel_perc;
+    if (cpu > top.cpu_perc) {
+      top.pid = snapshot.stats.data[i].pid;
+      top.cpu_perc = cpu;
+      strncpy(top.comm, snapshot.stats.data[i].comm, sizeof(top.comm) - 1);
+      top.comm[sizeof(top.comm) - 1] = '\0';
+    }
+  }
+  *my_state.top_processes.emplace_back(my_state.cur_arena,
+                                       my_state.wasted_bytes) = top;
+
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
     BumpArena new_arena = BumpArena::create();
@@ -57,6 +72,7 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
     for (int i = 0; i < my_state.num_cores; ++i) {
       my_state.core_usage[i].realloc(new_arena);
     }
+    my_state.top_processes.realloc(new_arena);
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -150,6 +166,27 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
           ImPlot::PlotLine(label, my_state.times.data(),
                            my_state.core_usage[i].data(),
                            my_state.core_usage[i].size());
+        }
+      }
+
+      // Show tooltip with top process on hover
+      if (ImPlot::IsPlotHovered() && my_state.times.size() > 0) {
+        ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+        size_t idx = lower_bound(
+            my_state.times.size(),
+            [&my_state](size_t i) { return my_state.times.data()[i]; }, mouse.x);
+        if (idx < my_state.times.size()) {
+          const TopCpuProcess &top = my_state.top_processes.data()[idx];
+          if (top.pid > 0) {
+            double cpu_perc = top.cpu_perc;
+            if (!my_state.show_per_core && my_state.num_cores > 0) {
+              cpu_perc /= my_state.num_cores;
+            }
+            ImGui::BeginTooltip();
+            ImGui::Text("Total: %.1f%%", my_state.total_usage.data()[idx]);
+            ImGui::Text("Top: %s (PID %d) %.1f%%", top.comm, top.pid, cpu_perc);
+            ImGui::EndTooltip();
+          }
         }
       }
 
