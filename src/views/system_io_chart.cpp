@@ -25,6 +25,16 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
       my_state.cur_arena, my_state.wasted_bytes) = rate.read_mb_per_sec;
   *my_state.write_mb_per_sec.emplace_back(
       my_state.cur_arena, my_state.wasted_bytes) = rate.write_mb_per_sec;
+  *my_state.total_mb_per_sec.emplace_back(my_state.cur_arena,
+                                          my_state.wasted_bytes) =
+      rate.read_mb_per_sec + rate.write_mb_per_sec;
+
+  // Find top I/O process (store in MB/s to match system values)
+  *my_state.top_processes.emplace_back(my_state.cur_arena,
+                                       my_state.wasted_bytes) =
+      find_top_process(snapshot, [](const ProcessDerivedStat &d) {
+        return (d.io_read_kb_per_sec + d.io_write_kb_per_sec) / 1024.0;
+      });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -33,6 +43,8 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
     my_state.times.realloc(new_arena);
     my_state.read_mb_per_sec.realloc(new_arena);
     my_state.write_mb_per_sec.realloc(new_arena);
+    my_state.total_mb_per_sec.realloc(new_arena);
+    my_state.top_processes.realloc(new_arena);
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -46,8 +58,8 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
   if (ImGui::Begin("System I/O", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();
-    const bool should_fit_y =
-        try_initial_y_fit(my_state.y_axis_fitted, my_state.read_mb_per_sec.size());
+    const bool should_fit_y = try_initial_y_fit(
+        my_state.y_axis_fitted, my_state.read_mb_per_sec.size());
     if (ImPlot::BeginPlot("##SystemIO", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       if (should_fit_y) {
@@ -72,6 +84,9 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
       chart_add_tooltip(TITLE_READ, "sectors read from /proc/diskstats");
       chart_add_tooltip(TITLE_WRITE, "sectors written from /proc/diskstats");
+
+      show_top_process_tooltip(my_state.times, my_state.top_processes, "I/O",
+                               my_state.total_mb_per_sec, format_io_rate_mb);
 
       ImPlot::EndPlot();
     }

@@ -4,6 +4,29 @@
 #include "state.h"
 
 #include <algorithm>
+#include <cstring>
+
+struct TopProcess {
+  int pid;
+  char comm[16];  // Linux limits to 15 chars + null
+  double value;
+};
+
+// Find top process by a given metric extractor
+template <class F>
+TopProcess find_top_process(const StateSnapshot &snapshot, F get_value) {
+  TopProcess top = {0, {'\0'}, 0.0};
+  for (size_t i = 0; i < snapshot.stats.size; ++i) {
+    const double val = get_value(snapshot.derived_stats.data[i]);
+    if (val > top.value) {
+      top.pid = snapshot.stats.data[i].pid;
+      top.value = val;
+      strncpy(top.comm, snapshot.stats.data[i].comm, sizeof(top.comm) - 1);
+      top.comm[sizeof(top.comm) - 1] = '\0';
+    }
+  }
+  return top;
+}
 
 // CPU chart titles:
 constexpr const char *TITLE_TOTAL = "Total";

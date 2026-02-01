@@ -32,6 +32,13 @@ void system_mem_chart_update(SystemMemChartState &my_state,
   *my_state.available.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
       mem.mem_available;
 
+  // Find top memory process (store in KB to match system values)
+  *my_state.top_processes.emplace_back(my_state.cur_arena,
+                                       my_state.wasted_bytes) =
+      find_top_process(snapshot, [](const ProcessDerivedStat &d) {
+        return d.mem_resident_bytes / 1024.0;
+      });
+
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
     BumpArena new_arena = BumpArena::create();
@@ -39,6 +46,7 @@ void system_mem_chart_update(SystemMemChartState &my_state,
     my_state.times.realloc(new_arena);
     my_state.used.realloc(new_arena);
     my_state.available.realloc(new_arena);
+    my_state.top_processes.realloc(new_arena);
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -73,8 +81,12 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       ImPlot::PlotLine(TITLE_AVAILABLE, my_state.times.data(),
                        my_state.available.data(), my_state.available.size());
 
-      chart_add_tooltip(TITLE_USED, "MemTotal - MemAvailable from /proc/meminfo");
+      chart_add_tooltip(TITLE_USED,
+                        "MemTotal - MemAvailable from /proc/meminfo");
       chart_add_tooltip(TITLE_AVAILABLE, "MemAvailable from /proc/meminfo");
+
+      show_top_process_tooltip(my_state.times, my_state.top_processes, "Used",
+                               my_state.used, format_memory_kb);
 
       ImPlot::EndPlot();
     }

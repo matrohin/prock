@@ -47,19 +47,11 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
   }
 
   // Find top CPU process
-  TopCpuProcess top = {0, {'\0'}, 0.0};
-  for (size_t i = 0; i < snapshot.stats.size; ++i) {
-    const ProcessDerivedStat &derived = snapshot.derived_stats.data[i];
-    double cpu = derived.cpu_user_perc + derived.cpu_kernel_perc;
-    if (cpu > top.cpu_perc) {
-      top.pid = snapshot.stats.data[i].pid;
-      top.cpu_perc = cpu;
-      strncpy(top.comm, snapshot.stats.data[i].comm, sizeof(top.comm) - 1);
-      top.comm[sizeof(top.comm) - 1] = '\0';
-    }
-  }
   *my_state.top_processes.emplace_back(my_state.cur_arena,
-                                       my_state.wasted_bytes) = top;
+                                       my_state.wasted_bytes) =
+      find_top_process(snapshot, [](const ProcessDerivedStat &d) {
+        return d.cpu_user_perc + d.cpu_kernel_perc;
+      });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -118,7 +110,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
                          my_state.total_usage.data(),
                          my_state.total_usage.size());
 
-        chart_add_tooltip(TITLE_TOTAL, "user + system + irq + softirq from /proc/stat");
+        chart_add_tooltip(TITLE_TOTAL,
+                          "user + system + irq + softirq from /proc/stat");
         chart_add_tooltip(TITLE_KERNEL, "system from /proc/stat");
         chart_add_tooltip(TITLE_INTERRUPTS, "irq + softirq from /proc/stat");
       } else if (my_state.stacked) {
@@ -170,25 +163,14 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
       }
 
       // Show tooltip with top process on hover
-      if (ImPlot::IsPlotHovered() && my_state.times.size() > 0) {
-        ImPlotPoint mouse = ImPlot::GetPlotMousePos();
-        size_t idx = lower_bound(
-            my_state.times.size(),
-            [&my_state](size_t i) { return my_state.times.data()[i]; }, mouse.x);
-        if (idx < my_state.times.size()) {
-          const TopCpuProcess &top = my_state.top_processes.data()[idx];
-          if (top.pid > 0) {
-            double cpu_perc = top.cpu_perc;
-            if (!my_state.show_per_core && my_state.num_cores > 0) {
-              cpu_perc /= my_state.num_cores;
-            }
-            ImGui::BeginTooltip();
-            ImGui::Text("Total: %.1f%%", my_state.total_usage.data()[idx]);
-            ImGui::Text("Top: %s (PID %d) %.1f%%", top.comm, top.pid, cpu_perc);
-            ImGui::EndTooltip();
-          }
-        }
-      }
+      int num_cores = my_state.show_per_core ? 0 : my_state.num_cores;
+      show_top_process_tooltip(
+          my_state.times, my_state.top_processes, "Total", my_state.total_usage,
+          [num_cores](const double val, char *buf, const int size,
+                      void * /*unused*/) {
+            const double cpu_perc = (num_cores > 0) ? val / num_cores : val;
+            snprintf(buf, size, "%.1f%%", cpu_perc);
+          });
 
       ImPlot::EndPlot();
     }

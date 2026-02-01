@@ -5,6 +5,7 @@ struct SystemMemChartState {
   GrowingArray<double> times;
   GrowingArray<double> used;      // Used memory in KB (Total - Available)
   GrowingArray<double> available; // Available memory in KB
+  GrowingArray<TopProcess> top_processes;
   size_t wasted_bytes;
   bool y_axis_fitted;
 };

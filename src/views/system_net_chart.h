@@ -5,6 +5,8 @@ struct SystemNetChartState {
   GrowingArray<double> times;
   GrowingArray<double> recv_mb_per_sec;  // Receive throughput in MB/s
   GrowingArray<double> send_mb_per_sec;  // Send throughput in MB/s
+  GrowingArray<double> total_mb_per_sec; // Combined for tooltip
+  GrowingArray<TopProcess> top_processes;
   size_t wasted_bytes;
   bool y_axis_fitted;
 };

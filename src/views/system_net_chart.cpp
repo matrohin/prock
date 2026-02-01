@@ -26,6 +26,16 @@ void system_net_chart_update(SystemNetChartState &my_state,
       my_state.cur_arena, my_state.wasted_bytes) = rate.recv_mb_per_sec;
   *my_state.send_mb_per_sec.emplace_back(
       my_state.cur_arena, my_state.wasted_bytes) = rate.send_mb_per_sec;
+  *my_state.total_mb_per_sec.emplace_back(my_state.cur_arena,
+                                          my_state.wasted_bytes) =
+      rate.recv_mb_per_sec + rate.send_mb_per_sec;
+
+  // Find top network process (store in MB/s to match system values)
+  *my_state.top_processes.emplace_back(my_state.cur_arena,
+                                       my_state.wasted_bytes) =
+      find_top_process(snapshot, [](const ProcessDerivedStat &d) {
+        return (d.net_recv_kb_per_sec + d.net_send_kb_per_sec) / 1024.0;
+      });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -34,6 +44,8 @@ void system_net_chart_update(SystemNetChartState &my_state,
     my_state.times.realloc(new_arena);
     my_state.recv_mb_per_sec.realloc(new_arena);
     my_state.send_mb_per_sec.realloc(new_arena);
+    my_state.total_mb_per_sec.realloc(new_arena);
+    my_state.top_processes.realloc(new_arena);
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -47,8 +59,8 @@ void system_net_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
   if (ImGui::Begin("System Network", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();
-    const bool should_fit_y =
-        try_initial_y_fit(my_state.y_axis_fitted, my_state.recv_mb_per_sec.size());
+    const bool should_fit_y = try_initial_y_fit(
+        my_state.y_axis_fitted, my_state.recv_mb_per_sec.size());
     if (ImPlot::BeginPlot("##SystemNet", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       if (should_fit_y) {
@@ -74,6 +86,9 @@ void system_net_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
       chart_add_tooltip(TITLE_RECV, "receive bytes from /proc/net/dev");
       chart_add_tooltip(TITLE_SEND, "transmit bytes from /proc/net/dev");
+
+      show_top_process_tooltip(my_state.times, my_state.top_processes, "Net",
+                               my_state.total_mb_per_sec, format_io_rate_mb);
 
       ImPlot::EndPlot();
     }

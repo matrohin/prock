@@ -3,6 +3,37 @@
 #include "base.h"
 #include "imgui.h"
 #include "implot.h"
+#include "views/common_charts.h"
+
+// Show tooltip with top process on chart hover
+// format_value :: (double, char *, int, void *)
+template <class F>
+void show_top_process_tooltip(const GrowingArray<double> &times,
+                              const GrowingArray<TopProcess> &top_processes,
+                              const char *system_label,
+                              const GrowingArray<double> &system_values,
+                              F format_value) {
+  if (!ImPlot::IsPlotHovered() || times.size() == 0) {
+    return;
+  }
+  ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+  size_t idx = lower_bound(
+      times.size(), [&times](size_t i) { return times.data()[i]; }, mouse.x);
+  if (idx >= times.size()) {
+    return;
+  }
+  char system_buf[32];
+  format_value(system_values.data()[idx], system_buf, sizeof(system_buf), nullptr);
+  ImGui::BeginTooltip();
+  ImGui::Text("%s: %s", system_label, system_buf);
+  const TopProcess &top = top_processes.data()[idx];
+  if (top.pid > 0) {
+    char top_buf[32];
+    format_value(top.value, top_buf, sizeof(top_buf), nullptr);
+    ImGui::Text("Top: %s (PID %d) %s", top.comm, top.pid, top_buf);
+  }
+  ImGui::EndTooltip();
+}
 
 inline void chart_add_tooltip(const char *title, const char *tooltip) {
   if (ImPlot::IsLegendEntryHovered(title)) {
