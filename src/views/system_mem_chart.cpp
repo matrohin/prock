@@ -53,10 +53,7 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   if (ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();
     const bool should_fit_y =
-        !my_state.y_axis_fitted && my_state.used.size() >= 2;
-    if (should_fit_y) {
-      ImPlot::SetNextAxisToFit(ImAxis_Y1);
-    }
+        try_initial_y_fit(my_state.y_axis_fitted, my_state.used.size());
     if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       if (should_fit_y) {

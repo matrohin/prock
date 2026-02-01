@@ -69,16 +69,15 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
   SystemCpuChartState &my_state = view_state.system_cpu_chart_state;
   if (ImGui::Begin("System CPU Usage", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();
+    const bool should_fit_y =
+        try_initial_y_fit(my_state.y_axis_fitted, my_state.total_usage.size());
     if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
-      setup_chart(my_state.times, format_percent);
-
-      if (my_state.show_per_core && my_state.stacked) {
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, std::max(1, my_state.num_cores) * 100,
-                                ImPlotCond_Once);
-      } else {
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 100, ImPlotCond_Once);
+      if (should_fit_y) {
+        my_state.y_axis_fitted = true;
       }
+
+      setup_chart(my_state.times, format_percent);
 
       if (!my_state.show_per_core) {
         push_fill_alpha();

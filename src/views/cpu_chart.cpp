@@ -70,12 +70,15 @@ void cpu_chart_draw(ViewState &view_state) {
       process_window_check_close(chart.flags, should_be_opened);
 
       push_fit_with_padding();
+      const bool should_fit_y =
+          try_initial_y_fit(chart.y_axis_fitted, chart.cpu_total_perc.size());
       if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
+        if (should_fit_y) {
+          chart.y_axis_fitted = true;
+        }
+
         setup_chart(chart.times, format_percent);
-        const int num_cores = view_state.system_cpu_chart_state.num_cores;
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, std::max(1, num_cores) * 100,
-                                ImPlotCond_Once);
 
         push_fill_alpha();
         ImPlot::PlotShaded(TITLE_TOTAL, chart.times.data(),

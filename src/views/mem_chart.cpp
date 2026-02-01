@@ -67,10 +67,7 @@ void mem_chart_draw(ViewState &view_state) {
 
       push_fit_with_padding();
       const bool should_fit_y =
-          !chart.y_axis_fitted && chart.mem_resident_kb.size() >= 2;
-      if (should_fit_y) {
-        ImPlot::SetNextAxisToFit(ImAxis_Y1);
-      }
+          try_initial_y_fit(chart.y_axis_fitted, chart.mem_resident_kb.size());
       if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
         if (should_fit_y) {

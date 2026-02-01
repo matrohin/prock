@@ -21,9 +21,23 @@ inline void push_fill_alpha(const float val = 0.25f) {
 }
 inline void pop_fill_alpha() { ImPlot::PopStyleVar(); }
 
+constexpr ImPlotAxisFlags COMMON_X_FLAGS =
+    ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
+constexpr ImPlotAxisFlags COMMON_Y_FLAGS = ImPlotAxisFlags_RangeFit;
+
+// Returns true if Y axis fit was requested; caller should set y_axis_fitted =
+// true after BeginPlot succeeds.
+inline bool try_initial_y_fit(bool y_axis_fitted, size_t data_size) {
+  if (y_axis_fitted || data_size < 3) {
+    return false;
+  }
+  ImPlot::SetNextAxisToFit(ImAxis_Y1);
+  return true;
+}
+
 inline void setup_chart(const GrowingArray<double> &times,
                         const ImPlotFormatter y_formatter) {
-  ImPlot::SetupAxes("Time", nullptr, ImPlotAxisFlags_AutoFit);
+  ImPlot::SetupAxes("Time", nullptr, COMMON_X_FLAGS, COMMON_Y_FLAGS);
 
   ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
 
