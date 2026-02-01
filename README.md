@@ -50,7 +50,7 @@ cmake --preset release
 cmake --build ./build/Release
 
 sudo cmake --install ./build/Release
-sudo cp ./src/prock/prock.desktop /usr/share/applications/
+sudo cp prock.desktop /usr/share/applications/
 ```
 
 ### Debug build & Run
