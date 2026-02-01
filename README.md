@@ -55,4 +55,8 @@ cmake --preset debug
 
 ## Screenshots
 
-![Main View](./images/main-view.png) ![Process Views](./images/process-views.png)
+My configuration:
+* JetBrainsMonoNerdFontMono-Regular font.
+* Nord Theme.
+
+![Screenshot](./images/screenshot.png)
