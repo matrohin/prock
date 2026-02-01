@@ -22,14 +22,18 @@ void show_top_process_tooltip(const GrowingArray<double> &times,
   if (idx >= times.size()) {
     return;
   }
+  constexpr bool is_system = true;
+  constexpr bool is_process = false;
   char system_buf[32];
-  format_value(system_values.data()[idx], system_buf, sizeof(system_buf), nullptr);
+  format_value(system_values.data()[idx], system_buf, sizeof(system_buf),
+               const_cast<bool *>(&is_system));
   ImGui::BeginTooltip();
   ImGui::Text("%s: %s", system_label, system_buf);
   const TopProcess &top = top_processes.data()[idx];
   if (top.pid > 0) {
     char top_buf[32];
-    format_value(top.value, top_buf, sizeof(top_buf), nullptr);
+    format_value(top.value, top_buf, sizeof(top_buf),
+                 const_cast<bool *>(&is_process));
     ImGui::Text("Top: %s (PID %d) %s", top.comm, top.pid, top_buf);
   }
   ImGui::EndTooltip();

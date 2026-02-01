@@ -163,12 +163,23 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
       }
 
       // Show tooltip with top process on hover
-      int num_cores = my_state.show_per_core ? 0 : my_state.num_cores;
+      // Per-core view: system * num_cores (to match stacked scale), process as-is
+      // Total view: system as-is, process / num_cores (to normalize to 0-100%)
+      const int num_cores = my_state.num_cores;
+      const bool per_core = my_state.show_per_core;
       show_top_process_tooltip(
           my_state.times, my_state.top_processes, "Total", my_state.total_usage,
-          [num_cores](const double val, char *buf, const int size,
-                      void * /*unused*/) {
-            const double cpu_perc = (num_cores > 0) ? val / num_cores : val;
+          [num_cores, per_core](const double val, char *buf, const int size,
+                                void *user_data) {
+            const bool is_system = user_data && *static_cast<bool *>(user_data);
+            double cpu_perc = val;
+            if (num_cores > 0) {
+              if (is_system && per_core) {
+                cpu_perc = val * num_cores;
+              } else if (!is_system && !per_core) {
+                cpu_perc = val / num_cores;
+              }
+            }
             snprintf(buf, size, "%.1f%%", cpu_perc);
           });
 

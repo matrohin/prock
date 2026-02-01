@@ -128,6 +128,45 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
   return result.to_array();
 }
 
+// Check if socket is on loopback (127.x.x.x or ::1)
+static bool is_loopback_socket(const SocketEntry &socket) {
+  // IPv4: Check if either end is 127.x.x.x
+  if (socket.protocol == eSocketProtocol_TCP ||
+      socket.protocol == eSocketProtocol_UDP) {
+    const uint32_t local_ip = socket.local_ip;
+    const uint32_t remote_ip = socket.remote_ip;
+    // 127.0.0.0/8 in network byte order (little-endian x86): first byte == 127
+    if ((local_ip & 0xff) == 127 || (remote_ip & 0xff) == 127) {
+      return true;
+    }
+  }
+
+  // IPv6: Check if either end is ::1 or ::ffff:127.x.x.x (IPv4-mapped loopback)
+  if (socket.protocol == eSocketProtocol_TCP6 ||
+      socket.protocol == eSocketProtocol_UDP6) {
+    static constexpr uint8_t ipv6_loopback[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+    static constexpr uint8_t ipv4_mapped_prefix[12] = {0,0,0,0,0,0,0,0,0,0,0xff,0xff};
+
+    // Pure IPv6 loopback (::1)
+    if (memcmp(socket.local_ip6, ipv6_loopback, 16) == 0 ||
+        memcmp(socket.remote_ip6, ipv6_loopback, 16) == 0) {
+      return true;
+    }
+
+    // IPv4-mapped loopback (::ffff:127.x.x.x)
+    if (memcmp(socket.local_ip6, ipv4_mapped_prefix, 12) == 0 &&
+        socket.local_ip6[12] == 127) {
+      return true;
+    }
+    if (memcmp(socket.remote_ip6, ipv4_mapped_prefix, 12) == 0 &&
+        socket.remote_ip6[12] == 127) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Read socket inodes owned by a process from /proc/[pid]/fd/
 static void read_process_socket_inodes(const int pid,
                                        GrowingArray<unsigned long> &out,
@@ -417,8 +456,13 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
             },
             inode);
         if (found_inode < socket_stats.size) {
-          total_recv += socket_stats.data[found_inode].bytes_received;
-          total_send += socket_stats.data[found_inode].bytes_sent;
+          const SocketEntry &socket = socket_stats.data[found_inode];
+          // Skip loopback sockets to match /proc/net/dev behavior
+          if (is_loopback_socket(socket)) {
+            continue;
+          }
+          total_recv += socket.bytes_received;
+          total_send += socket.bytes_sent;
         }
       }
       stat.net_recv_bytes = total_recv;
