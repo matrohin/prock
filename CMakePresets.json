@@ -11,7 +11,7 @@
       "hidden": true,
       "cacheVariables": {
         "GLFW_BUILD_X11": "ON",
-        "GLFW_BUILD_WAYLAND": "OM"
+        "GLFW_BUILD_WAYLAND": "ON"
       }
     },
     {
@@ -45,6 +45,18 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ENABLE_TRACY": "OFF"
+      }
+    },
+    {
+      "name": "release-x11",
+      "displayName": "Release X11",
+      "description": "Release build with Wayland disabled",
+      "binaryDir": "${sourceDir}/build/ReleaseX11",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_TRACY": "OFF",
+        "GLFW_BUILD_X11": "ON",
+        "GLFW_BUILD_WAYLAND": "OFF"
       }
     }
   ]

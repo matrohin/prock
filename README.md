@@ -31,9 +31,17 @@ The tool is still in development. I need it myself to improve my Linux desktop e
 
 ### Dependencies
 
+**Debian/Ubuntu:**
 ```bash
-sudo apt install libwayland-dev libxkbcommon-dev xorg-dev libgles2-mesa-dev
+sudo apt install cmake gcc libwayland-dev libxkbcommon-dev xorg-dev libgles2-mesa-dev
 ```
+
+**Arch Linux:**
+```bash
+sudo pacman -Sy cmake gcc
+```
+
+> **Note for GNOME users:** If the window title bar is not displayed on Wayland, this may be due to a [known mutter issue](https://gitlab.gnome.org/GNOME/mutter/-/issues/217). Use the `release-x11` preset instead to disable Wayland support.
 
 ### Release build & Install
 
