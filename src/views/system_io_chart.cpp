@@ -25,16 +25,6 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
       my_state.cur_arena, my_state.wasted_bytes) = rate.read_mb_per_sec;
   *my_state.write_mb_per_sec.emplace_back(
       my_state.cur_arena, my_state.wasted_bytes) = rate.write_mb_per_sec;
-  *my_state.total_mb_per_sec.emplace_back(my_state.cur_arena,
-                                          my_state.wasted_bytes) =
-      rate.read_mb_per_sec + rate.write_mb_per_sec;
-
-  // Find top I/O process (store in MB/s to match system values)
-  *my_state.top_processes.emplace_back(my_state.cur_arena,
-                                       my_state.wasted_bytes) =
-      find_top_process(snapshot, [](const ProcessDerivedStat &d) {
-        return (d.io_read_kb_per_sec + d.io_write_kb_per_sec) / 1024.0;
-      });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -43,8 +33,6 @@ void system_io_chart_update(SystemIoChartState &my_state, const State &state) {
     my_state.times.realloc(new_arena);
     my_state.read_mb_per_sec.realloc(new_arena);
     my_state.write_mb_per_sec.realloc(new_arena);
-    my_state.total_mb_per_sec.realloc(new_arena);
-    my_state.top_processes.realloc(new_arena);
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -85,8 +73,24 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       chart_add_tooltip(TITLE_READ, "sectors read from /proc/diskstats");
       chart_add_tooltip(TITLE_WRITE, "sectors written from /proc/diskstats");
 
-      show_top_process_tooltip(my_state.times, my_state.top_processes, "I/O",
-                               my_state.total_mb_per_sec, format_io_rate_mb);
+      if (ImPlot::IsPlotHovered() && my_state.times.size() > 0) {
+        ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+        size_t idx = lower_bound(
+            my_state.times.size(),
+            [&](size_t i) { return my_state.times.data()[i]; }, mouse.x);
+        if (idx < my_state.times.size()) {
+          char read_buf[32];
+          char write_buf[32];
+          format_io_rate_mb(my_state.read_mb_per_sec.data()[idx], read_buf,
+                            sizeof(read_buf), nullptr);
+          format_io_rate_mb(my_state.write_mb_per_sec.data()[idx], write_buf,
+                            sizeof(write_buf), nullptr);
+          ImGui::BeginTooltip();
+          ImGui::Text("Read: %s", read_buf);
+          ImGui::Text("Write: %s", write_buf);
+          ImGui::EndTooltip();
+        }
+      }
 
       ImPlot::EndPlot();
     }
