@@ -58,6 +58,7 @@ struct BriefTableState {
   bool show_affinity_popup;
   bool show_priority_popup;
   char process_error[128];        // Error buffer for affinity/priority ops
+  int process_error_code;         // errno value for pkexec option
 };
 
 void brief_table_update(BriefTableState &my_state, State &state);

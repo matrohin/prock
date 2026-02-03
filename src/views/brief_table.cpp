@@ -134,9 +134,10 @@ static bool get_process_affinity(int pid, uint64_t &mask, int num_cpus) {
 }
 
 static bool set_process_affinity(int pid, uint64_t mask, char *err,
-                                 size_t err_sz) {
+                                 size_t err_sz, int *err_code) {
   if (mask == 0) {
     snprintf(err, err_sz, "At least one CPU must be selected");
+    *err_code = 0;
     return false;
   }
   cpu_set_t cpu_set;
@@ -145,6 +146,7 @@ static bool set_process_affinity(int pid, uint64_t mask, char *err,
     if (mask & (1ULL << i)) CPU_SET(i, &cpu_set);
   }
   if (sched_setaffinity(pid, sizeof(cpu_set), &cpu_set) != 0) {
+    *err_code = errno;
     snprintf(err, err_sz, "Failed to set affinity for PID %d: %s", pid,
              strerror(errno));
     return false;
@@ -158,8 +160,10 @@ static int get_process_nice(int pid) {
   return (nice == -1 && errno != 0) ? 0 : nice;
 }
 
-static bool set_process_nice(int pid, int nice_val, char *err, size_t err_sz) {
+static bool set_process_nice(int pid, int nice_val, char *err, size_t err_sz,
+                             int *err_code) {
   if (setpriority(PRIO_PROCESS, pid, nice_val) != 0) {
+    *err_code = errno;
     snprintf(err, err_sz, "Failed to set priority for PID %d: %s", pid,
              strerror(errno));
     return false;
@@ -425,7 +429,8 @@ static void affinity_popup_draw(BriefTableState &my_state, int num_cpus) {
       if (set_process_affinity(my_state.control_edit_pid,
                                my_state.affinity_edit_mask,
                                my_state.process_error,
-                               sizeof(my_state.process_error))) {
+                               sizeof(my_state.process_error),
+                               &my_state.process_error_code)) {
         ImGui::CloseCurrentPopup();
       }
     }
@@ -460,7 +465,8 @@ static void priority_popup_draw(BriefTableState &my_state) {
     if (ImGui::Button("Apply")) {
       if (set_process_nice(my_state.control_edit_pid, my_state.priority_edit_nice,
                            my_state.process_error,
-                           sizeof(my_state.process_error))) {
+                           sizeof(my_state.process_error),
+                           &my_state.process_error_code)) {
         ImGui::CloseCurrentPopup();
       }
     }
@@ -479,6 +485,12 @@ static void process_error_popup_draw(BriefTableState &my_state) {
   if (ImGui::BeginPopupModal("Process Error", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::Text("%s", my_state.process_error);
+    if (my_state.process_error_code == EACCES) {
+      if (ImGui::Button("Restart with pkexec")) {
+        restart_with_pkexec();
+      }
+      ImGui::SameLine();
+    }
     if (ImGui::Button("OK")) {
       my_state.process_error[0] = '\0';
       ImGui::CloseCurrentPopup();
