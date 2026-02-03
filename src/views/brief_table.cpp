@@ -691,7 +691,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             !ImGui::IsItemToggledOpen()) {
           open_all_windows(line.pid, line.comm, view_state);
         }
+        if (is_grayed) ImGui::PopStyleColor();
         table_context_menu_draw(ctx, view_state, my_state, line, label, num_cpus);
+        if (is_grayed) ImGui::PushStyleColor(ImGuiCol_Text,
+            ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         data_columns_draw(line);
 
         if (node_open && has_children) {
@@ -715,7 +718,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           open_all_windows(line.pid, line.comm, view_state);
         }
 
+        if (is_grayed) ImGui::PopStyleColor();
         table_context_menu_draw(ctx, view_state, my_state, line, label, num_cpus);
+        if (is_grayed) ImGui::PushStyleColor(ImGuiCol_Text,
+            ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         data_columns_draw(line);
       }
 
