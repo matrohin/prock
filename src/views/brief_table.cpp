@@ -395,6 +395,7 @@ static void affinity_popup_draw(BriefTableState &my_state, int num_cpus) {
   }
   if (ImGui::BeginPopupModal("Set CPU Affinity", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
     ImGui::Text("PID: %d", my_state.control_edit_pid);
     ImGui::Separator();
 
@@ -449,6 +450,7 @@ static void priority_popup_draw(BriefTableState &my_state) {
   }
   if (ImGui::BeginPopupModal("Set Process Priority", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
     ImGui::Text("PID: %d", my_state.control_edit_pid);
     ImGui::Separator();
 
@@ -484,6 +486,10 @@ static void process_error_popup_draw(BriefTableState &my_state) {
   }
   if (ImGui::BeginPopupModal("Process Error", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+      my_state.process_error[0] = '\0';
+      ImGui::CloseCurrentPopup();
+    }
     ImGui::Text("%s", my_state.process_error);
     if (my_state.process_error_code == EACCES) {
       if (ImGui::Button("Restart with pkexec")) {
@@ -760,6 +766,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   }
   if (ImGui::BeginPopupModal("Kill Error", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+      my_state.kill_error[0] = '\0';
+      ImGui::CloseCurrentPopup();
+    }
     ImGui::Text("%s", my_state.kill_error);
     if (ImGui::Button("OK")) {
       my_state.kill_error[0] = '\0';
