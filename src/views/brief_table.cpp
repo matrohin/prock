@@ -25,6 +25,7 @@
 
 // Highlight durations (must match brief_table_logic.cpp)
 static constexpr int64_t NEW_PROCESS_HIGHLIGHT_NS = 2'000'000'000; // 2 seconds
+static constexpr int64_t TYPE_SEARCH_TIMEOUT_NS = 1'000'000'000;   // 1 second
 
 enum FilterResult {
   FilterResult_NoMatch = 0,
@@ -608,6 +609,38 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       compute_filter_visibility(my_state, filter);
     }
 
+    // Type-to-search: handle keyboard input when table is focused
+    if (!ImGui::IsAnyItemActive() && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup)) {
+      // Reset search after timeout
+      if (now_ns - my_state.type_search_time_ns > TYPE_SEARCH_TIMEOUT_NS) {
+        my_state.type_search[0] = '\0';
+      }
+      // Capture typed characters
+      ImGuiIO &io = ImGui::GetIO();
+      for (int n = 0; n < io.InputQueueCharacters.Size; ++n) {
+        ImWchar c = io.InputQueueCharacters[n];
+        if (c >= 32 && c < 127) {  // Printable ASCII
+          size_t len = strlen(my_state.type_search);
+          if (len < sizeof(my_state.type_search) - 1) {
+            my_state.type_search[len] = static_cast<char>(c);
+            my_state.type_search[len + 1] = '\0';
+            my_state.type_search_time_ns = now_ns;
+            // Find first matching process (case-insensitive prefix match on name)
+            my_state.type_search_scroll_to_idx = -1;
+            for (size_t j = 0; j < my_state.lines.size; ++j) {
+              const BriefTableLine &l = my_state.lines.data[j];
+              if (filter_active && l.filter_state == 0) continue;
+              if (strncasecmp(l.comm, my_state.type_search, len + 1) == 0) {
+                my_state.type_search_scroll_to_idx = static_cast<int>(j);
+                my_state.selected_pid = l.pid;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
     for (size_t i = 0; i < my_state.lines.size; ++i) {
       const BriefTableLine &line = my_state.lines.data[i];
       const bool is_dead = line.death_time_ns != 0;
@@ -723,6 +756,12 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         if (is_grayed) ImGui::PushStyleColor(ImGuiCol_Text,
             ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         data_columns_draw(line);
+      }
+
+      // Type-to-search: scroll to matching row
+      if (my_state.type_search_scroll_to_idx == static_cast<int>(i)) {
+        ImGui::SetScrollHereY(0.5f);
+        my_state.type_search_scroll_to_idx = -1;
       }
 
       if (is_grayed) {

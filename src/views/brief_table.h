@@ -59,6 +59,11 @@ struct BriefTableState {
   bool show_priority_popup;
   char process_error[128];        // Error buffer for affinity/priority ops
   int process_error_code;         // errno value for pkexec option
+
+  // Type-to-search state
+  char type_search[32];           // Current search string
+  int64_t type_search_time_ns;    // Last keystroke timestamp for timeout
+  int type_search_scroll_to_idx;  // Index to scroll to, -1 if none
 };
 
 void brief_table_update(BriefTableState &my_state, State &state);
