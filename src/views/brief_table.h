@@ -50,6 +50,14 @@ struct BriefTableState {
   char kill_error[128];
   bool tree_mode; // Toggle: false = flat, true = tree
   char filter_text[256];
+
+  // Affinity/priority popup state
+  int control_edit_pid;           // PID being edited, 0 if none
+  uint64_t affinity_edit_mask;    // Affinity mask being edited
+  int priority_edit_nice;         // Nice value being edited
+  bool show_affinity_popup;
+  bool show_priority_popup;
+  char process_error[128];        // Error buffer for affinity/priority ops
 };
 
 void brief_table_update(BriefTableState &my_state, State &state);

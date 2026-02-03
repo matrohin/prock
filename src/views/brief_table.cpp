@@ -19,7 +19,9 @@
 #include <cerrno>
 #include <chrono>
 #include <cstring>
+#include <sched.h>
 #include <signal.h>
+#include <sys/resource.h>
 
 // Highlight durations (must match brief_table_logic.cpp)
 static constexpr int64_t NEW_PROCESS_HIGHLIGHT_NS = 2'000'000'000; // 2 seconds
@@ -120,6 +122,51 @@ static void copy_process_row(const BriefTableLine &line) {
   ImGui::SetClipboardText(buf);
 }
 
+static bool get_process_affinity(int pid, uint64_t &mask, int num_cpus) {
+  cpu_set_t cpu_set;
+  CPU_ZERO(&cpu_set);
+  if (sched_getaffinity(pid, sizeof(cpu_set), &cpu_set) != 0) return false;
+  mask = 0;
+  for (int i = 0; i < num_cpus && i < 64; ++i) {
+    if (CPU_ISSET(i, &cpu_set)) mask |= (1ULL << i);
+  }
+  return true;
+}
+
+static bool set_process_affinity(int pid, uint64_t mask, char *err,
+                                 size_t err_sz) {
+  if (mask == 0) {
+    snprintf(err, err_sz, "At least one CPU must be selected");
+    return false;
+  }
+  cpu_set_t cpu_set;
+  CPU_ZERO(&cpu_set);
+  for (int i = 0; i < 64; ++i) {
+    if (mask & (1ULL << i)) CPU_SET(i, &cpu_set);
+  }
+  if (sched_setaffinity(pid, sizeof(cpu_set), &cpu_set) != 0) {
+    snprintf(err, err_sz, "Failed to set affinity for PID %d: %s", pid,
+             strerror(errno));
+    return false;
+  }
+  return true;
+}
+
+static int get_process_nice(int pid) {
+  errno = 0;
+  int nice = getpriority(PRIO_PROCESS, pid);
+  return (nice == -1 && errno != 0) ? 0 : nice;
+}
+
+static bool set_process_nice(int pid, int nice_val, char *err, size_t err_sz) {
+  if (setpriority(PRIO_PROCESS, pid, nice_val) != 0) {
+    snprintf(err, err_sz, "Failed to set priority for PID %d: %s", pid,
+             strerror(errno));
+    return false;
+  }
+  return true;
+}
+
 static void copy_all_processes(BumpArena &arena,
                                const BriefTableState &my_state) {
   // Header + all rows
@@ -148,7 +195,7 @@ static void copy_all_processes(BumpArena &arena,
 static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                                     BriefTableState &my_state,
                                     const BriefTableLine &line,
-                                    const char *label) {
+                                    const char *label, int num_cpus) {
   const int pid = line.pid;
   if (ImGui::BeginPopupContextItem(label)) {
     my_state.selected_pid = pid;
@@ -195,6 +242,17 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     if (ImGui::MenuItem("Show Sockets")) {
       socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
                             pid, line.comm);
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Set Affinity...")) {
+      my_state.control_edit_pid = pid;
+      get_process_affinity(pid, my_state.affinity_edit_mask, num_cpus);
+      my_state.show_affinity_popup = true;
+    }
+    if (ImGui::MenuItem("Set Priority...")) {
+      my_state.control_edit_pid = pid;
+      my_state.priority_edit_nice = get_process_nice(pid);
+      my_state.show_priority_popup = true;
     }
     ImGui::Separator();
     if (ImGui::MenuItem("Kill Process", "Del") ||
@@ -326,6 +384,109 @@ static void data_columns_draw(const BriefTableLine &line) {
                        derived_stat.net_send_kb_per_sec);
 }
 
+static void affinity_popup_draw(BriefTableState &my_state, int num_cpus) {
+  if (my_state.show_affinity_popup) {
+    ImGui::OpenPopup("Set CPU Affinity");
+    my_state.show_affinity_popup = false;
+  }
+  if (ImGui::BeginPopupModal("Set CPU Affinity", nullptr,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("PID: %d", my_state.control_edit_pid);
+    ImGui::Separator();
+
+    if (ImGui::Button("Select All")) {
+      my_state.affinity_edit_mask = (num_cpus >= 64)
+                                        ? ~0ULL
+                                        : ((1ULL << num_cpus) - 1);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear All")) {
+      my_state.affinity_edit_mask = 0;
+    }
+    ImGui::Separator();
+
+    // Display checkboxes in a grid (8 per row)
+    constexpr int cpus_per_row = 8;
+    for (int i = 0; i < num_cpus && i < 64; ++i) {
+      if (i > 0 && i % cpus_per_row != 0) ImGui::SameLine();
+      bool checked = (my_state.affinity_edit_mask & (1ULL << i)) != 0;
+      char label[16];
+      snprintf(label, sizeof(label), "CPU %d", i);
+      if (ImGui::Checkbox(label, &checked)) {
+        if (checked)
+          my_state.affinity_edit_mask |= (1ULL << i);
+        else
+          my_state.affinity_edit_mask &= ~(1ULL << i);
+      }
+    }
+    ImGui::Separator();
+
+    if (ImGui::Button("Apply")) {
+      if (set_process_affinity(my_state.control_edit_pid,
+                               my_state.affinity_edit_mask,
+                               my_state.process_error,
+                               sizeof(my_state.process_error))) {
+        ImGui::CloseCurrentPopup();
+      }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel")) {
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
+static void priority_popup_draw(BriefTableState &my_state) {
+  if (my_state.show_priority_popup) {
+    ImGui::OpenPopup("Set Process Priority");
+    my_state.show_priority_popup = false;
+  }
+  if (ImGui::BeginPopupModal("Set Process Priority", nullptr,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("PID: %d", my_state.control_edit_pid);
+    ImGui::Separator();
+
+    ImGui::Text("Nice value (-20 = highest, +19 = lowest):");
+    ImGui::SliderInt("##nice", &my_state.priority_edit_nice, -20, 19);
+
+    if (my_state.priority_edit_nice < 0) {
+      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 180, 0, 255));
+      ImGui::Text("Warning: Requires root privileges");
+      ImGui::PopStyleColor();
+    }
+    ImGui::Separator();
+
+    if (ImGui::Button("Apply")) {
+      if (set_process_nice(my_state.control_edit_pid, my_state.priority_edit_nice,
+                           my_state.process_error,
+                           sizeof(my_state.process_error))) {
+        ImGui::CloseCurrentPopup();
+      }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel")) {
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
+static void process_error_popup_draw(BriefTableState &my_state) {
+  if (my_state.process_error[0] != '\0') {
+    ImGui::OpenPopup("Process Error");
+  }
+  if (ImGui::BeginPopupModal("Process Error", nullptr,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("%s", my_state.process_error);
+    if (ImGui::Button("OK")) {
+      my_state.process_error[0] = '\0';
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
 void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state) {
   ZoneScoped;
@@ -339,6 +500,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   ImGuiTextFilter filter = draw_filter_input(
       "##ProcessFilter", my_state.filter_text, sizeof(my_state.filter_text));
   ImGui::SameLine();
+  const int num_cpus = static_cast<int>(state.snapshot.cpu_stats.size) - 1;
   bool reset_sort_to_pid = false;
   if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {
     // Reset to PID sorting when entering tree mode
@@ -511,7 +673,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             !ImGui::IsItemToggledOpen()) {
           open_all_windows(line.pid, line.comm, view_state);
         }
-        table_context_menu_draw(ctx, view_state, my_state, line, label);
+        table_context_menu_draw(ctx, view_state, my_state, line, label, num_cpus);
         data_columns_draw(line);
 
         if (node_open && has_children) {
@@ -535,7 +697,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           open_all_windows(line.pid, line.comm, view_state);
         }
 
-        table_context_menu_draw(ctx, view_state, my_state, line, label);
+        table_context_menu_draw(ctx, view_state, my_state, line, label, num_cpus);
         data_columns_draw(line);
       }
 
@@ -574,6 +736,11 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       }
     }
   }
+
+  // Draw popups for affinity/priority controls
+  affinity_popup_draw(my_state, num_cpus);
+  priority_popup_draw(my_state);
+  process_error_popup_draw(my_state);
 
   // Show error popup if there's an error
   if (my_state.kill_error[0] != '\0') {
