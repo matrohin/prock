@@ -179,7 +179,34 @@ inline void draw_error_with_pkexec(const char *error_message, int error_code) {
   ImGui::TextWrapped("%s", error_message);
   if (error_code == EACCES) {
     if (ImGui::Button("Restart with pkexec")) {
-      execlp("pkexec", "pkexec", "/proc/self/exe", nullptr);
+      char exe_path[PATH_MAX];
+      ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+      if (len > 0) {
+        exe_path[len] = '\0';
+        // Preserve display environment variables that pkexec strips
+        const char *env_vars[] = {"DISPLAY", "WAYLAND_DISPLAY",
+                                  "XDG_RUNTIME_DIR", "XAUTHORITY"};
+        char env_args[5][512];
+        const char *args[9] = {"pkexec", "env"};
+        int arg_idx = 2;
+        for (int i = 0; i < 4; ++i) {
+          const char *val = getenv(env_vars[i]);
+          if (val) {
+            snprintf(env_args[i], sizeof(env_args[i]), "%s=%s", env_vars[i], val);
+            args[arg_idx++] = env_args[i];
+          }
+        }
+        // Pass config dir so elevated process uses same settings
+        const char *home = getenv("HOME");
+        if (home) {
+          snprintf(env_args[4], sizeof(env_args[4]),
+                   "PROCK_CONFIG_DIR=%s/.config/prock", home);
+          args[arg_idx++] = env_args[4];
+        }
+        args[arg_idx++] = exe_path;
+        args[arg_idx] = nullptr;
+        execvp("pkexec", const_cast<char *const *>(args));
+      }
     }
   }
 }

@@ -346,25 +346,35 @@ int main(int, char **) {
       ImGuiConfigFlags_NavEnableKeyboard;           // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
 
-  // Set up config path in $HOME/.config/prock/
+  // Set up config path: PROCK_CONFIG_DIR or $HOME/.config/prock/
   static char ini_path[PATH_MAX] = {};
-  const char *home = getenv("HOME");
-  if (home) {
-    char dir_path[PATH_MAX] = {};
-    int n = 0;
-    // Ensure .config directory exists
-    n = snprintf(dir_path, sizeof(dir_path), "%s/.config", home);
-    if (n > 0 && static_cast<size_t>(n) < sizeof(dir_path)) {
-      mkdir(dir_path, 0755);
-      // Ensure .config/prock directory exists
-      n = snprintf(dir_path, sizeof(dir_path), "%s/.config/prock", home);
+  const char *config_dir = getenv("PROCK_CONFIG_DIR");
+  if (config_dir) {
+    // Use explicit config dir (e.g., when running elevated via pkexec)
+    mkdir(config_dir, 0755);
+    int n = snprintf(ini_path, sizeof(ini_path), "%s/settings.ini", config_dir);
+    if (n > 0 && static_cast<size_t>(n) < sizeof(ini_path)) {
+      io.IniFilename = ini_path;
+    }
+  } else {
+    const char *home = getenv("HOME");
+    if (home) {
+      char dir_path[PATH_MAX] = {};
+      int n = 0;
+      // Ensure .config directory exists
+      n = snprintf(dir_path, sizeof(dir_path), "%s/.config", home);
       if (n > 0 && static_cast<size_t>(n) < sizeof(dir_path)) {
         mkdir(dir_path, 0755);
-        // Set the ini file path
-        n = snprintf(ini_path, sizeof(ini_path),
-                     "%s/.config/prock/settings.ini", home);
-        if (n > 0 && static_cast<size_t>(n) < sizeof(ini_path)) {
-          io.IniFilename = ini_path;
+        // Ensure .config/prock directory exists
+        n = snprintf(dir_path, sizeof(dir_path), "%s/.config/prock", home);
+        if (n > 0 && static_cast<size_t>(n) < sizeof(dir_path)) {
+          mkdir(dir_path, 0755);
+          // Set the ini file path
+          n = snprintf(ini_path, sizeof(ini_path),
+                       "%s/.config/prock/settings.ini", home);
+          if (n > 0 && static_cast<size_t>(n) < sizeof(ini_path)) {
+            io.IniFilename = ini_path;
+          }
         }
       }
     }
