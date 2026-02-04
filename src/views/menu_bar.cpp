@@ -139,14 +139,12 @@ void menu_bar_draw(ViewState &view_state) {
         ImGui::EndMenu();
       }
 
-      ImGui::Separator();
-
-      const bool has_focused_process =
-          view_state.process_host_state.focused_pid > 0;
-      if (ImGui::MenuItem("Restore Process Window Layout", nullptr, false,
-                          has_focused_process)) {
-        process_host_restore_layout(view_state,
-                                    view_state.process_host_state.focused_pid);
+      if (view_state.process_host_state.focused_pid > 0) {
+        ImGui::Separator();
+        if (ImGui::MenuItem("Restore Process Window Layout")) {
+          process_host_restore_layout(view_state,
+                                      view_state.process_host_state.focused_pid);
+        }
       }
 
       ImGui::PopItemFlag();

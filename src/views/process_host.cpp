@@ -59,9 +59,12 @@ ImGuiID process_host_open(ProcessHostState &state, const int pid,
 void process_host_draw(ViewState &view_state) {
   ZoneScoped;
   ProcessHostState &my_state = view_state.process_host_state;
+  // Reset each frame unless a menu/popup is open (so menu items remain visible)
+  if (!ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup)) {
+    my_state.focused_pid = -1;
+  }
   size_t last = 0;
 
-  bool should_be_opened = true;
   for (size_t i = 0; i < my_state.windows.size(); ++i) {
     if (last != i) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
@@ -69,6 +72,7 @@ void process_host_draw(ViewState &view_state) {
     ProcessHostWindow &win = my_state.windows.data()[last];
     view_state.cascade.next_if_new(win.title);
 
+    bool should_be_opened = true;
     if (ImGui::Begin(win.title, &should_be_opened, COMMON_VIEW_FLAGS)) {
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)) {
         my_state.focused_pid = win.pid;
