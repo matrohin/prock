@@ -510,6 +510,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state) {
   ZoneScoped;
   BriefTableState &my_state = view_state.brief_table_state;
+  int focus_scroll_to_idx = -1;  // Local variable for type-to-search scrolling/focus
 
   char title[64];
   snprintf(title, sizeof(title), "Process Table (%zu processes)###ProcessTable",
@@ -625,13 +626,25 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             my_state.type_search[len] = static_cast<char>(c);
             my_state.type_search[len + 1] = '\0';
             my_state.type_search_time_ns = now_ns;
-            // Find first matching process (case-insensitive prefix match on name)
-            my_state.type_search_scroll_to_idx = -1;
+            // Find current selection's index
+            int current_idx = 0;
             for (size_t j = 0; j < my_state.lines.size; ++j) {
+              if (my_state.lines.data[j].pid == my_state.selected_pid) {
+                current_idx = static_cast<int>(j);
+                break;
+              }
+            }
+            // Search starting from next position (if first char) or current (if refining)
+            // First char: start from next to find something different from current selection
+            // Subsequent chars: start from current to refine the existing match
+            const size_t total = my_state.lines.size;
+            const size_t start_offset = (len == 0) ? 1 : 0;
+            for (size_t offset = start_offset; offset <= total; ++offset) {
+              size_t j = (current_idx + offset) % total;
               const BriefTableLine &l = my_state.lines.data[j];
               if (filter_active && l.filter_state == 0) continue;
               if (strncasecmp(l.comm, my_state.type_search, len + 1) == 0) {
-                my_state.type_search_scroll_to_idx = static_cast<int>(j);
+                focus_scroll_to_idx = static_cast<int>(j);
                 my_state.selected_pid = l.pid;
                 break;
               }
@@ -758,10 +771,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         data_columns_draw(line);
       }
 
-      // Type-to-search: scroll to matching row
-      if (my_state.type_search_scroll_to_idx == static_cast<int>(i)) {
+      // Type-to-search: scroll to matching row and set keyboard focus
+      if (focus_scroll_to_idx == static_cast<int>(i)) {
         ImGui::SetScrollHereY(0.5f);
-        my_state.type_search_scroll_to_idx = -1;
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       if (is_grayed) {
