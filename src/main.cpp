@@ -56,8 +56,8 @@ static int g_needs_updates = 0;
 static float g_applied_zoom_scale = 1.0f;
 static Theme g_applied_theme = Theme::Light;
 static float g_monitor_scale = 1.0f;
-static ImGuiStyle
-    g_base_style; // Style after theme + monitor scale, before zoom
+static ImGuiStyle g_base_style;
+
 void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
                                int /*action*/, int /*mods*/) {
   g_needs_updates = 2;
@@ -99,7 +99,7 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
         fval < 0.75f ? 0.75f : (fval > 2.0f ? 2.0f : fval);
   } else if (strncmp(line, "FontPath=", 9) == 0) {
     const char *path = line + 9;
-    size_t len = strlen(path);
+    const size_t len = strlen(path);
     if (len < sizeof(view_state->preferences_state.font_path)) {
       memcpy(view_state->preferences_state.font_path, path, len + 1);
     }
@@ -470,7 +470,7 @@ int main(int, char **) {
     auto frame_start = SteadyClock::now();
     FrameMarkStart(MAIN_FRAME);
     if (update(state, view_state, sync)) {
-      g_needs_updates = 2;
+      g_needs_updates = 1;
     }
 
     // Sync update period to gathering thread
@@ -491,7 +491,6 @@ int main(int, char **) {
     const float new_zoom = view_state.preferences_state.zoom_scale;
     if (g_applied_zoom_scale != new_zoom) {
       // Restore base style (has monitor scale, no zoom)
-      ImGuiStyle &style = ImGui::GetStyle();
       style = g_base_style;
       // Apply zoom on top
       style.ScaleAllSizes(new_zoom);

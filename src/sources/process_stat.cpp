@@ -11,6 +11,7 @@
 #include <linux/sock_diag.h>
 #include <linux/tcp.h>
 #include <netinet/in.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -31,7 +32,7 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
     int protocol;
     SocketProtocol socket_protocol;
   };
-  const ProtocolQuery queries[] = {
+  constexpr ProtocolQuery queries[] = {
       {AF_INET, IPPROTO_TCP, eSocketProtocol_TCP},
       {AF_INET, IPPROTO_UDP, eSocketProtocol_UDP},
       {AF_INET6, IPPROTO_TCP, eSocketProtocol_TCP6},
@@ -144,8 +145,10 @@ static bool is_loopback_socket(const SocketEntry &socket) {
   // IPv6: Check if either end is ::1 or ::ffff:127.x.x.x (IPv4-mapped loopback)
   if (socket.protocol == eSocketProtocol_TCP6 ||
       socket.protocol == eSocketProtocol_UDP6) {
-    static constexpr uint8_t ipv6_loopback[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-    static constexpr uint8_t ipv4_mapped_prefix[12] = {0,0,0,0,0,0,0,0,0,0,0xff,0xff};
+    static constexpr uint8_t ipv6_loopback[16] = {0, 0, 0, 0, 0, 0, 0, 0,
+                                                  0, 0, 0, 0, 0, 0, 0, 1};
+    static constexpr uint8_t ipv4_mapped_prefix[12] = {0, 0, 0, 0, 0,    0,
+                                                       0, 0, 0, 0, 0xff, 0xff};
 
     // Pure IPv6 loopback (::1)
     if (memcmp(socket.local_ip6, ipv6_loopback, 16) == 0 ||
@@ -345,7 +348,7 @@ static bool read_process(const int pid, BumpArena &arena, ProcessStat *out) {
   fclose(stat_file);
 
   // Find last ')' - comm can contain unbalanced parens
-  char *after_comm = strrchr(stat_buf, ')');
+  const char *after_comm = strrchr(stat_buf, ')');
   if (!after_comm) {
     return false;
   }
@@ -403,18 +406,18 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
 
   LinkedList<long> pids = {};
   while (true) {
-    dirent *dir = readdir(proc_dir);
+    const dirent *dir = readdir(proc_dir);
     if (!dir) {
       break;
     }
 
     const char *name = dir->d_name;
     char *str_end = nullptr;
-    long parsed_pid = strtol(name, &str_end, 10);
+    const long parsed_pid = strtol(name, &str_end, 10);
     if (parsed_pid == 0 || parsed_pid == LONG_MAX || parsed_pid == LONG_MIN) {
       continue;
     }
-    *(pids.emplace_front(result_arena)) = parsed_pid;
+    *pids.emplace_front(result_arena) = parsed_pid;
   }
 
   Array<ProcessStat> result =
@@ -691,7 +694,7 @@ static Array<ProcessStat> read_process_threads(const int pid,
 }
 
 // Read threads for all watched PIDs
-static Array<ThreadSnapshot> read_watched_threads(Sync &sync,
+static Array<ThreadSnapshot> read_watched_threads(const Sync &sync,
                                                   BumpArena &arena) {
   ZoneScoped;
   const int count = sync.watched_pids_count.load();
@@ -703,7 +706,7 @@ static Array<ThreadSnapshot> read_watched_threads(Sync &sync,
   int pids[MAX_WATCHED_PIDS];
   int actual_count = 0;
   for (int i = 0; i < MAX_WATCHED_PIDS && actual_count < count; ++i) {
-    int pid = sync.watched_pids[i].load();
+    const int pid = sync.watched_pids[i].load();
     if (pid != 0) {
       pids[actual_count++] = pid;
     }

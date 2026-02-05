@@ -1,10 +1,13 @@
 #include "views/menu_bar.h"
 
+#include "views/common.h"
 #include "views/process_host.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
 #include "tracy/Tracy.hpp"
+
+#include <iterator>
 
 static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
 static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
@@ -12,21 +15,21 @@ static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
 
 static constexpr float ZOOM_SCALES[] = {0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
 static const char *ZOOM_LABELS[] = {"75%", "100%", "125%", "150%", "200%"};
-static constexpr int ZOOM_COUNT = 5;
+static constexpr int ZOOM_COUNT = std::size(ZOOM_LABELS);
+static const char *PREFERENCES_TITLE = "Preferences";
 
 static void draw_preferences_modal(PreferencesState &prefs) {
   if (prefs.show_preferences_modal) {
-    ImGui::OpenPopup("Preferences");
+    ImGui::OpenPopup(PREFERENCES_TITLE);
   }
 
-  ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+  const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
   ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-  if (ImGui::BeginPopupModal("Preferences", &prefs.show_preferences_modal,
+  if (ImGui::BeginPopupModal(PREFERENCES_TITLE, &prefs.show_preferences_modal,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
     // Esc closes the preferences modal
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-      ImGui::CloseCurrentPopup();
+    if (popup_close_on_escape()) {
       prefs.show_preferences_modal = false;
     }
 
@@ -36,8 +39,8 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::SetNextItemWidth(120);
     if (ImGui::BeginCombo("Theme", theme_name(prefs.theme))) {
       for (int i = 0; i < static_cast<int>(Theme::COUNT); i++) {
-        Theme t = static_cast<Theme>(i);
-        bool is_selected = (prefs.theme == t);
+        const Theme t = static_cast<Theme>(i);
+        const bool is_selected = prefs.theme == t;
         if (ImGui::Selectable(theme_name(t), is_selected)) {
           prefs.theme = t;
           apply_theme(prefs.theme);
@@ -142,8 +145,8 @@ void menu_bar_draw(ViewState &view_state) {
       if (view_state.process_host_state.focused_pid > 0) {
         ImGui::Separator();
         if (ImGui::MenuItem("Restore Process Window Layout")) {
-          process_host_restore_layout(view_state,
-                                      view_state.process_host_state.focused_pid);
+          process_host_restore_layout(
+              view_state, view_state.process_host_state.focused_pid);
         }
       }
 
@@ -162,9 +165,9 @@ void menu_bar_draw(ViewState &view_state) {
       char fps_text[32];
       snprintf(fps_text, sizeof(fps_text), "%.1f FPS",
                static_cast<double>(ImGui::GetIO().Framerate));
-      float text_width = ImGui::CalcTextSize(fps_text).x;
-      float menu_bar_width = ImGui::GetWindowWidth();
-      float spacing = ImGui::GetStyle().ItemSpacing.x;
+      const float text_width = ImGui::CalcTextSize(fps_text).x;
+      const float menu_bar_width = ImGui::GetWindowWidth();
+      const float spacing = ImGui::GetStyle().ItemSpacing.x;
       ImGui::SameLine(menu_bar_width - text_width - spacing);
       ImGui::TextDisabled("%s", fps_text);
     }

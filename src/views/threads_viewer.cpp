@@ -2,21 +2,24 @@
 
 #include "state.h"
 #include "views/common.h"
+#include "views/process_window_flags.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "table_item.h"
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
 #include <cstring>
 
-const char *THREAD_COPY_HEADER = "TID\tName\tState\tCPU Total\tCPU Kernel\tMemory\n";
+const char *THREAD_COPY_HEADER =
+    "TID\tName\tState\tCPU Total\tCPU Kernel\tMemory\n";
 
 static void copy_thread_row(const ProcessStat &thread,
                             const ThreadDerivedStat &derived) {
   char buf[512];
-  snprintf(buf, sizeof(buf), "%s%d\t%s\t%c\t%.1f\t%.1f\t%ld", THREAD_COPY_HEADER,
-           thread.pid, thread.comm, thread.state,
+  snprintf(buf, sizeof(buf), "%s%d\t%s\t%c\t%.1f\t%.1f\t%ld",
+           THREAD_COPY_HEADER, thread.pid, thread.comm, thread.state,
            derived.cpu_user_perc + derived.cpu_kernel_perc,
            derived.cpu_kernel_perc, derived.mem_resident_bytes);
   ImGui::SetClipboardText(buf);
@@ -31,15 +34,16 @@ static void copy_all_threads(BumpArena &arena, const ThreadsViewerWindow &win) {
   for (size_t i = 0; i < win.threads.size; ++i) {
     const ProcessStat &thread = win.threads.data[i];
     const ThreadDerivedStat &derived = win.derived.data[i];
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n",
-                    thread.pid, thread.comm, thread.state,
-                    derived.cpu_user_perc + derived.cpu_kernel_perc,
-                    derived.cpu_kernel_perc, derived.mem_resident_bytes);
+    ptr +=
+        snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n",
+                 thread.pid, thread.comm, thread.state,
+                 derived.cpu_user_perc + derived.cpu_kernel_perc,
+                 derived.cpu_kernel_perc, derived.mem_resident_bytes);
   }
   ImGui::SetClipboardText(buf);
 }
 
-static void sort_threads(ThreadsViewerWindow &win) {
+static void sort_threads(const ThreadsViewerWindow &win) {
   if (win.threads.size == 0) return;
 
   // Create index array for sorting
@@ -49,7 +53,7 @@ static void sort_threads(ThreadsViewerWindow &win) {
     indices[i] = i;
   }
 
-  const auto compare = [&](size_t a, size_t b) {
+  const auto compare = [&](const size_t a, const size_t b) {
     const ProcessStat &ta = win.threads.data[a];
     const ProcessStat &tb = win.threads.data[b];
     const ThreadDerivedStat &da = win.derived.data[a];
@@ -63,8 +67,8 @@ static void sort_threads(ThreadsViewerWindow &win) {
     case eThreadsViewerColumnId_State:
       return ta.state < tb.state;
     case eThreadsViewerColumnId_CpuTotal:
-      return (da.cpu_user_perc + da.cpu_kernel_perc) <
-             (db.cpu_user_perc + db.cpu_kernel_perc);
+      return da.cpu_user_perc + da.cpu_kernel_perc <
+             db.cpu_user_perc + db.cpu_kernel_perc;
     case eThreadsViewerColumnId_CpuKernel:
       return da.cpu_kernel_perc < db.cpu_kernel_perc;
     case eThreadsViewerColumnId_Memory:
@@ -77,13 +81,14 @@ static void sort_threads(ThreadsViewerWindow &win) {
   if (win.sorted_order == ImGuiSortDirection_Ascending) {
     std::stable_sort(indices, indices + win.threads.size, compare);
   } else {
-    std::stable_sort(indices, indices + win.threads.size,
-                     [&](size_t a, size_t b) { return compare(b, a); });
+    std::stable_sort(
+        indices, indices + win.threads.size,
+        [&](const size_t a, const size_t b) { return compare(b, a); });
   }
 
   // Apply sorted order (in-place reorder using temp storage)
-  ProcessStat *temp_threads =
-      static_cast<ProcessStat *>(alloca(win.threads.size * sizeof(ProcessStat)));
+  ProcessStat *temp_threads = static_cast<ProcessStat *>(
+      alloca(win.threads.size * sizeof(ProcessStat)));
   ThreadDerivedStat *temp_derived = static_cast<ThreadDerivedStat *>(
       alloca(win.threads.size * sizeof(ThreadDerivedStat)));
 
@@ -102,7 +107,7 @@ static bool add_watched_pid(Sync &sync, int pid) {
   // Check if already watched
   for (int i = 0; i < MAX_WATCHED_PIDS; ++i) {
     if (sync.watched_pids[i].load() == pid) {
-      return true;  // Already watching
+      return true; // Already watching
     }
   }
 
@@ -114,11 +119,11 @@ static bool add_watched_pid(Sync &sync, int pid) {
       return true;
     }
   }
-  return false;  // No empty slot
+  return false; // No empty slot
 }
 
 // Remove a PID from the watched list
-static void remove_watched_pid(Sync &sync, int pid) {
+static void remove_watched_pid(Sync &sync, const int pid) {
   for (int i = 0; i < MAX_WATCHED_PIDS; ++i) {
     int expected = pid;
     if (sync.watched_pids[i].compare_exchange_strong(expected, 0)) {
@@ -129,8 +134,8 @@ static void remove_watched_pid(Sync &sync, int pid) {
 }
 
 // Check if any window still needs this PID watched
-static bool pid_still_needed(const ThreadsViewerState &state, int pid,
-                             size_t exclude_idx) {
+static bool pid_still_needed(const ThreadsViewerState &state, const int pid,
+                             const size_t exclude_idx) {
   for (size_t i = 0; i < state.windows.size(); ++i) {
     if (i != exclude_idx && state.windows.data()[i].pid == pid) {
       return true;
@@ -147,7 +152,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
   }
 
   if (!add_watched_pid(sync, pid)) {
-    return;  // Failed to add to watched list
+    return; // Failed to add to watched list
   }
 
   ThreadsViewerWindow *win =
@@ -234,16 +239,16 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
     win.status = eThreadsViewerStatus_Ready;
 
     // Save previous data for delta computation
-    state.wasted_bytes +=
-        win.threads.size * sizeof(ProcessStat) +
-        win.derived.size * sizeof(ThreadDerivedStat) +
-        win.prev_threads.size * sizeof(ProcessStat);
+    state.wasted_bytes += win.threads.size * sizeof(ProcessStat) +
+                          win.derived.size * sizeof(ThreadDerivedStat) +
+                          win.prev_threads.size * sizeof(ProcessStat);
 
     SteadyTimePoint prev_at{SteadyClock::duration{win.prev_at_ns}};
     Array<ProcessStat> prev_threads = win.prev_threads;
 
     // Copy new thread data
-    win.threads = Array<ProcessStat>::create(state.cur_arena, snap->threads.size);
+    win.threads =
+        Array<ProcessStat>::create(state.cur_arena, snap->threads.size);
     memcpy(win.threads.data, snap->threads.data,
            snap->threads.size * sizeof(ProcessStat));
 
@@ -361,7 +366,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
-                                  [&]() { sort_threads(win); });
+                                  [&] { sort_threads(win); });
 
           for (size_t j = 0; j < win.threads.size; ++j) {
             const ProcessStat &thread = win.threads.data[j];
@@ -369,7 +374,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
 
             if (!filter.PassFilter(thread.comm)) continue;
 
-            const bool is_selected = (win.selected_tid == thread.pid);
+            const bool is_selected = win.selected_tid == thread.pid;
             ImGui::TableNextRow();
 
             // TID column with selection
@@ -392,35 +397,21 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
               ImGui::EndPopup();
             }
 
-            // Name column
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Name);
-            ImGui::Text("%s", thread.comm);
+            table_item_draw_text(thread.comm);
 
-            // State column
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_State);
-            ImGui::Text("%c", thread.state);
-            if (ImGui::IsItemHovered()) {
-              const char *desc = get_state_tooltip(thread.state);
-              if (desc) ImGui::SetTooltip("%s", desc);
-            }
+            table_item_draw_state(thread.state);
 
-            // CPU% column
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuTotal);
-            ImGui::TextAligned(
-                1.0f, ImGui::GetColumnWidth(), "%.1f",
-                derived.cpu_user_perc + derived.cpu_kernel_perc);
+            table_item_draw_float(derived.cpu_user_perc +
+                                  derived.cpu_kernel_perc);
 
-            // Kernel column
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuKernel);
-            ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f",
-                               derived.cpu_kernel_perc);
+            table_item_draw_float(derived.cpu_kernel_perc);
 
-            // Memory column
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Memory);
-            char mem_buf[32];
-            format_memory_bytes(derived.mem_resident_bytes, mem_buf,
-                                sizeof(mem_buf));
-            ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%s", mem_buf);
+            table_item_draw_memory(derived.mem_resident_bytes);
           }
 
           ImGui::EndTable();
@@ -450,10 +441,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
       if (!pid_still_needed(my_state, win.pid, i)) {
         remove_watched_pid(*view_state.sync, win.pid);
       }
-      my_state.wasted_bytes +=
-          win.threads.size * sizeof(ProcessStat) +
-          win.derived.size * sizeof(ThreadDerivedStat) +
-          win.prev_threads.size * sizeof(ProcessStat);
+      my_state.wasted_bytes += win.threads.size * sizeof(ProcessStat) +
+                               win.derived.size * sizeof(ThreadDerivedStat) +
+                               win.prev_threads.size * sizeof(ProcessStat);
     }
   }
   my_state.windows.shrink_to(last);

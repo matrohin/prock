@@ -50,7 +50,8 @@ if(BUILD_TESTS)
     tests/test_views.cpp
     src/base.cpp
     src/views/brief_table_logic.cpp
-    src/state.cpp)
+    src/state.cpp
+          src/views/table_item.h)
   target_include_directories(prock_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/tests
