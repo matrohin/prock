@@ -13,7 +13,6 @@ struct SystemCpuChartState {
   size_t wasted_bytes;
   int num_cores;
 
-  bool show_per_core;
   bool stacked;
   bool y_axis_fitted;
 };

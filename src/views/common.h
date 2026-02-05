@@ -186,3 +186,11 @@ inline bool popup_close_on_escape() {
   }
   return false;
 }
+
+// Returns CPU percentage scaled for display:
+// - per_core=true: raw value (can exceed 100% on multi-core)
+// - per_core=false: normalized to 0-100% range
+inline double scale_cpu_perc(double value, int num_cores, bool per_core) {
+  if (per_core || num_cores <= 0) return value;
+  return value / num_cores;
+}

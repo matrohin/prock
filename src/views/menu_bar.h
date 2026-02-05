@@ -11,6 +11,7 @@ struct PreferencesState {
   char font_path[512] = {};  // Custom TTF font path, empty = default
   bool font_needs_reload = false;  // Signal to reload font atlas
   bool show_debug_fps = false;  // Toggle with F3
+  bool cpu_per_core = false;  // CPU % as per-core (can exceed 100%) vs normalized
 };
 
 struct ViewState;

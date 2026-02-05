@@ -126,20 +126,19 @@ void menu_bar_draw(ViewState &view_state) {
     if (ImGui::BeginMenu("View")) {
       ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
 
-      // System CPU Chart options
-      if (ImGui::BeginMenu("System CPU")) {
-        if (ImGui::MenuItem("Per-core", nullptr,
-                            view_state.system_cpu_chart_state.show_per_core)) {
-          view_state.system_cpu_chart_state.show_per_core =
-              !view_state.system_cpu_chart_state.show_per_core;
-        }
-        if (ImGui::MenuItem("Stacked", nullptr,
-                            view_state.system_cpu_chart_state.stacked,
-                            view_state.system_cpu_chart_state.show_per_core)) {
-          view_state.system_cpu_chart_state.stacked =
-              !view_state.system_cpu_chart_state.stacked;
-        }
-        ImGui::EndMenu();
+      if (ImGui::MenuItem("Per-core CPU %", nullptr,
+                          view_state.preferences_state.cpu_per_core)) {
+        view_state.preferences_state.cpu_per_core =
+            !view_state.preferences_state.cpu_per_core;
+        view_state.system_cpu_chart_state.y_axis_fitted = false;
+      }
+
+      if (ImGui::MenuItem("Stacked", nullptr,
+                          view_state.system_cpu_chart_state.stacked,
+                          view_state.preferences_state.cpu_per_core)) {
+        view_state.system_cpu_chart_state.stacked =
+            !view_state.system_cpu_chart_state.stacked;
+        view_state.system_cpu_chart_state.y_axis_fitted = false;
       }
 
       if (view_state.process_host_state.focused_pid > 0) {

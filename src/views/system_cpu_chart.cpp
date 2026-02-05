@@ -87,7 +87,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
 
       setup_chart(my_state.times, format_percent);
 
-      if (!my_state.show_per_core) {
+      const bool per_core = view_state.preferences_state.cpu_per_core;
+      if (!per_core) {
         push_fill_alpha();
         ImPlot::PlotShaded(TITLE_TOTAL, my_state.times.data(),
                            my_state.total_usage.data(),
@@ -166,7 +167,6 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
       // Per-core view: system * num_cores (to match stacked scale), process as-is
       // Total view: system as-is, process / num_cores (to normalize to 0-100%)
       const int num_cores = my_state.num_cores;
-      const bool per_core = my_state.show_per_core;
       show_top_process_tooltip(
           my_state.times, my_state.top_processes, "Total", my_state.total_usage,
           [num_cores, per_core](const double val, char *buf, const int size,

@@ -13,6 +13,22 @@
 
 #include <cmath>
 
+struct CpuChartScaledData {
+  const double *times;
+  const double *values;
+  double scale;
+};
+
+static ImPlotPoint cpu_chart_scaled_getter(const int idx, void *user_data) {
+  const auto *data = static_cast<CpuChartScaledData *>(user_data);
+  return ImPlotPoint(data->times[idx], data->values[idx] * data->scale);
+}
+
+static ImPlotPoint cpu_chart_baseline_getter(const int idx, void *user_data) {
+  const auto *data = static_cast<CpuChartScaledData *>(user_data);
+  return ImPlotPoint(data->times[idx], 0.0);
+}
+
 void cpu_chart_update(CpuChartState &my_state, const State &state) {
   const double update_at = std::chrono::duration_cast<Seconds>(
                                state.update_system_time.time_since_epoch())
@@ -53,6 +69,9 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
 void cpu_chart_draw(ViewState &view_state) {
   ZoneScoped;
   CpuChartState &my_state = view_state.cpu_chart_state;
+  const int num_cores = view_state.system_cpu_chart_state.num_cores;
+  const bool per_core = view_state.preferences_state.cpu_per_core;
+  const double scale = (per_core || num_cores <= 0) ? 1.0 : 1.0 / num_cores;
 
   size_t last = 0;
 
@@ -80,21 +99,24 @@ void cpu_chart_draw(ViewState &view_state) {
 
         setup_chart(chart.times, format_percent);
 
+        CpuChartScaledData total_data = {chart.times.data(),
+                                         chart.cpu_total_perc.data(), scale};
+        CpuChartScaledData kernel_data = {chart.times.data(),
+                                          chart.cpu_kernel_perc.data(), scale};
+
         push_fill_alpha();
-        ImPlot::PlotShaded(TITLE_TOTAL, chart.times.data(),
-                           chart.cpu_total_perc.data(),
-                           chart.cpu_total_perc.size());
-        ImPlot::PlotShaded(TITLE_KERNEL, chart.times.data(),
-                           chart.cpu_kernel_perc.data(),
-                           chart.cpu_kernel_perc.size());
+        ImPlot::PlotShadedG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
+                            cpu_chart_baseline_getter, &total_data,
+                            chart.cpu_total_perc.size());
+        ImPlot::PlotShadedG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
+                            cpu_chart_baseline_getter, &kernel_data,
+                            chart.cpu_kernel_perc.size());
         pop_fill_alpha();
 
-        ImPlot::PlotLine(TITLE_KERNEL, chart.times.data(),
-                         chart.cpu_kernel_perc.data(),
-                         chart.cpu_kernel_perc.size());
-        ImPlot::PlotLine(TITLE_TOTAL, chart.times.data(),
-                         chart.cpu_total_perc.data(),
-                         chart.cpu_total_perc.size());
+        ImPlot::PlotLineG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
+                          chart.cpu_kernel_perc.size());
+        ImPlot::PlotLineG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
+                          chart.cpu_total_perc.size());
 
         chart_add_tooltip(TITLE_TOTAL, "utime + stime from /proc/[pid]/stat");
         chart_add_tooltip(TITLE_KERNEL, "stime from /proc/[pid]/stat");

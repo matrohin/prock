@@ -346,7 +346,8 @@ static void compute_filter_visibility(const BriefTableState &my_state,
   }
 }
 
-static void data_columns_draw(const BriefTableLine &line) {
+static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
+                              const bool cpu_per_core) {
   const ProcessDerivedStat &derived_stat = line.derived_stat;
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Name))
     ImGui::Text("%s", line.comm);
@@ -356,12 +357,15 @@ static void data_columns_draw(const BriefTableLine &line) {
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads))
     table_item_draw_long(line.num_threads);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc))
-    table_item_draw_float(derived_stat.cpu_user_perc +
-                          derived_stat.cpu_kernel_perc);
+    table_item_draw_float(scale_cpu_perc(derived_stat.cpu_user_perc +
+                                             derived_stat.cpu_kernel_perc,
+                                         num_cpus, cpu_per_core));
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc))
-    table_item_draw_float(derived_stat.cpu_user_perc);
+    table_item_draw_float(
+        scale_cpu_perc(derived_stat.cpu_user_perc, num_cpus, cpu_per_core));
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc))
-    table_item_draw_float(derived_stat.cpu_kernel_perc);
+    table_item_draw_float(
+        scale_cpu_perc(derived_stat.cpu_kernel_perc, num_cpus, cpu_per_core));
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes))
     table_item_draw_memory(derived_stat.mem_resident_bytes);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes))
@@ -505,6 +509,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       "##ProcessFilter", my_state.filter_text, sizeof(my_state.filter_text));
   ImGui::SameLine();
   const int num_cpus = static_cast<int>(state.snapshot.cpu_stats.size) - 1;
+  const bool cpu_per_core = view_state.preferences_state.cpu_per_core;
   bool reset_sort_to_pid = false;
   if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {
     // Reset to PID sorting when entering tree mode
@@ -736,7 +741,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         if (is_grayed)
           ImGui::PushStyleColor(
               ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-        data_columns_draw(line);
+        data_columns_draw(line, num_cpus, cpu_per_core);
 
         if (node_open && has_children) {
           // Children will follow; track depth for later TreePop
@@ -765,7 +770,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         if (is_grayed)
           ImGui::PushStyleColor(
               ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-        data_columns_draw(line);
+        data_columns_draw(line, num_cpus, cpu_per_core);
       }
 
       if (is_grayed) {

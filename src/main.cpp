@@ -80,8 +80,8 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
 
   int val = 0;
   float fval = 0.0f;
-  if (sscanf(line, "ShowPerCore=%d", &val) == 1) {
-    view_state->system_cpu_chart_state.show_per_core = (val != 0);
+  if (sscanf(line, "CpuPerCore=%d", &val) == 1) {
+    view_state->preferences_state.cpu_per_core = (val != 0);
   } else if (sscanf(line, "Stacked=%d", &val) == 1) {
     view_state->system_cpu_chart_state.stacked = (val != 0);
   } else if (sscanf(line, "Theme=%d", &val) == 1) {
@@ -113,14 +113,13 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   if (!view_state) return;
 
   buf->appendf("[%s][SystemCpuChart]\n", handler->TypeName);
-  buf->appendf(
-      "ShowPerCore=%d\n",
-      static_cast<int>(view_state->system_cpu_chart_state.show_per_core));
   buf->appendf("Stacked=%d\n",
                static_cast<int>(view_state->system_cpu_chart_state.stacked));
   buf->append("\n");
 
   buf->appendf("[%s][Preferences]\n", handler->TypeName);
+  buf->appendf("CpuPerCore=%d\n",
+               static_cast<int>(view_state->preferences_state.cpu_per_core));
   buf->appendf("Theme=%d\n",
                static_cast<int>(view_state->preferences_state.theme));
   buf->appendf("UpdatePeriod=%.2f\n",
@@ -304,7 +303,6 @@ DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,19 Size=1280,673 Split=Y
   DockNode    ID=0x00000002 Parent=0xF352448A SizeRef=1280,502 CentralNode=1 Selected=0x67CD0030
 
 [ViewSettings][SystemCpuChart]
-ShowPerCore=0
 Stacked=0
 )";
 
