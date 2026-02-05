@@ -519,11 +519,12 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     sort_brief_table_tree(my_state, ctx.frame_arena);
   }
 
-  if (ImGui::BeginTable(
-          "Processes", eBriefTableColumnId_Count,
-          ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-              ImGuiTableFlags_RowBg | ImGuiTableFlags_Hideable |
-              ImGuiTableFlags_Sortable | ImGuiTableFlags_Borders)) {
+  constexpr ImGuiTableFlags flags =
+      ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+      ImGuiTableFlags_RowBg | ImGuiTableFlags_Hideable |
+      ImGuiTableFlags_Sortable | ImGuiTableFlags_Borders |
+      ImGuiTableFlags_ScrollY;
+  if (ImGui::BeginTable("Processes", eBriefTableColumnId_Count, flags)) {
     ImGui::TableSetupColumn("Process ID", ImGuiTableColumnFlags_NoHide, 0.0f,
                             eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f,
@@ -702,7 +703,6 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         ImGui::SetScrollHereY(0.5f);
         ImGui::SetKeyboardFocusHere(0);
       }
-
 
       if (my_state.tree_mode) {
         // Check if this node has children (next line has greater depth and
