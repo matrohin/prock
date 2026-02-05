@@ -46,21 +46,19 @@ struct BriefTableState {
   Array<BriefTableLine> lines;
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
-  int selected_pid; // -1 means no selection
+  int selected_pid = -1;
   char kill_error[128];
-  bool tree_mode; // Toggle: false = flat, true = tree
   char filter_text[256];
 
-  // Affinity/priority popup state
   int control_edit_pid;           // PID being edited, 0 if none
   uint64_t affinity_edit_mask;    // Affinity mask being edited
   int priority_edit_nice;         // Nice value being edited
   bool show_affinity_popup;
   bool show_priority_popup;
+  bool tree_mode; // Toggle: false = flat, true = tree
   char process_error[128];        // Error buffer for affinity/priority ops
   int process_error_code;         // errno value for pkexec option
 
-  // Type-to-search state
   char type_search[32];           // Current search string
   int64_t type_search_time_ns;    // Last keystroke timestamp for timeout
 };

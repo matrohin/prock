@@ -624,9 +624,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             // from current selection Subsequent chars: start from current to
             // refine the existing match
             const size_t total = my_state.lines.size;
-            const size_t start_offset = (len == 0) ? 1 : 0;
-            for (size_t offset = start_offset; offset <= total; ++offset) {
-              size_t j = (current_idx + offset) % total;
+            if (len == 0) current_idx += 1;
+            for (size_t offset = 0; offset <= total; ++offset) {
+              const size_t j = (current_idx + offset) % total;
               const BriefTableLine &l = my_state.lines.data[j];
               if (filter_active && l.filter_state == 0) continue;
               if (strncasecmp(l.comm, my_state.type_search, len + 1) == 0) {
@@ -692,6 +692,12 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         ImGui::PushStyleColor(ImGuiCol_Text,
                               ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
       }
+
+      if (focus_scroll_to_idx == static_cast<int>(i)) {
+        ImGui::SetScrollHereY(0.5f);
+        ImGui::SetKeyboardFocusHere(0);
+      }
+
 
       if (my_state.tree_mode) {
         // Check if this node has children (next line has greater depth and
@@ -760,12 +766,6 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           ImGui::PushStyleColor(
               ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         data_columns_draw(line);
-      }
-
-      // Type-to-search: scroll to matching row and set keyboard focus
-      if (focus_scroll_to_idx == static_cast<int>(i)) {
-        ImGui::SetScrollHereY(0.5f);
-        ImGui::SetKeyboardFocusHere(-1);
       }
 
       if (is_grayed) {
