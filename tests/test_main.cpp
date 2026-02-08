@@ -326,6 +326,152 @@ TEST_CASE("RingBuffer basic operations") {
   }
 }
 
+// ============================================================================
+// GrowingArray::last_or Tests
+// ============================================================================
+
+TEST_CASE("GrowingArray::last_or") {
+  BumpArena arena = BumpArena::create();
+
+  SUBCASE("returns default when empty") {
+    GrowingArray<int> arr = {};
+    CHECK(arr.last_or(42) == 42);
+    CHECK(arr.last_or(-1) == -1);
+  }
+
+  SUBCASE("returns last element with single element") {
+    GrowingArray<int> arr = {};
+    size_t wasted = 0;
+    *arr.emplace_back(arena, wasted) = 99;
+
+    CHECK(arr.last_or(0) == 99);
+  }
+
+  SUBCASE("returns last element with multiple elements") {
+    GrowingArray<int> arr = {};
+    size_t wasted = 0;
+    *arr.emplace_back(arena, wasted) = 10;
+    *arr.emplace_back(arena, wasted) = 20;
+    *arr.emplace_back(arena, wasted) = 30;
+
+    CHECK(arr.last_or(0) == 30);
+  }
+
+  SUBCASE("returns last after shrink") {
+    GrowingArray<int> arr = {};
+    size_t wasted = 0;
+    *arr.emplace_back(arena, wasted) = 10;
+    *arr.emplace_back(arena, wasted) = 20;
+    *arr.emplace_back(arena, wasted) = 30;
+
+    arr.shrink_to(2);
+    CHECK(arr.last_or(0) == 20);
+  }
+
+  arena.destroy();
+}
+
+// ============================================================================
+// BumpArena::alloc_string_copy Tests
+// ============================================================================
+
+TEST_CASE("BumpArena::alloc_string_copy") {
+  BumpArena arena = BumpArena::create();
+
+  SUBCASE("copies string with explicit length") {
+    const char *result = arena.alloc_string_copy("hello", 5);
+    CHECK(strcmp(result, "hello") == 0);
+  }
+
+  SUBCASE("copies string with auto length") {
+    const char *result = arena.alloc_string_copy("world");
+    CHECK(strcmp(result, "world") == 0);
+  }
+
+  SUBCASE("copies empty string") {
+    const char *result = arena.alloc_string_copy("", 0);
+    CHECK(result[0] == '\0');
+    CHECK(strlen(result) == 0);
+  }
+
+  SUBCASE("result is independent of source") {
+    char src[] = "original";
+    const char *result = arena.alloc_string_copy(src);
+    src[0] = 'X';
+    CHECK(strcmp(result, "original") == 0);
+  }
+
+  SUBCASE("copies partial string with explicit length") {
+    const char *result = arena.alloc_string_copy("hello world", 5);
+    CHECK(strcmp(result, "hello") == 0);
+    CHECK(strlen(result) == 5);
+  }
+
+  arena.destroy();
+}
+
+// ============================================================================
+// lower_bound / bin_search_exact Tests
+// ============================================================================
+
+TEST_CASE("lower_bound") {
+  SUBCASE("single element - found") {
+    int arr[] = {10};
+    auto get = [&](size_t i) { return arr[i]; };
+    CHECK(lower_bound<int>(1, get, 10) == 0);
+  }
+
+  SUBCASE("multiple elements - finds exact value") {
+    int arr[] = {10, 20, 30, 40, 50};
+    auto get = [&](size_t i) { return arr[i]; };
+    CHECK(lower_bound<int>(5, get, 10) == 0);
+    CHECK(lower_bound<int>(5, get, 30) == 2);
+    CHECK(lower_bound<int>(5, get, 50) == 4);
+  }
+
+  SUBCASE("returns index of largest element <= value") {
+    int arr[] = {10, 20, 30, 40, 50};
+    auto get = [&](size_t i) { return arr[i]; };
+    // 25 is between 20 and 30, lower_bound should return index of 20
+    CHECK(lower_bound<int>(5, get, 25) == 1);
+    CHECK(lower_bound<int>(5, get, 45) == 3);
+  }
+}
+
+TEST_CASE("bin_search_exact") {
+  SUBCASE("finds exact match") {
+    int arr[] = {10, 20, 30, 40, 50};
+    auto get = [&](size_t i) { return arr[i]; };
+    CHECK(bin_search_exact<int>(5, get, 10) == 0);
+    CHECK(bin_search_exact<int>(5, get, 30) == 2);
+    CHECK(bin_search_exact<int>(5, get, 50) == 4);
+  }
+
+  SUBCASE("returns SIZE_MAX for missing values") {
+    int arr[] = {10, 20, 30, 40, 50};
+    auto get = [&](size_t i) { return arr[i]; };
+    CHECK(bin_search_exact<int>(5, get, 5) == SIZE_MAX);
+    CHECK(bin_search_exact<int>(5, get, 25) == SIZE_MAX);
+    CHECK(bin_search_exact<int>(5, get, 55) == SIZE_MAX);
+  }
+
+  SUBCASE("empty array returns SIZE_MAX") {
+    auto get = [](size_t) { return 0; };
+    CHECK(bin_search_exact<int>(0, get, 10) == SIZE_MAX);
+  }
+
+  SUBCASE("single element - not found") {
+    int arr[] = {10};
+    auto get = [&](size_t i) { return arr[i]; };
+    CHECK(bin_search_exact<int>(1, get, 5) == SIZE_MAX);
+    CHECK(bin_search_exact<int>(1, get, 15) == SIZE_MAX);
+  }
+}
+
+// ============================================================================
+// RingBuffer Tests (continued)
+// ============================================================================
+
 TEST_CASE("RingBuffer with struct type") {
   struct TestData {
     int x;
