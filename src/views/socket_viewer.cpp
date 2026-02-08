@@ -10,6 +10,8 @@
 #include <cerrno>
 #include <cstring>
 
+static constexpr size_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
+
 static const char *tcp_state_name(const int state) {
   switch (state) {
   case eTcpState_ESTABLISHED:
@@ -55,15 +57,15 @@ static const char *protocol_name(const int protocol) {
 }
 
 // Format IPv4 address from network byte order
-static void format_ipv4(char *buf, size_t buf_size, unsigned int ip,
-                        unsigned short port) {
+static void format_ipv4(char *buf, const size_t buf_size, const unsigned int ip,
+                        const unsigned short port) {
   snprintf(buf, buf_size, "%u.%u.%u.%u:%u", (ip >> 0) & 0xFF, (ip >> 8) & 0xFF,
            (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
 }
 
 // Format IPv6 address
-static void format_ipv6(char *buf, size_t buf_size, const unsigned char *ip,
-                        unsigned short port) {
+static void format_ipv6(char *buf, const size_t buf_size,
+                        const unsigned char *ip, const unsigned short port) {
   // Check for IPv4-mapped IPv6 (::ffff:x.x.x.x)
   bool is_v4_mapped = true;
   for (int i = 0; i < 10; ++i) {
@@ -112,8 +114,8 @@ static void format_ipv6(char *buf, size_t buf_size, const unsigned char *ip,
            ip[10], ip[11], ip[12], ip[13], ip[14], ip[15], port);
 }
 
-static void format_address(char *buf, size_t buf_size, const SocketEntry &sock,
-                           bool local) {
+static void format_address(char *buf, const size_t buf_size,
+                           const SocketEntry &sock, const bool local) {
   const bool is_ipv6 = (sock.protocol == eSocketProtocol_TCP6 ||
                         sock.protocol == eSocketProtocol_UDP6);
   if (is_ipv6) {
@@ -128,18 +130,20 @@ static void format_address(char *buf, size_t buf_size, const SocketEntry &sock,
 const char *SOCKET_COPY_HEADER =
     "Protocol\tLocal Address\tRemote Address\tState\tRecv-Q\tSend-Q\n";
 
+static bool is_tcp(const SocketProtocol protocol) {
+  return protocol == eSocketProtocol_TCP || protocol == eSocketProtocol_TCP6;
+}
+
 static void copy_socket_row(const SocketEntry &sock) {
   char local_addr[64], remote_addr[64];
   format_address(local_addr, sizeof(local_addr), sock, true);
   format_address(remote_addr, sizeof(remote_addr), sock, false);
 
-  const bool is_tcp = (sock.protocol == eSocketProtocol_TCP ||
-                       sock.protocol == eSocketProtocol_TCP6);
   char buf[512];
   snprintf(buf, sizeof(buf), "%s%s\t%s\t%s\t%s\t%u\t%u", SOCKET_COPY_HEADER,
            protocol_name(sock.protocol), local_addr, remote_addr,
-           is_tcp ? tcp_state_name(sock.state) : "-", sock.rx_queue,
-           sock.tx_queue);
+           is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
+           sock.rx_queue, sock.tx_queue);
   ImGui::SetClipboardText(buf);
 }
 
@@ -155,12 +159,10 @@ static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
     format_address(local_addr, sizeof(local_addr), sock, true);
     format_address(remote_addr, sizeof(remote_addr), sock, false);
 
-    const bool is_tcp = (sock.protocol == eSocketProtocol_TCP ||
-                         sock.protocol == eSocketProtocol_TCP6);
     ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\t%s\t%s\t%u\t%u\n",
                     protocol_name(sock.protocol), local_addr, remote_addr,
-                    is_tcp ? tcp_state_name(sock.state) : "-", sock.rx_queue,
-                    sock.tx_queue);
+                    is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
+                    sock.rx_queue, sock.tx_queue);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -213,8 +215,8 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const int pid,
     return;
   }
 
-  SocketViewerWindow *win =
-      state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
+  ++state.updates_since_last_cleanup;
+  SocketViewerWindow *win = state.windows.emplace_back(state.cur_arena);
   win->status = eSocketViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
@@ -228,7 +230,6 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const int pid,
 }
 
 void socket_viewer_update(SocketViewerState &state, Sync &sync) {
-  // Process responses
   SocketResponse response;
   while (sync.on_demand_reader.socket_response_queue.pop(response)) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
@@ -253,24 +254,18 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
   }
 
   // Compact arena if wasted too much
-  if (state.wasted_bytes > SLAB_SIZE) {
+  if (state.updates_since_last_cleanup > CLEANUP_AFTER_N_UPDATES_SOCKETS) {
     BumpArena old_arena = state.cur_arena;
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
     for (size_t i = 0; i < state.windows.size(); ++i) {
       SocketViewerWindow &win = state.windows.data()[i];
-      if (win.sockets.size > 0) {
-        Array<SocketEntry> new_sockets =
-            Array<SocketEntry>::create(new_arena, win.sockets.size);
-        memcpy(new_sockets.data, win.sockets.data,
-               win.sockets.size * sizeof(SocketEntry));
-        win.sockets = new_sockets;
-      }
+      win.sockets = Array<SocketEntry>::copy_from(new_arena, win.sockets);
     }
 
     state.cur_arena = new_arena;
-    state.wasted_bytes = 0;
+    state.updates_since_last_cleanup = 0;
     old_arena.destroy();
   }
 }
@@ -347,7 +342,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
-                                  [&]() { sort_sockets(win); });
+                                  [&] { sort_sockets(win); });
 
           char local_addr[64], remote_addr[64];
           for (size_t j = 0; j < win.sockets.size; ++j) {
@@ -395,9 +390,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             // State
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_State);
-            const bool is_tcp = (sock.protocol == eSocketProtocol_TCP ||
-                                 sock.protocol == eSocketProtocol_TCP6);
-            if (is_tcp) {
+            if (is_tcp(sock.protocol)) {
               ImGui::TextUnformatted(tcp_state_name(sock.state));
             } else {
               ImGui::TextDisabled("-");
@@ -435,7 +428,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     if (should_be_opened) {
       ++last;
     } else {
-      my_state.wasted_bytes += win.sockets.size * sizeof(SocketEntry);
+      ++my_state.updates_since_last_cleanup;
     }
   }
   my_state.windows.shrink_to(last);

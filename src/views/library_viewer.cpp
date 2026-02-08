@@ -81,6 +81,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
     return;
   }
 
+  ++state.updates_since_last_cleanup;
   LibraryViewerWindow *win = state.windows.emplace_back(state.cur_arena);
   win->status = eLibraryViewerStatus_Loading;
   win->pid = pid;

@@ -4,20 +4,21 @@
 
 #include <algorithm>
 #include <dirent.h>
+#include <stdio.h>
 #include <unistd.h>
 
 // Collect socket inodes for a specific process from /proc/<pid>/fd
-static size_t collect_socket_inodes(const int pid, unsigned long *inodes,
-                                    const size_t max_inodes) {
+static Array<unsigned long> collect_socket_inodes(BumpArena &arena,
+                                                  const int pid) {
+  GrowingArray<unsigned long> inodes = {};
   char fd_dir_path[64];
   snprintf(fd_dir_path, sizeof(fd_dir_path), "/proc/%d/fd", pid);
 
   DIR *fd_dir = opendir(fd_dir_path);
-  if (!fd_dir) return 0;
+  if (!fd_dir) return inodes.to_array();
 
-  size_t count = 0;
-  struct dirent *entry;
-  while ((entry = readdir(fd_dir)) && count < max_inodes) {
+  dirent *entry;
+  while ((entry = readdir(fd_dir))) {
     if (entry->d_name[0] == '.') continue;
 
     char link_path[PATH_MAX];
@@ -34,61 +35,43 @@ static size_t collect_socket_inodes(const int pid, unsigned long *inodes,
 
     unsigned long inode = 0;
     if (sscanf(link_target + 8, "%lu]", &inode) == 1) {
-      inodes[count++] = inode;
+      *inodes.emplace_back(arena) = inode;
     }
   }
   closedir(fd_dir);
-  return count;
+  return inodes.to_array();
 }
 
 SocketResponse read_process_sockets(BumpArena &temp_arena,
                                     const SocketRequest &request) {
   ZoneScoped;
-
   const int pid = request.pid;
 
   SocketResponse response = {};
   response.pid = pid;
   response.owner_arena = BumpArena::create();
 
-  // Collect socket inodes for this process
-  constexpr size_t MAX_INODES = 4096;
-  unsigned long *inodes =
-      response.owner_arena.alloc_array_of<unsigned long>(MAX_INODES);
-  const size_t inode_count = collect_socket_inodes(pid, inodes, MAX_INODES);
+  const Array<unsigned long> inodes = collect_socket_inodes(temp_arena, pid);
 
-  if (inode_count == 0) {
-    // No sockets found (or can't read /proc/<pid>/fd)
+  if (inodes.size == 0) {
     response.sockets = Array<SocketEntry>::create(response.owner_arena, 0);
+    // TODO: Propagate the errno to here in case of a failure
     response.error_code = 0;
     return response;
   }
+  std::sort(inodes.data, inodes.data + inodes.size);
 
-  // Sort inodes for binary search
-  std::sort(inodes, inodes + inode_count);
-
-  // Query all sockets via netlink (sorted by inode)
   const Array<SocketEntry> all_sockets = query_sockets_netlink(temp_arena);
 
-  // Filter to only sockets belonging to this process
-  size_t match_count = 0;
-  for (size_t i = 0; i < all_sockets.size; ++i) {
-    if (std::binary_search(inodes, inodes + inode_count,
-                           all_sockets.data[i].inode)) {
-      ++match_count;
-    }
-  }
-
   response.sockets =
-      Array<SocketEntry>::create(response.owner_arena, match_count);
+      Array<SocketEntry>::create(response.owner_arena, inodes.size);
   size_t j = 0;
   for (size_t i = 0; i < all_sockets.size; ++i) {
-    if (std::binary_search(inodes, inodes + inode_count,
+    if (std::binary_search(inodes.data, inodes.data + inodes.size,
                            all_sockets.data[i].inode)) {
       response.sockets.data[j++] = all_sockets.data[i];
     }
   }
-
-  response.error_code = 0;
+  response.sockets.size = j;
   return response;
 }

@@ -171,7 +171,9 @@ template <class T> struct Array {
   static Array<T> copy_from(BumpArena &arena, const T *from,
                             const size_t size) {
     Array<T> dst = create(arena, size);
-    memcpy(dst.data, from, size * sizeof(T));
+    if (size > 0) {
+      memcpy(dst.data, from, size * sizeof(T));
+    }
     return dst;
   }
 

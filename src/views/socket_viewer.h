@@ -44,7 +44,7 @@ struct SocketViewerWindow {
 struct SocketViewerState {
   GrowingArray<SocketViewerWindow> windows;
   BumpArena cur_arena;
-  size_t wasted_bytes;
+  size_t updates_since_last_cleanup;
 };
 
 struct FrameContext;

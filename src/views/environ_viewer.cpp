@@ -98,6 +98,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
     return;
   }
 
+  ++state.updates_since_last_cleanup;
   EnvironViewerWindow *win = state.windows.emplace_back(state.cur_arena);
   win->status = eEnvironViewerStatus_Loading;
   win->pid = pid;
