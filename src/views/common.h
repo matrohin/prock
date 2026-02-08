@@ -67,7 +67,7 @@ template <class T> void common_views_sort_added(GrowingArray<T> &views) {
 constexpr ImGuiTableFlags COMMON_TABLE_FLAGS =
     ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
     ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |
-    ImGuiTableFlags_ScrollY;
+    ImGuiTableFlags_ScrollY | ImGuiTableFlags_HighlightHoveredColumn;
 
 // Draw a filter input with Ctrl+F keyboard shortcut
 inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,

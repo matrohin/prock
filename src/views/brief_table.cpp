@@ -523,8 +523,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
       ImGuiTableFlags_RowBg | ImGuiTableFlags_Hideable |
       ImGuiTableFlags_Sortable | ImGuiTableFlags_Borders |
-      ImGuiTableFlags_ScrollY;
+      ImGuiTableFlags_ScrollY | ImGuiTableFlags_HighlightHoveredColumn;
   if (ImGui::BeginTable("Processes", eBriefTableColumnId_Count, flags)) {
+    ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Process ID", ImGuiTableColumnFlags_NoHide, 0.0f,
                             eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f,
