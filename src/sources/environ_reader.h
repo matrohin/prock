@@ -1,10 +1,11 @@
 #pragma once
 
+#include "base/base.h"
+#include "base/string.h"
+
 struct EnvironEntry {
-  const char *name;
-  const char *value;
-  size_t name_len;
-  size_t value_len;
+  String name;
+  String value;
 };
 
 struct EnvironRequest {
@@ -13,7 +14,7 @@ struct EnvironRequest {
 
 struct EnvironResponse {
   int pid;
-  int error_code; // 0=success, errno otherwise
+  int error_code;
   BumpArena owner_arena;
   Array<EnvironEntry> entries;
 };

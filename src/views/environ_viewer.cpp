@@ -13,16 +13,18 @@
 
 const char *ENVIRON_COPY_HEADER = "Name\tValue\n";
 
+static constexpr size_t CLEANUP_AFTER_N_UPDATES_ENVIRON = 5;
+
 static void copy_environ_row(const EnvironEntry &entry) {
   char buf[4400];
-  snprintf(buf, sizeof(buf), "%s%s\t%s", ENVIRON_COPY_HEADER, entry.name,
-           entry.value);
+  snprintf(buf, sizeof(buf), "%s%s\t%s", ENVIRON_COPY_HEADER, entry.name.data,
+           entry.value.data);
   ImGui::SetClipboardText(buf);
 }
 
 static void copy_path_segment(const char *start, const char *end) {
   size_t len = end - start;
-  char buf[4096];
+  char buf[PATH_MAX];
   if (len >= sizeof(buf)) len = sizeof(buf) - 1;
   memcpy(buf, start, len);
   buf[len] = '\0';
@@ -37,20 +39,21 @@ static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
 
   for (size_t i = 0; i < win.entries.size; ++i) {
     const EnvironEntry &entry = win.entries.data[i];
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\n", entry.name,
-                    entry.value);
+    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\n", entry.name.data,
+                    entry.value.data);
   }
   ImGui::SetClipboardText(buf);
 }
 
-// Returns true if value looks like a PATH-style variable (multiple colon-separated paths)
-static bool is_expandable_value(const char *value, size_t len) {
-  if (len < 10) return false;  // Too short to benefit from expansion
+// Returns true if value looks like a PATH-style variable (multiple
+// colon-separated paths)
+static bool is_expandable_value(const String &value) {
+  if (value.len < 10) return false; // Too short to benefit from expansion
   int colons = 0;
-  for (size_t i = 0; i < len; ++i) {
-    if (value[i] == ':') {
+  for (size_t i = 0; i < value.len; ++i) {
+    if (value.data[i] == ':') {
       ++colons;
-      if (colons >= 2) return true;  // At least 3 segments
+      if (colons >= 2) return true; // At least 3 segments
     }
   }
   return false;
@@ -62,9 +65,9 @@ static void sort_environ(EnvironViewerWindow &win) {
   const auto compare = [&](const EnvironEntry &a, const EnvironEntry &b) {
     switch (win.sorted_by) {
     case eEnvironViewerColumnId_Name:
-      return strcmp(a.name, b.name) < 0;
+      return strcmp(a.name.data, b.name.data) < 0;
     case eEnvironViewerColumnId_Value:
-      return strcmp(a.value, b.value) < 0;
+      return strcmp(a.value.data, b.value.data) < 0;
     default:
       return false;
     }
@@ -95,8 +98,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
     return;
   }
 
-  EnvironViewerWindow *win =
-      state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
+  EnvironViewerWindow *win = state.windows.emplace_back(state.cur_arena);
   win->status = eEnvironViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
@@ -111,7 +113,6 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
 }
 
 void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
-  // Process responses
   EnvironResponse response;
   while (sync.on_demand_reader.environ_response_queue.pop(response)) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
@@ -119,16 +120,12 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eEnvironViewerStatus_Ready;
-          // Copy entries to our arena, including string data
           win.entries =
-              Array<EnvironEntry>::create(state.cur_arena, response.entries.size);
-          for (size_t j = 0; j < response.entries.size; ++j) {
-            const EnvironEntry &src = response.entries.data[j];
+              Array<EnvironEntry>::copy_from(state.cur_arena, response.entries);
+          for (size_t j = 0; j < win.entries.size; ++j) {
             EnvironEntry &dst = win.entries.data[j];
-            dst.name = state.cur_arena.alloc_string_copy(src.name, src.name_len);
-            dst.name_len = src.name_len;
-            dst.value = state.cur_arena.alloc_string_copy(src.value, src.value_len);
-            dst.value_len = src.value_len;
+            dst.name = String::copy_from(state.cur_arena, dst.name);
+            dst.value = String::copy_from(state.cur_arena, dst.value);
           }
         } else {
           win.status = eEnvironViewerStatus_Error;
@@ -141,7 +138,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
   }
 
   // Compact arena if wasted too much
-  if (state.wasted_bytes > SLAB_SIZE) {
+  if (state.updates_since_last_cleanup > CLEANUP_AFTER_N_UPDATES_ENVIRON) {
     BumpArena old_arena = state.cur_arena;
     BumpArena new_arena = BumpArena::create();
 
@@ -150,21 +147,18 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
       EnvironViewerWindow &win = state.windows.data()[i];
       if (win.entries.size > 0) {
         Array<EnvironEntry> new_entries =
-            Array<EnvironEntry>::create(new_arena, win.entries.size);
+            Array<EnvironEntry>::copy_from(state.cur_arena, win.entries);
         for (size_t j = 0; j < win.entries.size; ++j) {
-          const EnvironEntry &src = win.entries.data[j];
           EnvironEntry &dst = new_entries.data[j];
-          dst.name = new_arena.alloc_string_copy(src.name, src.name_len);
-          dst.name_len = src.name_len;
-          dst.value = new_arena.alloc_string_copy(src.value, src.value_len);
-          dst.value_len = src.value_len;
+          dst.name = String::copy_from(new_arena, dst.name);
+          dst.value = String::copy_from(new_arena, dst.value);
         }
         win.entries = new_entries;
       }
     }
 
     state.cur_arena = new_arena;
-    state.wasted_bytes = 0;
+    state.updates_since_last_cleanup = 0;
     old_arena.destroy();
   }
 }
@@ -193,8 +187,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                win.process_name, win.pid, win.entries.size, win.pid);
     }
 
-    process_window_handle_docking_and_pos(view_state, win.dock_id,
-                                          win.flags, title);
+    process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
+                                          title);
 
     bool should_be_opened = true;
     ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS;
@@ -228,18 +222,17 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
-                                  [&]() { sort_environ(win); });
+                                  [&] { sort_environ(win); });
 
           for (size_t j = 0; j < win.entries.size; ++j) {
             const EnvironEntry &entry = win.entries.data[j];
             // Filter by name or value
-            if (filter.IsActive() && !filter.PassFilter(entry.name) &&
-                !filter.PassFilter(entry.value)) {
+            if (filter.IsActive() && !filter.PassFilter(entry.name.data) &&
+                !filter.PassFilter(entry.value.data)) {
               continue;
             }
-            const bool is_selected = (win.selected_index == static_cast<int>(j));
-            const bool expandable =
-                is_expandable_value(entry.value, entry.value_len);
+            const bool is_selected = win.selected_index == static_cast<int>(j);
+            const bool expandable = is_expandable_value(entry.value);
 
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Name);
@@ -254,7 +247,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                          ImGuiTreeNodeFlags_AllowOverlap;
               if (parent_selected) flags |= ImGuiTreeNodeFlags_Selected;
 
-              bool is_open = ImGui::TreeNodeEx(entry.name, flags);
+              bool is_open = ImGui::TreeNodeEx(entry.name.data, flags);
 
               // Handle selection on click
               if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
@@ -278,16 +271,16 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               // Value column - show collapsed hint or nothing when expanded
               ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
               if (!is_open) {
-                ImGui::TextUnformatted(entry.value);
+                ImGui::TextUnformatted(entry.value.data);
                 if (ImGui::IsItemHovered()) {
-                  ImGui::SetTooltip("%s", entry.value);
+                  ImGui::SetTooltip("%s", entry.value.data);
                 }
               }
 
               // Render children when expanded
               if (is_open) {
-                const char *seg_start = entry.value;
-                const char *p = entry.value;
+                const char *seg_start = entry.value.data;
+                const char *p = entry.value.data;
                 int seg_idx = 0;
                 while (*p || seg_start != p) {
                   if (*p == ':' || *p == '\0') {
@@ -344,7 +337,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               }
             } else {
               // Non-expandable: use regular selectable
-              if (ImGui::Selectable(entry.name, is_selected,
+              if (ImGui::Selectable(entry.name.data, is_selected,
                                     ImGuiSelectableFlags_SpanAllColumns)) {
                 win.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
@@ -364,9 +357,9 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
               // Value
               ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
-              ImGui::TextUnformatted(entry.value);
-              if (ImGui::IsItemHovered() && entry.value_len > 50) {
-                ImGui::SetTooltip("%s", entry.value);
+              ImGui::TextUnformatted(entry.value.data);
+              if (ImGui::IsItemHovered() && entry.value.len > 50) {
+                ImGui::SetTooltip("%s", entry.value.data);
               }
             }
 
@@ -382,8 +375,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           const EnvironEntry &entry = win.entries.data[win.selected_index];
           if (win.selected_child_index >= 0) {
             // Copy specific path segment
-            const char *seg_start = entry.value;
-            const char *p = entry.value;
+            const char *seg_start = entry.value.data;
+            const char *p = entry.value.data;
             int seg_idx = 0;
             while (*p || seg_start != p) {
               if (*p == ':' || *p == '\0') {
@@ -409,7 +402,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     if (should_be_opened) {
       ++last;
     } else {
-      my_state.wasted_bytes += win.entries.size * sizeof(EnvironEntry);
+      ++my_state.updates_since_last_cleanup;
     }
   }
   my_state.windows.shrink_to(last);

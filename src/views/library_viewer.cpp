@@ -13,7 +13,7 @@
 
 const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 
-static constexpr size_t CLEANUP_AFTER_N_UPDATES = 5;
+static constexpr size_t CLEANUP_AFTER_N_UPDATES_LIBRARIES = 5;
 
 static void copy_library_row(const LibraryEntry &lib) {
   char buf[512];
@@ -95,7 +95,6 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
 }
 
 void library_viewer_update(LibraryViewerState &state, Sync &sync) {
-  // Process responses
   LibraryResponse response;
   while (sync.on_demand_reader.library_response_queue.pop(response)) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
@@ -103,7 +102,6 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eLibraryViewerStatus_Ready;
-          // Copy libraries to our arena, including string data
           win.libraries = Array<LibraryEntry>::copy_from(state.cur_arena,
                                                          response.libraries);
           for (size_t j = 0; j < win.libraries.size; ++j) {
@@ -121,7 +119,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
   }
 
   // Compact arena if wasted too much
-  if (state.updates_since_last_cleanup > CLEANUP_AFTER_N_UPDATES) {
+  if (state.updates_since_last_cleanup > CLEANUP_AFTER_N_UPDATES_LIBRARIES) {
     BumpArena old_arena = state.cur_arena;
     BumpArena new_arena = BumpArena::create();
 

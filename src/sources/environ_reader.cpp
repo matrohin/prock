@@ -73,14 +73,12 @@ EnvironResponse read_process_environ(BumpArena &temp_arena,
       EnvironEntry *entry = entries.emplace_back(temp_arena, wasted);
 
       const size_t name_len = eq - ptr;
-      entry->name = response.owner_arena.alloc_string_copy(ptr, name_len);
-      entry->name_len = name_len;
+      entry->name = String::copy_from(response.owner_arena, ptr, name_len);
 
       const char *value_start = eq + 1;
       const size_t value_len = len - (value_start - ptr);
       entry->value =
-          response.owner_arena.alloc_string_copy(value_start, value_len);
-      entry->value_len = value_len;
+          String::copy_from(response.owner_arena, value_start, value_len);
     }
 
     ptr += len + 1;
@@ -89,15 +87,11 @@ EnvironResponse read_process_environ(BumpArena &temp_arena,
   // Sort alphabetically by name
   std::sort(entries.begin(), entries.end(),
             [](const EnvironEntry &a, const EnvironEntry &b) {
-              return strcmp(a.name, b.name) < 0;
+              return strcmp(a.name.data, b.name.data) < 0;
             });
 
-  // Copy to final array
-  response.entries =
-      Array<EnvironEntry>::create(response.owner_arena, entries.size());
-  memcpy(response.entries.data, entries.data(),
-         entries.size() * sizeof(EnvironEntry));
-
+  response.entries = Array<EnvironEntry>::copy_from(
+      response.owner_arena, entries.data(), entries.size());
   response.error_code = 0;
   return response;
 }

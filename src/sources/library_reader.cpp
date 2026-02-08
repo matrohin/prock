@@ -86,12 +86,8 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
               return strcmp(a.path.data, b.path.data) < 0;
             });
 
-  // Copy to final array
-  response.libraries =
-      Array<LibraryEntry>::create(response.owner_arena, entries.size());
-  memcpy(response.libraries.data, entries.data(),
-         entries.size() * sizeof(LibraryEntry));
-
+  response.libraries = Array<LibraryEntry>::copy_from(
+      response.owner_arena, entries.data(), entries.size());
   response.error_code = 0;
   return response;
 }

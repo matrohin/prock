@@ -40,7 +40,7 @@ struct EnvironViewerWindow {
 struct EnvironViewerState {
   GrowingArray<EnvironViewerWindow> windows;
   BumpArena cur_arena;
-  size_t wasted_bytes;
+  size_t updates_since_last_cleanup;
 };
 
 struct FrameContext;

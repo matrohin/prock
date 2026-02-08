@@ -168,10 +168,15 @@ template <class T> struct Array {
     return Array<T>{result, with_size};
   }
 
-  static Array<T> copy_from(BumpArena &arena, const Array<T> &from) {
-    Array<T> dst = create(arena, from.size);
-    memcpy(dst.data, from.data, from.size * sizeof(T));
+  static Array<T> copy_from(BumpArena &arena, const T *from,
+                            const size_t size) {
+    Array<T> dst = create(arena, size);
+    memcpy(dst.data, from, size * sizeof(T));
     return dst;
+  }
+
+  static Array<T> copy_from(BumpArena &arena, const Array<T> &from) {
+    return copy_from(arena, from.data, from.size);
   }
 
   size_t byte_size() const { return size * sizeof(T); }
