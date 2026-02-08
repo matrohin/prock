@@ -59,3 +59,6 @@ void process_window_handle_docking_and_pos(ViewState &view_state,
                                             ImGuiID dock_id,
                                             ProcessWindowFlags &flags,
                                             const char *label);
+
+
+ImGuiWindowFlags process_window_flags(ProcessWindowFlags &flags);

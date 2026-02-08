@@ -1,5 +1,6 @@
 #include "process_window_flags.h"
 
+#include "views/common.h"
 #include "views/view_state.h"
 
 void process_window_check_close(ProcessWindowFlags &flags,
@@ -30,4 +31,13 @@ void process_window_handle_docking_and_pos(ViewState &view_state,
   } else {
     view_state.cascade.next_if_new(label);
   }
+}
+
+ImGuiWindowFlags process_window_flags(ProcessWindowFlags &flags) {
+  ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS;
+  if (flags & eProcessWindowFlags_NoFocusOnAppearing) {
+    win_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
+    flags &= ~eProcessWindowFlags_NoFocusOnAppearing;
+  }
+  return win_flags;
 }

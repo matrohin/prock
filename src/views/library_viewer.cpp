@@ -171,11 +171,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                           title);
 
     bool should_be_opened = true;
-    ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS;
-    if (win.flags & eProcessWindowFlags_NoFocusOnAppearing) {
-      win_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
-      win.flags &= ~eProcessWindowFlags_NoFocusOnAppearing;
-    }
+    const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
     if (ImGui::Begin(title, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 

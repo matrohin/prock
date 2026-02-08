@@ -57,11 +57,7 @@ void mem_chart_draw(ViewState &view_state) {
                                           chart.flags, chart.label);
 
     bool should_be_opened = true;
-    ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS;
-    if (chart.flags & eProcessWindowFlags_NoFocusOnAppearing) {
-      win_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
-      chart.flags &= ~eProcessWindowFlags_NoFocusOnAppearing;
-    }
+    const ImGuiWindowFlags win_flags = process_window_flags(chart.flags);
     if (ImGui::Begin(chart.label, &should_be_opened, win_flags)) {
       process_window_check_close(chart.flags, should_be_opened);
 
