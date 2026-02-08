@@ -1,8 +1,8 @@
 #pragma once
+#include "base/string.h"
 
 struct LibraryEntry {
-  const char *path;
-  size_t path_len;
+  String path;
   unsigned long addr_start;
   unsigned long addr_end;
   long file_size; // -1 if stat failed

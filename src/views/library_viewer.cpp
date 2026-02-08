@@ -13,11 +13,13 @@
 
 const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 
+static constexpr size_t CLEANUP_AFTER_N_UPDATES = 5;
+
 static void copy_library_row(const LibraryEntry &lib) {
   char buf[512];
   const unsigned long mapped_size = lib.addr_end - lib.addr_start;
-  snprintf(buf, sizeof(buf), "%s%s\t%lu\t%ld", LIBRARY_COPY_HEADER, lib.path,
-           mapped_size, lib.file_size);
+  snprintf(buf, sizeof(buf), "%s%s\t%lu\t%ld", LIBRARY_COPY_HEADER,
+           lib.path.data, mapped_size, lib.file_size);
   ImGui::SetClipboardText(buf);
 }
 
@@ -31,8 +33,8 @@ static void copy_all_libraries(BumpArena &arena,
   for (size_t i = 0; i < win.libraries.size; ++i) {
     const LibraryEntry &lib = win.libraries.data[i];
     const unsigned long mapped_size = lib.addr_end - lib.addr_start;
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n", lib.path,
-                    mapped_size, lib.file_size);
+    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n",
+                    lib.path.data, mapped_size, lib.file_size);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -43,7 +45,7 @@ static void sort_libraries(LibraryViewerWindow &win) {
   const auto compare = [&](const LibraryEntry &a, const LibraryEntry &b) {
     switch (win.sorted_by) {
     case eLibraryViewerColumnId_Path:
-      return strcmp(a.path, b.path) < 0;
+      return strcmp(a.path.data, b.path.data) < 0;
     case eLibraryViewerColumnId_MappedSize:
       return a.addr_end - a.addr_start < b.addr_end - b.addr_start;
     case eLibraryViewerColumnId_FileSize:
@@ -79,8 +81,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
     return;
   }
 
-  LibraryViewerWindow *win =
-      state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
+  LibraryViewerWindow *win = state.windows.emplace_back(state.cur_arena);
   win->status = eLibraryViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
@@ -103,16 +104,11 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
         if (response.error_code == 0) {
           win.status = eLibraryViewerStatus_Ready;
           // Copy libraries to our arena, including string data
-          win.libraries = Array<LibraryEntry>::create(state.cur_arena,
-                                                      response.libraries.size);
-          for (size_t j = 0; j < response.libraries.size; ++j) {
-            const LibraryEntry &src = response.libraries.data[j];
+          win.libraries = Array<LibraryEntry>::copy_from(state.cur_arena,
+                                                         response.libraries);
+          for (size_t j = 0; j < win.libraries.size; ++j) {
             LibraryEntry &dst = win.libraries.data[j];
-            dst.path = state.cur_arena.alloc_string_copy(src.path, src.path_len);
-            dst.path_len = src.path_len;
-            dst.addr_start = src.addr_start;
-            dst.addr_end = src.addr_end;
-            dst.file_size = src.file_size;
+            dst.path = String::copy_from(state.cur_arena, dst.path);
           }
         } else {
           win.status = eLibraryViewerStatus_Error;
@@ -125,7 +121,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
   }
 
   // Compact arena if wasted too much
-  if (state.wasted_bytes > SLAB_SIZE) {
+  if (state.updates_since_last_cleanup > CLEANUP_AFTER_N_UPDATES) {
     BumpArena old_arena = state.cur_arena;
     BumpArena new_arena = BumpArena::create();
 
@@ -133,23 +129,17 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
     for (size_t i = 0; i < state.windows.size(); ++i) {
       LibraryViewerWindow &win = state.windows.data()[i];
       if (win.libraries.size > 0) {
-        Array<LibraryEntry> new_libs =
-            Array<LibraryEntry>::create(new_arena, win.libraries.size);
+        win.libraries =
+            Array<LibraryEntry>::copy_from(new_arena, win.libraries);
         for (size_t j = 0; j < win.libraries.size; ++j) {
-          const LibraryEntry &src = win.libraries.data[j];
-          LibraryEntry &dst = new_libs.data[j];
-          dst.path = new_arena.alloc_string_copy(src.path, src.path_len);
-          dst.path_len = src.path_len;
-          dst.addr_start = src.addr_start;
-          dst.addr_end = src.addr_end;
-          dst.file_size = src.file_size;
+          LibraryEntry &dst = win.libraries.data[j];
+          dst.path = String::copy_from(new_arena, dst.path);
         }
-        win.libraries = new_libs;
       }
     }
 
     state.cur_arena = new_arena;
-    state.wasted_bytes = 0;
+    state.updates_since_last_cleanup = 0;
     old_arena.destroy();
   }
 }
@@ -217,23 +207,22 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
-                                  [&]() { sort_libraries(win); });
+                                  [&] { sort_libraries(win); });
 
           for (size_t j = 0; j < win.libraries.size; ++j) {
             const LibraryEntry &lib = win.libraries.data[j];
-            if (!filter.PassFilter(lib.path)) continue;
-            const bool is_selected =
-                (win.selected_index == static_cast<int>(j));
+            if (!filter.PassFilter(lib.path.data)) continue;
+            const bool is_selected = win.selected_index == static_cast<int>(j);
             ImGui::TableNextRow();
 
             // Path with selection
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_Path);
-            if (ImGui::Selectable(lib.path, is_selected,
+            if (ImGui::Selectable(lib.path.data, is_selected,
                                   ImGuiSelectableFlags_SpanAllColumns)) {
               win.selected_index = static_cast<int>(j);
             }
             if (ImGui::IsItemHovered()) {
-              ImGui::SetTooltip("%s", lib.path);
+              ImGui::SetTooltip("%s", lib.path.data);
             }
 
             if (ImGui::BeginPopupContextItem()) {
@@ -256,9 +245,6 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ImGui::Text("%.1f KB", mapped_size / 1024.0);
             } else {
               ImGui::Text("%lu B", mapped_size);
-            }
-            if (ImGui::IsItemHovered()) {
-              ImGui::SetTooltip("0x%lx - 0x%lx", lib.addr_start, lib.addr_end);
             }
 
             // File Size
@@ -291,7 +277,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     if (should_be_opened) {
       ++last;
     } else {
-      my_state.wasted_bytes += win.libraries.size * sizeof(LibraryEntry);
+      ++my_state.updates_since_last_cleanup;
     }
   }
   my_state.windows.shrink_to(last);

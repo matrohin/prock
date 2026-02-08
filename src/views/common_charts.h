@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base.h"
+#include "base/base.h"
 #include "state.h"
 
 #include <algorithm>
@@ -44,23 +44,6 @@ constexpr const char *TITLE_AVAILABLE = "Available";
 // Net chart titles
 constexpr const char *TITLE_RECV = "Recv";
 constexpr const char *TITLE_SEND = "Send";
-
-template <class T>
-bool common_charts_contains_pid(const GrowingArray<T> &charts, int pid) {
-  const auto data = charts.data();
-  size_t left = 0;
-  size_t right = charts.size();
-  while (right - left > 1) {
-    const size_t middle = (left + right) / 2;
-    const auto &chart = data[middle];
-    if (chart.pid > pid) {
-      right = middle;
-    } else {
-      left = middle;
-    }
-  }
-  return left < right && data[left].pid == pid;
-}
 
 template <class T, class F>
 void common_charts_update(GrowingArray<T> &charts, const State &state, F f) {

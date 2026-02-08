@@ -1,9 +1,7 @@
 #pragma once
 
-#include "base.h"
+#include "base/base.h"
 #include "state.h"
-
-#include <cstring>
 
 // Helper to create a ProcessStat with minimal required fields
 inline ProcessStat make_process_stat(BumpArena &arena, int pid, int ppid,

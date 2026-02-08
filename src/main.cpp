@@ -1,5 +1,5 @@
-#include "base.h"
-#include "ring_buffer.h"
+#include "base/base.h"
+#include "base/ring_buffer.h"
 #include "sources/process_stat.h"
 #include "sources/sync.h"
 #include "state.h"
@@ -22,7 +22,7 @@
 #include <unistd.h>
 
 // UNITY BUILD:
-#include "base.cpp"
+#include "base/base.cpp"
 #include "sources/environ_reader.cpp"
 #include "sources/library_reader.cpp"
 #include "sources/on_demand_reader.cpp"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../sources/sync.h"
-#include "base.h"
+#include "base/base.h"
+#include "sources/sync.h"
 
 #include "imgui.h"
 
@@ -40,7 +40,7 @@ struct LibraryViewerWindow {
 struct LibraryViewerState {
   GrowingArray<LibraryViewerWindow> windows;
   BumpArena cur_arena;
-  size_t wasted_bytes;
+  size_t updates_since_last_cleanup;
 };
 
 struct FrameContext;

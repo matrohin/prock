@@ -45,9 +45,8 @@ struct SlabCache {
     ArenaSlab *old_head = head.load(std::memory_order_relaxed);
     do {
       slab->prev = old_head;
-    } while (!head.compare_exchange_weak(old_head, slab,
-                                         std::memory_order_release,
-                                         std::memory_order_relaxed));
+    } while (!head.compare_exchange_weak(
+        old_head, slab, std::memory_order_release, std::memory_order_relaxed));
   }
 
   ArenaSlab *pop() {
@@ -111,7 +110,7 @@ struct BumpArena {
   }
 
   // Allocate and copy a string (null-terminated)
-  const char *alloc_string_copy(const char *src, size_t len) {
+  const char *alloc_string_copy(const char *src, const size_t len) {
     char *dst = alloc_string(len + 1);
     memcpy(dst, src, len);
     dst[len] = '\0';
@@ -121,7 +120,6 @@ struct BumpArena {
   const char *alloc_string_copy(const char *src) {
     return alloc_string_copy(src, strlen(src));
   }
-
 
   template <class T> T *alloc() {
     return static_cast<T *>(alloc_raw(sizeof(T), alignof(T)));
@@ -140,11 +138,6 @@ struct BumpArena {
       it = prev;
     }
   }
-};
-
-struct String {
-  char *data;
-  size_t length;
 };
 
 template <class T> struct LinkedNode {
@@ -170,18 +163,32 @@ template <class T> struct Array {
   size_t size;
 
   static Array<T> create(BumpArena &arena, size_t with_size) {
-    T *result = static_cast<T *>(arena.alloc_raw(with_size * sizeof(T), alignof(T)));
+    T *result =
+        static_cast<T *>(arena.alloc_raw(with_size * sizeof(T), alignof(T)));
     return Array<T>{result, with_size};
   }
+
+  static Array<T> copy_from(BumpArena &arena, const Array<T> &from) {
+    Array<T> dst = create(arena, from.size);
+    memcpy(dst.data, from.data, from.size * sizeof(T));
+    return dst;
+  }
+
+  size_t byte_size() const { return size * sizeof(T); }
 };
 
 template <class T> struct GrowingArray {
   Array<T> inner;
   size_t cur_size;
 
+  T *emplace_back(BumpArena &arena) {
+    size_t wasted = 0;
+    return emplace_back(arena, wasted);
+  }
+
   T *emplace_back(BumpArena &arena, size_t &wasted_bytes) {
     if (cur_size >= inner.size) {
-      wasted_bytes += inner.size * sizeof(T);
+      wasted_bytes += inner.byte_size();
       realloc(arena);
     }
     return &inner.data[cur_size++];
@@ -215,8 +222,7 @@ template <class T> struct GrowingArray {
   Array<T> to_array() { return {data(), size()}; }
 };
 
-
-template<class T, class F>
+template <class T, class F>
 size_t lower_bound(const size_t size, F get_val, const T val) {
   size_t left = 0;
   size_t right = size;
@@ -232,7 +238,7 @@ size_t lower_bound(const size_t size, F get_val, const T val) {
   return left;
 }
 
-template<class T, class F>
+template <class T, class F>
 size_t bin_search_exact(const size_t size, F get_val, const T val) {
   const size_t result = lower_bound(size, get_val, val);
   if (result >= size || get_val(result) != val) {

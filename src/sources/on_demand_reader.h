@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ring_buffer.h"
+#include "../base/ring_buffer.h"
 #include "sources/environ_reader.h"
 #include "sources/library_reader.h"
 #include "sources/socket_reader.h"

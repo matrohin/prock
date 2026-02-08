@@ -1,8 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
-#include "base.h"
-#include "ring_buffer.h"
+#include "base/base.h"
+#include "base/ring_buffer.h"
 
 // ============================================================================
 // BumpArena Tests

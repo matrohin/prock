@@ -78,59 +78,10 @@ TEST_CASE("binary_search_pid") {
   arena.destroy();
 }
 
-// ============================================================================
-// common_charts_contains_pid Tests
-// ============================================================================
-
 struct TestChartData {
   int pid;
   char label[64];
 };
-
-TEST_CASE("common_charts_contains_pid") {
-  BumpArena arena = BumpArena::create();
-
-  SUBCASE("empty array returns false") {
-    GrowingArray<TestChartData> charts = {};
-    CHECK_FALSE(common_charts_contains_pid(charts, 100));
-  }
-
-  SUBCASE("single element - found") {
-    GrowingArray<TestChartData> charts = {};
-    size_t wasted = 0;
-    charts.emplace_back(arena, wasted)->pid = 100;
-
-    CHECK(common_charts_contains_pid(charts, 100));
-  }
-
-  SUBCASE("single element - not found") {
-    GrowingArray<TestChartData> charts = {};
-    size_t wasted = 0;
-    charts.emplace_back(arena, wasted)->pid = 100;
-
-    CHECK_FALSE(common_charts_contains_pid(charts, 50));
-    CHECK_FALSE(common_charts_contains_pid(charts, 150));
-  }
-
-  SUBCASE("multiple elements - sorted by pid") {
-    GrowingArray<TestChartData> charts = {};
-    size_t wasted = 0;
-    charts.emplace_back(arena, wasted)->pid = 10;
-    charts.emplace_back(arena, wasted)->pid = 20;
-    charts.emplace_back(arena, wasted)->pid = 30;
-    charts.emplace_back(arena, wasted)->pid = 40;
-    charts.emplace_back(arena, wasted)->pid = 50;
-
-    CHECK(common_charts_contains_pid(charts, 10));
-    CHECK(common_charts_contains_pid(charts, 30));
-    CHECK(common_charts_contains_pid(charts, 50));
-    CHECK_FALSE(common_charts_contains_pid(charts, 5));
-    CHECK_FALSE(common_charts_contains_pid(charts, 25));
-    CHECK_FALSE(common_charts_contains_pid(charts, 55));
-  }
-
-  arena.destroy();
-}
 
 // ============================================================================
 // common_charts_sort_added Tests

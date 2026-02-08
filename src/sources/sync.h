@@ -1,9 +1,9 @@
 #pragma once
 
-#include "base.h"
+#include "base/base.h"
+#include "base/ring_buffer.h"
 #include "on_demand_reader.h"
 #include "process_stat.h"
-#include "ring_buffer.h"
 
 #include <condition_variable>
 #include <mutex>

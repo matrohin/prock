@@ -1,14 +1,15 @@
 #include "library_reader.h"
 
-#include "base.h"
+#include "base/base.h"
+#include "base/string.h"
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
 #include <cerrno>
+#include <climits>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
-#include <limits.h>
 #include <sys/stat.h>
 
 LibraryResponse read_process_libraries(BumpArena &temp_arena,
@@ -57,7 +58,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
     // Check if already in list (deduplicate)
     bool found = false;
     for (size_t i = 0; i < entries.size(); ++i) {
-      if (strcmp(entries.data()[i].path, pathname) == 0) {
+      if (strcmp(entries.data()[i].path.data, pathname) == 0) {
         found = true;
         break;
       }
@@ -65,9 +66,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
     if (found) continue;
 
     LibraryEntry *entry = entries.emplace_back(temp_arena, wasted);
-    size_t path_len = strlen(pathname);
-    entry->path = response.owner_arena.alloc_string_copy(pathname, path_len);
-    entry->path_len = path_len;
+    entry->path = String::copy_from(response.owner_arena, pathname);
     entry->addr_start = addr_start;
     entry->addr_end = addr_end;
 
@@ -84,7 +83,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
   // Sort alphabetically by path
   std::sort(entries.begin(), entries.end(),
             [](const LibraryEntry &a, const LibraryEntry &b) {
-              return strcmp(a.path, b.path) < 0;
+              return strcmp(a.path.data, b.path.data) < 0;
             });
 
   // Copy to final array
