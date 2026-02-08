@@ -24,21 +24,28 @@ target_compile_options(project_warnings
     -Wnull-dereference # warn if a null dereference is detected
 )
 
+# ImGui/ImPlot static library (no project warnings):
+add_library(imgui_all STATIC src/imgui_all.cpp)
+target_include_directories(imgui_all PRIVATE
+  third-party/imgui
+  third-party/implot
+)
+target_link_libraries(imgui_all PRIVATE glfw OpenGL::GLES2)
+
 # Main executable:
 include(GNUInstallDirs)
 
-add_executable(${PROJECT_NAME} src/main.cpp src/imgui_all.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp)
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-set_source_files_properties(src/imgui_all.cpp PROPERTIES SKIP_LINTING ON)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
   third-party/imgui
   third-party/implot
   ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw OpenGL::GLES2 X11::X11 tracy project_warnings)
+target_link_libraries(${PROJECT_NAME} PRIVATE imgui_all glfw OpenGL::GLES2 X11::X11 tracy project_warnings)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_CLANG_TIDY clang-tidy)
 
 
