@@ -219,6 +219,7 @@ static void draw_main_window(const ImGuiIO &io, const State &state,
   ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
   FrameContext frame_ctx = {};
+  views_on_demand_update(view_state);
   views_draw(frame_ctx, view_state, state);
   frame_ctx.frame_arena.destroy();
 

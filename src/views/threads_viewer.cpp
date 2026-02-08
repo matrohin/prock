@@ -170,7 +170,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
 }
 
 void threads_viewer_update(ThreadsViewerState &state,
-                           const State & /*state_data*/, Sync & /*sync*/) {
+                           const State & /*state_data*/) {
   ZoneScoped;
 
   // Thread snapshots are processed in threads_viewer_process_snapshot

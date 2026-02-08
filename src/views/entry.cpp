@@ -29,11 +29,16 @@ void views_update(ViewState &view_state, State &state) {
   system_mem_chart_update(view_state.system_mem_chart_state, state);
   system_io_chart_update(view_state.system_io_chart_state, state);
   system_net_chart_update(view_state.system_net_chart_state, state);
+  threads_viewer_update(view_state.threads_viewer_state, state);
+}
+
+void views_on_demand_update(ViewState &view_state) {
+  ZoneScoped;
   library_viewer_update(view_state.library_viewer_state, *view_state.sync);
   environ_viewer_update(view_state.environ_viewer_state, *view_state.sync);
-  threads_viewer_update(view_state.threads_viewer_state, state, *view_state.sync);
   socket_viewer_update(view_state.socket_viewer_state, *view_state.sync);
 }
+
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   ZoneScoped;

@@ -44,7 +44,7 @@ struct ThreadsViewerWindow {
 
   // Previous snapshot for delta computation
   Array<ProcessStat> prev_threads;
-  int64_t prev_at_ns;  // nanoseconds since steady_clock epoch
+  int64_t prev_at_ns; // nanoseconds since steady_clock epoch
 
   // UI state
   int selected_tid;
@@ -66,8 +66,7 @@ struct State;
 void threads_viewer_open(ThreadsViewerState &state, Sync &sync, int pid,
                          const char *comm, ImGuiID dock_id = 0,
                          ProcessWindowFlags extra_flags = 0);
-void threads_viewer_update(ThreadsViewerState &state, const State &state_data,
-                           Sync &sync);
+void threads_viewer_update(ThreadsViewerState &state, const State &state_data);
 void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                          const State &state);
 void threads_viewer_process_snapshot(ThreadsViewerState &state,
