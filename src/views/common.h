@@ -169,8 +169,10 @@ inline void restart_with_pkexec() {
 }
 
 // Draw error message with optional pkexec restart button for permission errors
-inline void draw_error_with_pkexec(const char *error_message,
-                                   const int error_code) {
+inline void draw_error_with_pkexec(const int error_code) {
+  char error_message[128];
+  snprintf(error_message, sizeof(error_message), "Error: %s",
+           strerror(error_code));
   ImGui::Text("%s", error_message);
   if (error_code == EACCES) {
     if (ImGui::Button("Restart with pkexec")) {

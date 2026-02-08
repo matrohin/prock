@@ -45,7 +45,7 @@ static void sort_libraries(LibraryViewerWindow &win) {
     case eLibraryViewerColumnId_Path:
       return strcmp(a.path, b.path) < 0;
     case eLibraryViewerColumnId_MappedSize:
-      return (a.addr_end - a.addr_start) < (b.addr_end - b.addr_start);
+      return a.addr_end - a.addr_start < b.addr_end - b.addr_start;
     case eLibraryViewerColumnId_FileSize:
       return a.file_size < b.file_size;
     default:
@@ -117,8 +117,6 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
         } else {
           win.status = eLibraryViewerStatus_Error;
           win.error_code = response.error_code;
-          snprintf(win.error_message, sizeof(win.error_message), "Error: %s",
-                   strerror(response.error_code));
         }
         response.owner_arena.destroy();
         break;
@@ -194,7 +192,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       // Content area - show previous data while loading, or error message
       if (win.status == eLibraryViewerStatus_Error) {
-        draw_error_with_pkexec(win.error_message, win.error_code);
+        draw_error_with_pkexec(win.error_code);
       } else if (win.libraries.size > 0) {
         ImGuiTextFilter filter = draw_filter_input(
             "##LibFilter", win.filter_text, sizeof(win.filter_text));

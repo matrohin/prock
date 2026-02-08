@@ -133,8 +133,6 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
         } else {
           win.status = eEnvironViewerStatus_Error;
           win.error_code = response.error_code;
-          snprintf(win.error_message, sizeof(win.error_message), "Error: %s",
-                   strerror(response.error_code));
         }
         response.owner_arena.destroy();
         break;
@@ -209,7 +207,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       // Content area - show previous data while loading, or error message
       if (win.status == eEnvironViewerStatus_Error) {
-        draw_error_with_pkexec(win.error_message, win.error_code);
+        draw_error_with_pkexec(win.error_code);
       } else if (win.entries.size > 0) {
         ImGuiTextFilter filter = draw_filter_input(
             "##EnvFilter", win.filter_text, sizeof(win.filter_text));

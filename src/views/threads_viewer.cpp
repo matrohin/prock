@@ -103,7 +103,7 @@ static void sort_threads(const ThreadsViewerWindow &win) {
 }
 
 // Add a PID to the watched list for thread gathering
-static bool add_watched_pid(Sync &sync, int pid) {
+static bool add_watched_pid(Sync &sync, const int pid) {
   // Check if already watched
   for (int i = 0; i < MAX_WATCHED_PIDS; ++i) {
     if (sync.watched_pids[i].load() == pid) {
@@ -186,20 +186,20 @@ void threads_viewer_update(ThreadsViewerState &state,
     for (size_t i = 0; i < state.windows.size(); ++i) {
       ThreadsViewerWindow &win = state.windows.data()[i];
       if (win.threads.size > 0) {
-        Array<ProcessStat> new_threads =
+        const Array<ProcessStat> new_threads =
             Array<ProcessStat>::create(new_arena, win.threads.size);
         memcpy(new_threads.data, win.threads.data,
                win.threads.size * sizeof(ProcessStat));
         win.threads = new_threads;
 
-        Array<ThreadDerivedStat> new_derived =
+        const Array<ThreadDerivedStat> new_derived =
             Array<ThreadDerivedStat>::create(new_arena, win.derived.size);
         memcpy(new_derived.data, win.derived.data,
                win.derived.size * sizeof(ThreadDerivedStat));
         win.derived = new_derived;
       }
       if (win.prev_threads.size > 0) {
-        Array<ProcessStat> new_prev =
+        const Array<ProcessStat> new_prev =
             Array<ProcessStat>::create(new_arena, win.prev_threads.size);
         memcpy(new_prev.data, win.prev_threads.data,
                win.prev_threads.size * sizeof(ProcessStat));
@@ -244,7 +244,7 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
                           win.prev_threads.size * sizeof(ProcessStat);
 
     SteadyTimePoint prev_at{SteadyClock::duration{win.prev_at_ns}};
-    Array<ProcessStat> prev_threads = win.prev_threads;
+    const Array<ProcessStat> prev_threads = win.prev_threads;
 
     // Copy new thread data
     win.threads =
