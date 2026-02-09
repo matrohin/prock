@@ -356,6 +356,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             const bool is_selected =
                 (win.selected_index == static_cast<int>(j));
+            ImGui::PushID(static_cast<int>(j));
             ImGui::TableNextRow();
 
             // Protocol
@@ -407,6 +408,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             } else {
               ImGui::TextDisabled("0");
             }
+            ImGui::PopID();
           }
 
           ImGui::EndTable();
