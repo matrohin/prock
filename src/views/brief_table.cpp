@@ -494,6 +494,68 @@ static void process_error_popup_draw(BriefTableState &my_state) {
   }
 }
 
+static Array<int> compute_visible_indices(const BriefTableState &my_state,
+                                          bool filter_active,
+                                          BumpArena &arena) {
+  Array<int> buf = Array<int>::create(arena, my_state.lines.size);
+  int count = 0;
+
+  if (!my_state.tree_mode) {
+    // Flat mode: skip only filtered rows
+    for (size_t i = 0; i < my_state.lines.size; ++i) {
+      if (filter_active && my_state.lines.data[i].filter_state == 0) continue;
+      buf.data[count++] = static_cast<int>(i);
+    }
+  } else {
+    // Tree mode: skip filtered rows AND children of collapsed nodes
+    ImGuiWindow *window = ImGui::GetCurrentWindow();
+    ImGuiStorage *storage = window->DC.StateStorage;
+    int collapsed_at_depth = -1;
+
+    for (size_t i = 0; i < my_state.lines.size; ++i) {
+      const BriefTableLine &line = my_state.lines.data[i];
+
+      if (filter_active && line.filter_state == 0) continue;
+
+      // If we've returned to or above a collapsed node's depth, stop skipping
+      if (collapsed_at_depth >= 0 && line.tree_depth <= collapsed_at_depth) {
+        collapsed_at_depth = -1;
+      }
+
+      // Skip children of collapsed nodes
+      if (collapsed_at_depth >= 0 && line.tree_depth > collapsed_at_depth) {
+        continue;
+      }
+
+      buf.data[count++] = static_cast<int>(i);
+
+      // Check if this node has visible children
+      bool has_children = false;
+      for (size_t j = i + 1; j < my_state.lines.size; ++j) {
+        const BriefTableLine &next = my_state.lines.data[j];
+        if (next.tree_depth <= line.tree_depth) break;
+        if (!filter_active || next.filter_state != 0) {
+          has_children = true;
+          break;
+        }
+      }
+
+      if (has_children) {
+        // Check ImGui storage for open/close state (DefaultOpen = 1)
+        char pid_str[32];
+        snprintf(pid_str, sizeof(pid_str), "%d", line.pid);
+        const ImGuiID id = ImGui::GetID(pid_str);
+        const bool is_open = storage->GetInt(id, 1) != 0;
+        if (!is_open) {
+          collapsed_at_depth = line.tree_depth;
+        }
+      }
+    }
+  }
+
+  return Array<int>{buf.data, static_cast<size_t>(count)};
+}
+
 void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state) {
   ZoneScoped;
@@ -592,14 +654,14 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     }
 
     const int64_t now_ns = state.snapshot.at.time_since_epoch().count();
-    int current_tree_depth = 0;  // Track depth for TreePop management
-    int collapsed_at_depth = -1; // -1 means no collapsed parent; otherwise skip
-                                 // children deeper than this
 
     const bool filter_active = filter.IsActive();
     if (filter_active) {
       compute_filter_visibility(my_state, filter);
     }
+
+    const Array<int> visible_indices =
+        compute_visible_indices(my_state, filter_active, ctx.frame_arena);
 
     // Type-to-search: handle keyboard input when table is focused
     if (!ImGui::IsAnyItemActive() &&
@@ -647,70 +709,72 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       }
     }
 
-    for (size_t i = 0; i < my_state.lines.size; ++i) {
-      const BriefTableLine &line = my_state.lines.data[i];
-      const bool is_dead = line.death_time_ns != 0;
-      const bool is_new =
-          !is_dead && now_ns - line.first_seen_ns < NEW_PROCESS_HIGHLIGHT_NS;
-
-      char label[32];
-      snprintf(label, sizeof(label), "%d", line.pid);
-
-      // Skip hidden processes (filter_state computed for both tree and flat
-      // modes)
-      if (filter_active && line.filter_state == 0) continue;
-
-      // In tree mode, handle collapsed parent tracking and TreePop
-      if (my_state.tree_mode) {
-        // If we've returned to or above a collapsed node's depth, stop
-        // skipping
-        if (collapsed_at_depth >= 0 && line.tree_depth <= collapsed_at_depth) {
-          collapsed_at_depth = -1;
-        }
-
-        // Skip children of collapsed nodes
-        if (collapsed_at_depth >= 0 && line.tree_depth > collapsed_at_depth) {
-          continue;
-        }
-
-        // Pop back to the correct depth before rendering this node
-        while (current_tree_depth > line.tree_depth) {
-          ImGui::TreePop();
-          --current_tree_depth;
+    // Convert focus_scroll_to_idx (line index) to clipper index
+    int focus_clipper_idx = -1;
+    if (focus_scroll_to_idx >= 0) {
+      for (size_t ci = 0; ci < visible_indices.size; ++ci) {
+        if (visible_indices.data[ci] == focus_scroll_to_idx) {
+          focus_clipper_idx = static_cast<int>(ci);
+          break;
         }
       }
+    }
 
-      ImGui::TableNextRow();
+    ImGuiWindow *window = ImGui::GetCurrentWindow();
+    const float base_indent = window->DC.Indent.x;
+    const float indent_spacing = ImGui::GetStyle().IndentSpacing;
 
-      // Apply row highlighting
-      if (is_dead) {
-        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, DEAD_PROCESS_COLOR);
-      } else if (is_new) {
-        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, NEW_PROCESS_COLOR);
-      }
+    ImGuiListClipper clipper;
+    clipper.Begin(static_cast<int>(visible_indices.size));
+    if (focus_clipper_idx >= 0)
+      clipper.IncludeItemByIndex(focus_clipper_idx);
 
-      const bool is_selected = my_state.selected_pid == line.pid;
-      ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
+    while (clipper.Step()) {
+      for (int ci = clipper.DisplayStart; ci < clipper.DisplayEnd; ++ci) {
+        const int i = visible_indices.data[ci];
+        const BriefTableLine &line = my_state.lines.data[i];
+        const bool is_dead = line.death_time_ns != 0;
+        const bool is_new =
+            !is_dead && now_ns - line.first_seen_ns < NEW_PROCESS_HIGHLIGHT_NS;
 
-      // Gray out ancestor processes that don't match filter but have matching
-      // descendants
-      const bool is_grayed = filter_active && line.filter_state == 2;
-      if (is_grayed) {
-        ImGui::PushStyleColor(ImGuiCol_Text,
-                              ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-      }
+        char label[32];
+        snprintf(label, sizeof(label), "%d", line.pid);
 
-      if (focus_scroll_to_idx == static_cast<int>(i)) {
-        ImGui::SetScrollHereY(0.5f);
-        ImGui::SetKeyboardFocusHere(0);
-      }
+        // Set indent for tree mode before TableNextRow
+        if (my_state.tree_mode) {
+          window->DC.Indent.x =
+              base_indent + line.tree_depth * indent_spacing;
+        }
 
-      if (my_state.tree_mode) {
-        // Check if this node has children (next line has greater depth and
-        // visible)
-        bool has_children = false;
-        if (i + 1 < my_state.lines.size) {
-          // In filtered mode, we need to check for visible children
+        ImGui::TableNextRow();
+
+        // Apply row highlighting
+        if (is_dead) {
+          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, DEAD_PROCESS_COLOR);
+        } else if (is_new) {
+          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, NEW_PROCESS_COLOR);
+        }
+
+        const bool is_selected = my_state.selected_pid == line.pid;
+        ImGui::TableSetColumnIndex(eBriefTableColumnId_Pid);
+
+        // Gray out ancestor processes that don't match filter but have matching
+        // descendants
+        const bool is_grayed = filter_active && line.filter_state == 2;
+        if (is_grayed) {
+          ImGui::PushStyleColor(
+              ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        }
+
+        if (ci == focus_clipper_idx) {
+          ImGui::SetScrollHereY(0.5f);
+          ImGui::SetKeyboardFocusHere(0);
+        }
+
+        if (my_state.tree_mode) {
+          // Check if this node has children (scan original lines, not
+          // visible_indices)
+          bool has_children = false;
           for (size_t j = i + 1; j < my_state.lines.size; ++j) {
             const BriefTableLine &next = my_state.lines.data[j];
             if (next.tree_depth <= line.tree_depth) break;
@@ -719,71 +783,61 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
               break;
             }
           }
+
+          ImGuiTreeNodeFlags flags =
+              ImGuiTreeNodeFlags_SpanAllColumns |
+              ImGuiTreeNodeFlags_DefaultOpen |
+              ImGuiTreeNodeFlags_OpenOnArrow |
+              ImGuiTreeNodeFlags_NoTreePushOnOpen;
+          if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf;
+          if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
+
+          ImGui::TreeNodeEx(label, flags);
+
+          if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+            my_state.selected_pid = line.pid;
+          }
+          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) &&
+              !ImGui::IsItemToggledOpen()) {
+            open_all_windows(line.pid, line.comm, view_state);
+          }
+          if (is_grayed) ImGui::PopStyleColor();
+          table_context_menu_draw(ctx, view_state, my_state, line, label,
+                                  num_cpus);
+          if (is_grayed)
+            ImGui::PushStyleColor(
+                ImGuiCol_Text,
+                ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+          data_columns_draw(line, num_cpus, cpu_per_core);
+        } else {
+          if (ImGui::Selectable(label, is_selected,
+                                ImGuiSelectableFlags_SpanAllColumns) ||
+              ImGui::IsItemFocused()) {
+            my_state.selected_pid = line.pid;
+          }
+
+          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+            open_all_windows(line.pid, line.comm, view_state);
+          }
+
+          if (is_grayed) ImGui::PopStyleColor();
+          table_context_menu_draw(ctx, view_state, my_state, line, label,
+                                  num_cpus);
+          if (is_grayed)
+            ImGui::PushStyleColor(
+                ImGuiCol_Text,
+                ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+          data_columns_draw(line, num_cpus, cpu_per_core);
         }
 
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns |
-                                   ImGuiTreeNodeFlags_DefaultOpen |
-                                   ImGuiTreeNodeFlags_OpenOnArrow;
-        if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf;
-        if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
-
-        const bool node_open = ImGui::TreeNodeEx(label, flags);
-
-        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-          my_state.selected_pid = line.pid;
+        if (is_grayed) {
+          ImGui::PopStyleColor();
         }
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) &&
-            !ImGui::IsItemToggledOpen()) {
-          open_all_windows(line.pid, line.comm, view_state);
-        }
-        if (is_grayed) ImGui::PopStyleColor();
-        table_context_menu_draw(ctx, view_state, my_state, line, label,
-                                num_cpus);
-        if (is_grayed)
-          ImGui::PushStyleColor(
-              ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-        data_columns_draw(line, num_cpus, cpu_per_core);
-
-        if (node_open && has_children) {
-          // Children will follow; track depth for later TreePop
-          ++current_tree_depth;
-        } else if (node_open) {
-          // Leaf node that was opened - pop immediately
-          ImGui::TreePop();
-        } else if (has_children) {
-          // Node is collapsed - skip its children
-          collapsed_at_depth = line.tree_depth;
-        }
-      } else {
-        if (ImGui::Selectable(label, is_selected,
-                              ImGuiSelectableFlags_SpanAllColumns) ||
-            ImGui::IsItemFocused()) {
-          my_state.selected_pid = line.pid;
-        }
-
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-          open_all_windows(line.pid, line.comm, view_state);
-        }
-
-        if (is_grayed) ImGui::PopStyleColor();
-        table_context_menu_draw(ctx, view_state, my_state, line, label,
-                                num_cpus);
-        if (is_grayed)
-          ImGui::PushStyleColor(
-              ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-        data_columns_draw(line, num_cpus, cpu_per_core);
-      }
-
-      if (is_grayed) {
-        ImGui::PopStyleColor();
       }
     }
 
-    // Pop any remaining tree levels
-    while (current_tree_depth > 0) {
-      ImGui::TreePop();
-      --current_tree_depth;
-    }
+    // Restore indent after clipper loop
+    window->DC.Indent.x = base_indent;
 
     ImGui::EndTable();
   }
