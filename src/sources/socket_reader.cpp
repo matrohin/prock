@@ -3,19 +3,24 @@
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
+#include <cerrno>
 #include <dirent.h>
 #include <stdio.h>
 #include <unistd.h>
 
 // Collect socket inodes for a specific process from /proc/<pid>/fd
 static Array<unsigned long> collect_socket_inodes(BumpArena &arena,
-                                                  const int pid) {
+                                                  const int pid,
+                                                  int &out_errno) {
   GrowingArray<unsigned long> inodes = {};
   char fd_dir_path[64];
   snprintf(fd_dir_path, sizeof(fd_dir_path), "/proc/%d/fd", pid);
 
   DIR *fd_dir = opendir(fd_dir_path);
-  if (!fd_dir) return inodes.to_array();
+  if (!fd_dir) {
+    out_errno = errno;
+    return inodes.to_array();
+  }
 
   dirent *entry;
   while ((entry = readdir(fd_dir))) {
@@ -51,12 +56,13 @@ SocketResponse read_process_sockets(BumpArena &temp_arena,
   response.pid = pid;
   response.owner_arena = BumpArena::create();
 
-  const Array<unsigned long> inodes = collect_socket_inodes(temp_arena, pid);
+  int collect_errno = 0;
+  const Array<unsigned long> inodes =
+      collect_socket_inodes(temp_arena, pid, collect_errno);
 
   if (inodes.size == 0) {
     response.sockets = Array<SocketEntry>::create(response.owner_arena, 0);
-    // TODO: Propagate the errno to here in case of a failure
-    response.error_code = 0;
+    response.error_code = collect_errno;
     return response;
   }
   std::sort(inodes.data, inodes.data + inodes.size);
