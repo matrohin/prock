@@ -693,34 +693,19 @@ static Array<ProcessStat> read_process_threads(const int pid,
   return result;
 }
 
-// Read threads for all watched PIDs
-static Array<ThreadSnapshot> read_watched_threads(const Sync &sync,
-                                                  BumpArena &arena) {
+// Read threads for all watched PIDs using the gathering thread's local array
+static Array<ThreadSnapshot>
+read_watched_threads(const GrowingArray<int> &watched_pids, BumpArena &arena) {
   ZoneScoped;
-  const int count = sync.watched_pids_count.load();
-  if (count == 0) {
-    return {};
-  }
-
-  // Collect current watched PIDs
-  int pids[MAX_WATCHED_PIDS];
-  int actual_count = 0;
-  for (int i = 0; i < MAX_WATCHED_PIDS && actual_count < count; ++i) {
-    const int pid = sync.watched_pids[i].load();
-    if (pid != 0) {
-      pids[actual_count++] = pid;
-    }
-  }
-
-  if (actual_count == 0) {
+  if (watched_pids.size() == 0) {
     return {};
   }
 
   Array<ThreadSnapshot> result =
-      Array<ThreadSnapshot>::create(arena, actual_count);
-  for (int i = 0; i < actual_count; ++i) {
-    result.data[i].pid = pids[i];
-    result.data[i].threads = read_process_threads(pids[i], arena);
+      Array<ThreadSnapshot>::create(arena, watched_pids.size());
+  for (size_t i = 0; i < watched_pids.size(); ++i) {
+    result.data[i].pid = watched_pids.data()[i];
+    result.data[i].threads = read_process_threads(watched_pids.data()[i], arena);
   }
 
   return result;
@@ -779,6 +764,33 @@ void gather(GatheringState &state, Sync &sync) {
     return;
   }
 
+  // Drain watch/unwatch queues to update local watched PIDs
+  int pid = 0;
+  while (sync.thread_watch_queue.pop(pid)) {
+    // Check if already watched
+    bool found = false;
+    for (size_t i = 0; i < state.watched_pids.size(); ++i) {
+      if (state.watched_pids.data()[i] == pid) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      *state.watched_pids.emplace_back(state.watched_pids_arena) = pid;
+    }
+  }
+  while (sync.thread_unwatch_queue.pop(pid)) {
+    for (size_t i = 0; i < state.watched_pids.size(); ++i) {
+      if (state.watched_pids.data()[i] == pid) {
+        // Swap with last element and shrink
+        state.watched_pids.data()[i] =
+            state.watched_pids.data()[state.watched_pids.size() - 1];
+        state.watched_pids.shrink_to(state.watched_pids.size() - 1);
+        break;
+      }
+    }
+  }
+
   ZoneScoped;
   BumpArena arena = BumpArena::create();
   const auto process_stats = read_all_processes(arena);
@@ -786,7 +798,7 @@ void gather(GatheringState &state, Sync &sync) {
   const auto mem_info = read_mem_info();
   const auto disk_io_stats = read_disk_io_stats();
   const auto net_io_stats = read_net_io_stats();
-  const auto thread_snapshots = read_watched_threads(sync, arena);
+  const auto thread_snapshots = read_watched_threads(state.watched_pids, arena);
 
   state.last_update = SteadyClock::now();
   const SystemTimePoint system_now = SystemClock::now();

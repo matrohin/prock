@@ -8,8 +8,6 @@
 #include <condition_variable>
 #include <mutex>
 
-constexpr int MAX_WATCHED_PIDS = 16;
-
 struct ThreadSnapshot {
   int pid;
   Array<ProcessStat> threads;  // Reuse ProcessStat - same format for threads
@@ -34,9 +32,9 @@ struct Sync {
   std::condition_variable quit_cv;
   RingBuffer<UpdateSnapshot, 256> update_queue;
 
-  // Thread gathering: PIDs to gather threads for, 0=empty slot
-  std::atomic<int> watched_pids[MAX_WATCHED_PIDS];
-  std::atomic<int> watched_pids_count{0};
+  // Thread gathering: PIDs to watch/unwatch
+  RingBuffer<int, 16> thread_watch_queue;
+  RingBuffer<int, 16> thread_unwatch_queue;
 
   OnDemandReaderSync on_demand_reader;
 };

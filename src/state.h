@@ -41,6 +41,8 @@ struct NetIoRate {
   double send_mb_per_sec;
 };
 
+struct ThreadSnapshot;
+
 struct StateSnapshot {
   Array<ProcessStat> stats;
   Array<ProcessDerivedStat> derived_stats;
@@ -51,6 +53,7 @@ struct StateSnapshot {
   DiskIoRate disk_io_rate;
   NetIoStat net_io_stats;
   NetIoRate net_io_rate;
+  Array<ThreadSnapshot> thread_snapshots;
   SteadyTimePoint at;
 };
 

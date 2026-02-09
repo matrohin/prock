@@ -59,8 +59,3 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   brief_table_draw(ctx, view_state, state);
 }
 
-void views_process_thread_snapshots(ViewState &view_state, const State &state,
-                                    const UpdateSnapshot &snapshot) {
-  threads_viewer_process_snapshot(view_state.threads_viewer_state, state,
-                                  snapshot.thread_snapshots);
-}

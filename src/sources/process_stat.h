@@ -182,6 +182,8 @@ struct NetIoStat {
 
 struct GatheringState {
   SteadyTimePoint last_update;
+  GrowingArray<int> watched_pids;
+  BumpArena watched_pids_arena;
 };
 
 struct Sync;

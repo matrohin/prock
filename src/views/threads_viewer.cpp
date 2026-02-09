@@ -15,125 +15,73 @@
 const char *THREAD_COPY_HEADER =
     "TID\tName\tState\tCPU Total\tCPU Kernel\tMemory\n";
 
-static void copy_thread_row(const ProcessStat &thread,
-                            const ThreadDerivedStat &derived) {
+static void copy_thread_row(const ThreadLine &line) {
   char buf[512];
   snprintf(buf, sizeof(buf), "%s%d\t%s\t%c\t%.1f\t%.1f\t%ld",
-           THREAD_COPY_HEADER, thread.pid, thread.comm, thread.state,
-           derived.cpu_user_perc + derived.cpu_kernel_perc,
-           derived.cpu_kernel_perc, derived.mem_resident_bytes);
+           THREAD_COPY_HEADER, line.tid, line.comm, line.state,
+           line.cpu_user_perc + line.cpu_kernel_perc, line.cpu_kernel_perc,
+           line.mem_resident_bytes);
   ImGui::SetClipboardText(buf);
 }
 
 static void copy_all_threads(BumpArena &arena, const ThreadsViewerWindow &win) {
-  const size_t buf_size = 128 + win.threads.size * 256;
+  const size_t buf_size = 128 + win.lines.size * 256;
   char *buf = arena.alloc_string(buf_size);
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", THREAD_COPY_HEADER);
 
-  for (size_t i = 0; i < win.threads.size; ++i) {
-    const ProcessStat &thread = win.threads.data[i];
-    const ThreadDerivedStat &derived = win.derived.data[i];
+  for (size_t i = 0; i < win.lines.size; ++i) {
+    const ThreadLine &line = win.lines.data[i];
     ptr +=
         snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n",
-                 thread.pid, thread.comm, thread.state,
-                 derived.cpu_user_perc + derived.cpu_kernel_perc,
-                 derived.cpu_kernel_perc, derived.mem_resident_bytes);
+                 line.tid, line.comm, line.state,
+                 line.cpu_user_perc + line.cpu_kernel_perc,
+                 line.cpu_kernel_perc, line.mem_resident_bytes);
   }
   ImGui::SetClipboardText(buf);
 }
 
-static void sort_threads(const ThreadsViewerWindow &win) {
-  if (win.threads.size == 0) return;
-
-  // Create index array for sorting
-  size_t *indices =
-      static_cast<size_t *>(alloca(win.threads.size * sizeof(size_t)));
-  for (size_t i = 0; i < win.threads.size; ++i) {
-    indices[i] = i;
+static bool thread_line_is_less(const ThreadsViewerColumnId sorted_by,
+                                const ThreadLine &a, const ThreadLine &b) {
+  switch (sorted_by) {
+  case eThreadsViewerColumnId_Tid:
+    return a.tid < b.tid;
+  case eThreadsViewerColumnId_Name:
+    return strcmp(a.comm, b.comm) < 0;
+  case eThreadsViewerColumnId_State:
+    return a.state < b.state;
+  case eThreadsViewerColumnId_CpuTotal:
+    return a.cpu_user_perc + a.cpu_kernel_perc <
+           b.cpu_user_perc + b.cpu_kernel_perc;
+  case eThreadsViewerColumnId_CpuKernel:
+    return a.cpu_kernel_perc < b.cpu_kernel_perc;
+  case eThreadsViewerColumnId_Memory:
+    return a.mem_resident_bytes < b.mem_resident_bytes;
+  default:
+    return false;
   }
+}
 
-  const auto compare = [&](const size_t a, const size_t b) {
-    const ProcessStat &ta = win.threads.data[a];
-    const ProcessStat &tb = win.threads.data[b];
-    const ThreadDerivedStat &da = win.derived.data[a];
-    const ThreadDerivedStat &db = win.derived.data[b];
+static void sort_thread_lines(ThreadsViewerWindow &win) {
+  if (win.lines.size == 0) return;
 
-    switch (win.sorted_by) {
-    case eThreadsViewerColumnId_Tid:
-      return ta.pid < tb.pid;
-    case eThreadsViewerColumnId_Name:
-      return strcmp(ta.comm, tb.comm) < 0;
-    case eThreadsViewerColumnId_State:
-      return ta.state < tb.state;
-    case eThreadsViewerColumnId_CpuTotal:
-      return da.cpu_user_perc + da.cpu_kernel_perc <
-             db.cpu_user_perc + db.cpu_kernel_perc;
-    case eThreadsViewerColumnId_CpuKernel:
-      return da.cpu_kernel_perc < db.cpu_kernel_perc;
-    case eThreadsViewerColumnId_Memory:
-      return da.mem_resident_bytes < db.mem_resident_bytes;
-    default:
-      return false;
-    }
-  };
+  const auto sort_ascending =
+      [sorted_by = win.sorted_by](const ThreadLine &a, const ThreadLine &b) {
+        return thread_line_is_less(sorted_by, a, b);
+      };
 
   if (win.sorted_order == ImGuiSortDirection_Ascending) {
-    std::stable_sort(indices, indices + win.threads.size, compare);
+    std::stable_sort(win.lines.data, win.lines.data + win.lines.size,
+                     sort_ascending);
   } else {
-    std::stable_sort(
-        indices, indices + win.threads.size,
-        [&](const size_t a, const size_t b) { return compare(b, a); });
-  }
-
-  // Apply sorted order (in-place reorder using temp storage)
-  ProcessStat *temp_threads = static_cast<ProcessStat *>(
-      alloca(win.threads.size * sizeof(ProcessStat)));
-  ThreadDerivedStat *temp_derived = static_cast<ThreadDerivedStat *>(
-      alloca(win.threads.size * sizeof(ThreadDerivedStat)));
-
-  for (size_t i = 0; i < win.threads.size; ++i) {
-    temp_threads[i] = win.threads.data[indices[i]];
-    temp_derived[i] = win.derived.data[indices[i]];
-  }
-  memcpy(win.threads.data, temp_threads,
-         win.threads.size * sizeof(ProcessStat));
-  memcpy(win.derived.data, temp_derived,
-         win.threads.size * sizeof(ThreadDerivedStat));
-}
-
-// Add a PID to the watched list for thread gathering
-static bool add_watched_pid(Sync &sync, const int pid) {
-  // Check if already watched
-  for (int i = 0; i < MAX_WATCHED_PIDS; ++i) {
-    if (sync.watched_pids[i].load() == pid) {
-      return true; // Already watching
-    }
-  }
-
-  // Find empty slot
-  for (int i = 0; i < MAX_WATCHED_PIDS; ++i) {
-    int expected = 0;
-    if (sync.watched_pids[i].compare_exchange_strong(expected, pid)) {
-      sync.watched_pids_count.fetch_add(1);
-      return true;
-    }
-  }
-  return false; // No empty slot
-}
-
-// Remove a PID from the watched list
-static void remove_watched_pid(Sync &sync, const int pid) {
-  for (int i = 0; i < MAX_WATCHED_PIDS; ++i) {
-    int expected = pid;
-    if (sync.watched_pids[i].compare_exchange_strong(expected, 0)) {
-      sync.watched_pids_count.fetch_sub(1);
-      return;
-    }
+    std::stable_sort(win.lines.data, win.lines.data + win.lines.size,
+                     [&](const ThreadLine &a, const ThreadLine &b) {
+                       return sort_ascending(b, a);
+                     });
   }
 }
 
-// Check if any window still needs this PID watched
+// Check if any other window still needs this PID watched
 static bool pid_still_needed(const ThreadsViewerState &state, const int pid,
                              const size_t exclude_idx) {
   for (size_t i = 0; i < state.windows.size(); ++i) {
@@ -151,9 +99,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
     return;
   }
 
-  if (!add_watched_pid(sync, pid)) {
-    return; // Failed to add to watched list
-  }
+  sync.thread_watch_queue.push(pid);
 
   ThreadsViewerWindow *win =
       state.windows.emplace_back(state.cur_arena, state.wasted_bytes);
@@ -170,55 +116,15 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
 }
 
 void threads_viewer_update(ThreadsViewerState &state,
-                           const State & /*state_data*/) {
+                           const State &state_data) {
   ZoneScoped;
 
-  // Thread snapshots are processed in threads_viewer_process_snapshot
-  // which is called from main.cpp before views_update.
-  // This function handles arena compaction.
-
-  // Compact arena if wasted too much
-  if (state.wasted_bytes > SLAB_SIZE) {
-    BumpArena old_arena = state.cur_arena;
-    BumpArena new_arena = BumpArena::create();
-
-    state.windows.realloc(new_arena);
-    for (size_t i = 0; i < state.windows.size(); ++i) {
-      ThreadsViewerWindow &win = state.windows.data()[i];
-      if (win.threads.size > 0) {
-        const Array<ProcessStat> new_threads =
-            Array<ProcessStat>::create(new_arena, win.threads.size);
-        memcpy(new_threads.data, win.threads.data,
-               win.threads.size * sizeof(ProcessStat));
-        win.threads = new_threads;
-
-        const Array<ThreadDerivedStat> new_derived =
-            Array<ThreadDerivedStat>::create(new_arena, win.derived.size);
-        memcpy(new_derived.data, win.derived.data,
-               win.derived.size * sizeof(ThreadDerivedStat));
-        win.derived = new_derived;
-      }
-      if (win.prev_threads.size > 0) {
-        const Array<ProcessStat> new_prev =
-            Array<ProcessStat>::create(new_arena, win.prev_threads.size);
-        memcpy(new_prev.data, win.prev_threads.data,
-               win.prev_threads.size * sizeof(ProcessStat));
-        win.prev_threads = new_prev;
-      }
-    }
-
-    state.cur_arena = new_arena;
-    state.wasted_bytes = 0;
-    old_arena.destroy();
-  }
-}
-
-// Called from state update to process thread snapshots
-void threads_viewer_process_snapshot(ThreadsViewerState &state,
-                                     const State &state_data,
-                                     const Array<ThreadSnapshot> &snapshots) {
   const long page_size = state_data.system.mem_page_size;
   const double ticks_in_second = state_data.system.ticks_in_second;
+
+  // Process thread snapshots from the current update
+  const Array<ThreadSnapshot> &snapshots =
+      state_data.snapshot.thread_snapshots;
 
   for (size_t w = 0; w < state.windows.size(); ++w) {
     ThreadsViewerWindow &win = state.windows.data()[w];
@@ -238,23 +144,15 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
 
     win.status = eThreadsViewerStatus_Ready;
 
-    // Save previous data for delta computation
-    state.wasted_bytes += win.threads.size * sizeof(ProcessStat) +
-                          win.derived.size * sizeof(ThreadDerivedStat) +
+    // Account for wasted memory from old arrays
+    state.wasted_bytes += win.lines.size * sizeof(ThreadLine) +
                           win.prev_threads.size * sizeof(ProcessStat);
 
     SteadyTimePoint prev_at{SteadyClock::duration{win.prev_at_ns}};
     const Array<ProcessStat> prev_threads = win.prev_threads;
 
-    // Copy new thread data
-    win.threads =
-        Array<ProcessStat>::create(state.cur_arena, snap->threads.size);
-    memcpy(win.threads.data, snap->threads.data,
-           snap->threads.size * sizeof(ProcessStat));
-
-    // Compute derived stats
-    win.derived =
-        Array<ThreadDerivedStat>::create(state.cur_arena, snap->threads.size);
+    // Build ThreadLine array from snapshot
+    win.lines = Array<ThreadLine>::create(state.cur_arena, snap->threads.size);
 
     const SteadyTimePoint now = state_data.snapshot.at;
     const double time_delta =
@@ -262,10 +160,17 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
     const double ticks_passed = ticks_in_second * time_delta;
 
     size_t prev_idx = 0;
-    for (size_t i = 0; i < win.threads.size; ++i) {
-      ThreadDerivedStat &derived = win.derived.data[i];
-      const ProcessStat &thread = win.threads.data[i];
-      derived.mem_resident_bytes = thread.statm_resident * page_size;
+    for (size_t i = 0; i < snap->threads.size; ++i) {
+      const ProcessStat &thread = snap->threads.data[i];
+      ThreadLine &line = win.lines.data[i];
+
+      line.tid = thread.pid;
+      strncpy(line.comm, thread.comm, sizeof(line.comm) - 1);
+      line.comm[sizeof(line.comm) - 1] = '\0';
+      line.state = thread.state;
+      line.mem_resident_bytes = thread.statm_resident * page_size;
+      line.cpu_user_perc = 0;
+      line.cpu_kernel_perc = 0;
 
       // Find matching previous thread for delta computation
       while (prev_idx < prev_threads.size &&
@@ -277,27 +182,47 @@ void threads_viewer_process_snapshot(ThreadsViewerState &state,
           prev_threads.data[prev_idx].pid == thread.pid && ticks_passed > 0) {
         const ProcessStat &prev = prev_threads.data[prev_idx];
         if (thread.utime >= prev.utime) {
-          derived.cpu_user_perc =
+          line.cpu_user_perc =
               (thread.utime - prev.utime) / ticks_passed * 100;
         }
         if (thread.stime >= prev.stime) {
-          derived.cpu_kernel_perc =
+          line.cpu_kernel_perc =
               (thread.stime - prev.stime) / ticks_passed * 100;
         }
       }
     }
 
-    // Store current as prev for next update
+    // Store current raw stats as prev for next update
     win.prev_threads =
-        Array<ProcessStat>::create(state.cur_arena, win.threads.size);
-    memcpy(win.prev_threads.data, win.threads.data,
-           win.threads.size * sizeof(ProcessStat));
+        Array<ProcessStat>::copy_from(state.cur_arena, snap->threads);
     win.prev_at_ns = now.time_since_epoch().count();
 
     // Apply current sorting
     if (win.sorted_order != ImGuiSortDirection_None) {
-      sort_threads(win);
+      sort_thread_lines(win);
     }
+  }
+
+  // Compact arena if wasted too much
+  if (state.wasted_bytes > SLAB_SIZE) {
+    BumpArena old_arena = state.cur_arena;
+    BumpArena new_arena = BumpArena::create();
+
+    state.windows.realloc(new_arena);
+    for (size_t i = 0; i < state.windows.size(); ++i) {
+      ThreadsViewerWindow &win = state.windows.data()[i];
+      if (win.lines.size > 0) {
+        win.lines = Array<ThreadLine>::copy_from(new_arena, win.lines);
+      }
+      if (win.prev_threads.size > 0) {
+        win.prev_threads =
+            Array<ProcessStat>::copy_from(new_arena, win.prev_threads);
+      }
+    }
+
+    state.cur_arena = new_arena;
+    state.wasted_bytes = 0;
+    old_arena.destroy();
   }
 }
 
@@ -324,7 +249,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
     } else {
       snprintf(title, sizeof(title),
                "Threads: %s (%d) - %zu threads [Live]###Threads%d",
-               win.process_name, win.pid, win.threads.size, win.pid);
+               win.process_name, win.pid, win.lines.size, win.pid);
     }
 
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
@@ -337,7 +262,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
 
       if (win.status == eThreadsViewerStatus_Error) {
         ImGui::TextWrapped("%s", win.error_message);
-      } else if (win.threads.size > 0) {
+      } else if (win.lines.size > 0) {
         ImGuiTextFilter filter = draw_filter_input(
             "##ThreadFilter", win.filter_text, sizeof(win.filter_text));
 
@@ -362,30 +287,29 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
-                                  [&] { sort_threads(win); });
+                                  [&] { sort_thread_lines(win); });
 
-          for (size_t j = 0; j < win.threads.size; ++j) {
-            const ProcessStat &thread = win.threads.data[j];
-            const ThreadDerivedStat &derived = win.derived.data[j];
+          for (size_t j = 0; j < win.lines.size; ++j) {
+            const ThreadLine &line = win.lines.data[j];
 
-            if (!filter.PassFilter(thread.comm)) continue;
+            if (!filter.PassFilter(line.comm)) continue;
 
-            const bool is_selected = win.selected_tid == thread.pid;
+            const bool is_selected = win.selected_tid == line.tid;
             ImGui::TableNextRow();
 
             // TID column with selection
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Tid);
             char label[32];
-            snprintf(label, sizeof(label), "%d", thread.pid);
+            snprintf(label, sizeof(label), "%d", line.tid);
             if (ImGui::Selectable(label, is_selected,
                                   ImGuiSelectableFlags_SpanAllColumns)) {
-              win.selected_tid = thread.pid;
+              win.selected_tid = line.tid;
             }
 
             if (ImGui::BeginPopupContextItem()) {
-              win.selected_tid = thread.pid;
+              win.selected_tid = line.tid;
               if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-                copy_thread_row(thread, derived);
+                copy_thread_row(line);
               }
               if (ImGui::MenuItem("Copy All")) {
                 copy_all_threads(ctx.frame_arena, win);
@@ -394,20 +318,19 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             }
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Name);
-            table_item_draw_text(thread.comm);
+            table_item_draw_text(line.comm);
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_State);
-            table_item_draw_state(thread.state);
+            table_item_draw_state(line.state);
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuTotal);
-            table_item_draw_float(derived.cpu_user_perc +
-                                  derived.cpu_kernel_perc);
+            table_item_draw_float(line.cpu_user_perc + line.cpu_kernel_perc);
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuKernel);
-            table_item_draw_float(derived.cpu_kernel_perc);
+            table_item_draw_float(line.cpu_kernel_perc);
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Memory);
-            table_item_draw_memory(derived.mem_resident_bytes);
+            table_item_draw_memory(line.mem_resident_bytes);
           }
 
           ImGui::EndTable();
@@ -416,9 +339,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
         // Ctrl+C to copy selected row
         if (win.selected_tid >= 0 &&
             ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-          for (size_t j = 0; j < win.threads.size; ++j) {
-            if (win.threads.data[j].pid == win.selected_tid) {
-              copy_thread_row(win.threads.data[j], win.derived.data[j]);
+          for (size_t j = 0; j < win.lines.size; ++j) {
+            if (win.lines.data[j].tid == win.selected_tid) {
+              copy_thread_row(win.lines.data[j]);
               break;
             }
           }
@@ -435,10 +358,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
     } else {
       // Remove from watched list if no other window needs this PID
       if (!pid_still_needed(my_state, win.pid, i)) {
-        remove_watched_pid(*view_state.sync, win.pid);
+        view_state.sync->thread_unwatch_queue.push(win.pid);
       }
-      my_state.wasted_bytes += win.threads.size * sizeof(ProcessStat) +
-                               win.derived.size * sizeof(ThreadDerivedStat) +
+      my_state.wasted_bytes += win.lines.size * sizeof(ThreadLine) +
                                win.prev_threads.size * sizeof(ProcessStat);
     }
   }

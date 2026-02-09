@@ -118,9 +118,10 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
     net_io_rate.send_mb_per_sec = (send_delta * BYTES_TO_MB) / time_delta;
   }
 
-  return StateSnapshot{snapshot.stats,     derived_stats,
-                       snapshot.cpu_stats, cpu_perc,
-                       snapshot.mem_info,  snapshot.disk_io_stats,
-                       disk_io_rate,       snapshot.net_io_stats,
-                       net_io_rate,        snapshot.at};
+  return StateSnapshot{snapshot.stats,            derived_stats,
+                       snapshot.cpu_stats,         cpu_perc,
+                       snapshot.mem_info,           snapshot.disk_io_stats,
+                       disk_io_rate,                snapshot.net_io_stats,
+                       net_io_rate,                 snapshot.thread_snapshots,
+                       snapshot.at};
 }

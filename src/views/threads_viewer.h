@@ -5,7 +5,10 @@
 
 #include "imgui.h"
 
-struct ThreadDerivedStat {
+struct ThreadLine {
+  int tid;
+  char comm[64];
+  char state;
   double cpu_user_perc;
   double cpu_kernel_perc;
   long mem_resident_bytes;
@@ -38,11 +41,12 @@ struct ThreadsViewerWindow {
   char error_message[128];
   int error_code;
 
-  // Current data (owned by ThreadsViewerState::cur_arena)
-  Array<ProcessStat> threads;
-  Array<ThreadDerivedStat> derived;
+  // Display data (owned by ThreadsViewerState::cur_arena, rebuilt on each snapshot)
+  Array<ThreadLine> lines;
 
-  // Previous snapshot for delta computation
+  // Previous snapshot for delta computation (owned by cur_arena)
+  // Stored in TID-sorted order (as returned by read_process_threads)
+  // for linear-scan delta matching
   Array<ProcessStat> prev_threads;
   int64_t prev_at_ns; // nanoseconds since steady_clock epoch
 
@@ -69,6 +73,3 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, int pid,
 void threads_viewer_update(ThreadsViewerState &state, const State &state_data);
 void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                          const State &state);
-void threads_viewer_process_snapshot(ThreadsViewerState &state,
-                                     const State &state_data,
-                                     const Array<ThreadSnapshot> &snapshots);

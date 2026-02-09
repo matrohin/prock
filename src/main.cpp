@@ -178,8 +178,6 @@ static void state_update(State &state, ViewState &view_state,
   state.update_count += 1;
   state.update_system_time = snapshot.system_time;
 
-  // Process thread snapshots before general update
-  views_process_thread_snapshots(view_state, state, snapshot);
   views_update(view_state, state);
 
   old_arena.destroy();
