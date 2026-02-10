@@ -302,6 +302,7 @@ static bool read_process(const int pid, BumpArena &arena, ProcessStat *out) {
   ProcessStat &stat = *out;
   stat.pid = pid;
   stat.comm = "";
+  stat.cmdline = "";
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
   stat.net_recv_bytes = 0;
@@ -391,6 +392,27 @@ static bool read_process(const int pid, BumpArena &arena, ProcessStat *out) {
       }
     }
     fclose(io_file);
+  }
+
+  // Read /proc/[pid]/cmdline (may fail or be empty, that's OK)
+  char cmdline_filename[PATH_BUF_SIZE];
+  snprintf(cmdline_filename, PATH_BUF_SIZE, "/proc/%d/cmdline", pid);
+  FILE *cmdline_file = fopen(cmdline_filename, "r");
+  if (cmdline_file) {
+    char cmdline_buf[4096];
+    const size_t nread =
+        fread(cmdline_buf, 1, sizeof(cmdline_buf) - 1, cmdline_file);
+    fclose(cmdline_file);
+    if (nread > 0) {
+      // Replace null bytes between args with spaces
+      for (size_t i = 0; i < nread; ++i) {
+        if (cmdline_buf[i] == '\0') cmdline_buf[i] = ' ';
+      }
+      // Trim trailing space (was the final null)
+      size_t len = nread;
+      while (len > 0 && cmdline_buf[len - 1] == ' ') --len;
+      stat.cmdline = arena.alloc_string_copy(cmdline_buf, len);
+    }
   }
 
   return true;

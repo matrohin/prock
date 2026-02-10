@@ -11,6 +11,7 @@ inline ProcessStat make_process_stat(BumpArena &arena, int pid, int ppid,
   stat.ppid = ppid;
   stat.state = state;
   stat.comm = arena.alloc_string_copy(comm);
+  stat.cmdline = "";
   return stat;
 }
 

@@ -24,6 +24,7 @@ enum BriefTableColumnId {
   eBriefTableColumnId_IoWriteKbPerSec,
   eBriefTableColumnId_NetRecvKbPerSec,
   eBriefTableColumnId_NetSendKbPerSec,
+  eBriefTableColumnId_CmdLine,
   eBriefTableColumnId_Count,
 };
 
@@ -33,6 +34,8 @@ struct BriefTableLine {
   const char *comm;
   char state;
   long num_threads;
+
+  const char *cmdline;
 
   ProcessDerivedStat derived_stat;
 

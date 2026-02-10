@@ -86,7 +86,7 @@ static constexpr ImU32 DEAD_PROCESS_COLOR = IM_COL32(180, 50, 50, 60);
 const char *PROCESS_COPY_HEADER =
     "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
     "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tNet Recv (KB/s)\tNet "
-    "Send (KB/s)\n";
+    "Send (KB/s)\tCommand Line\n";
 
 static void open_all_windows(const int pid, const char *comm,
                              ViewState &view_state) {
@@ -111,17 +111,17 @@ static void open_all_windows(const int pid, const char *comm,
 
 static void copy_process_row(const BriefTableLine &line) {
   const ProcessDerivedStat &derived = line.derived_stat;
-  char buf[512];
+  char buf[4096];
   snprintf(buf, sizeof(buf),
            "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%.1f\t"
-           "%.1f",
+           "%.1f\t%s",
            PROCESS_COPY_HEADER, line.pid, line.comm, line.state,
            line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
            derived.cpu_user_perc, derived.cpu_kernel_perc,
            derived.mem_resident_bytes / 1024.0,
            derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
            derived.io_write_kb_per_sec, derived.net_recv_kb_per_sec,
-           derived.net_send_kb_per_sec);
+           derived.net_send_kb_per_sec, line.cmdline);
   ImGui::SetClipboardText(buf);
 }
 
@@ -177,8 +177,8 @@ static bool set_process_nice(const int pid, const int nice_val, char *err,
 
 static void copy_all_processes(BumpArena &arena,
                                const BriefTableState &my_state) {
-  // Header + all rows
-  const size_t buf_size = 256 + my_state.lines.size * 256;
+  // Header + all rows (extra space for cmdline)
+  const size_t buf_size = 256 + my_state.lines.size * 4352;
   char *buf = arena.alloc_string(buf_size);
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", PROCESS_COPY_HEADER);
@@ -188,14 +188,15 @@ static void copy_all_processes(BumpArena &arena,
     const ProcessDerivedStat &derived = line.derived_stat;
     ptr += snprintf(ptr, buf_size - (ptr - buf),
                     "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%."
-                    "1f\t%.1f\t%.1f\n",
+                    "1f\t%.1f\t%.1f\t%s\n",
                     line.pid, line.comm, line.state, line.num_threads,
                     derived.cpu_user_perc + derived.cpu_kernel_perc,
                     derived.cpu_user_perc, derived.cpu_kernel_perc,
                     derived.mem_resident_bytes / 1024.0,
                     derived.mem_virtual_bytes / 1024.0,
                     derived.io_read_kb_per_sec, derived.io_write_kb_per_sec,
-                    derived.net_recv_kb_per_sec, derived.net_send_kb_per_sec);
+                    derived.net_recv_kb_per_sec, derived.net_send_kb_per_sec,
+                    line.cmdline);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -263,6 +264,19 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       my_state.show_priority_popup = true;
     }
     ImGui::Separator();
+    if (ImGui::MenuItem("Suspend Process")) {
+      if (kill(pid, SIGSTOP) != 0) {
+        snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                 "Failed to suspend %d: %s", pid, strerror(errno));
+      }
+    }
+    if (ImGui::MenuItem("Resume Process")) {
+      if (kill(pid, SIGCONT) != 0) {
+        snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                 "Failed to resume %d: %s", pid, strerror(errno));
+      }
+    }
+    ImGui::Separator();
     if (ImGui::MenuItem("Kill Process", "Del") ||
         ImGui::IsKeyPressed(ImGuiKey_Delete)) {
       if (kill(pid, SIGTERM) != 0) {
@@ -275,6 +289,30 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       if (kill(pid, SIGKILL) != 0) {
         snprintf(my_state.kill_error, sizeof(my_state.kill_error),
                  "Failed to kill %d: %s", pid, strerror(errno));
+      }
+    }
+    if (ImGui::MenuItem("Kill Process Tree")) {
+      // Collect all descendant PIDs by walking ppid relationships
+      int tree_pids[4096];
+      int tree_count = 0;
+      tree_pids[tree_count++] = pid;
+      for (int ti = 0; ti < tree_count; ++ti) {
+        const int parent = tree_pids[ti];
+        for (size_t li = 0; li < my_state.lines.size; ++li) {
+          const BriefTableLine &l = my_state.lines.data[li];
+          if (l.ppid == parent && l.pid != parent &&
+              tree_count < (int)(sizeof(tree_pids) / sizeof(tree_pids[0]))) {
+            tree_pids[tree_count++] = l.pid;
+          }
+        }
+      }
+      // Kill in reverse order (children first, parent last)
+      for (int ti = tree_count - 1; ti >= 0; --ti) {
+        if (kill(tree_pids[ti], SIGKILL) != 0 &&
+            my_state.kill_error[0] == '\0') {
+          snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                   "Failed to kill %d: %s", tree_pids[ti], strerror(errno));
+        }
       }
     }
     ImGui::EndPopup();
@@ -378,6 +416,11 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
     table_item_draw_float(derived_stat.net_recv_kb_per_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_NetSendKbPerSec))
     table_item_draw_float(derived_stat.net_send_kb_per_sec);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CmdLine)) {
+    ImGui::TextUnformatted(line.cmdline);
+    if (ImGui::IsItemHovered())
+      ImGui::SetItemTooltip("%s", line.cmdline);
+  }
 }
 
 static void affinity_popup_draw(BriefTableState &my_state, const int num_cpus) {
@@ -631,6 +674,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_DefaultHide,
                             0.0f, eBriefTableColumnId_NetSendKbPerSec);
+    ImGui::TableSetupColumn("Command Line",
+                            ImGuiTableColumnFlags_DefaultHide, 0.0f,
+                            eBriefTableColumnId_CmdLine);
     if (reset_sort_to_pid) {
       ImGui::TableSetColumnSortDirection(eBriefTableColumnId_Pid,
                                          ImGuiSortDirection_Ascending, false);

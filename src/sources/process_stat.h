@@ -136,6 +136,8 @@ struct ProcessStat {
   // Network I/O (aggregated from socket stats via netlink INET_DIAG)
   ulonglong net_recv_bytes;
   ulonglong net_send_bytes;
+
+  const char *cmdline;
 };
 
 // From /proc/stat - all values are cumulative ticks

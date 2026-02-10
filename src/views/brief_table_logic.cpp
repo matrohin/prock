@@ -56,6 +56,8 @@ static bool table_line_is_less(const BriefTableColumnId sorted_by,
   case eBriefTableColumnId_NetSendKbPerSec:
     return left.derived_stat.net_send_kb_per_sec <
            right.derived_stat.net_send_kb_per_sec;
+  case eBriefTableColumnId_CmdLine:
+    return strcmp(left.cmdline, right.cmdline) < 0;
   case eBriefTableColumnId_Count:
     return false;
   }
@@ -155,6 +157,7 @@ static void brief_table_line_init(BriefTableLine &new_line,
   new_line.pid = stat.pid;
   new_line.ppid = stat.ppid;
   new_line.comm = stat.comm;
+  new_line.cmdline = stat.cmdline ? stat.cmdline : "";
   new_line.state = stat.state;
   new_line.num_threads = stat.num_threads;
 
@@ -206,6 +209,9 @@ void brief_table_update(BriefTableState &my_state, State &state) {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       new_line = old_line;
       new_line.comm = state.snapshot_arena.alloc_string_copy(old_line.comm);
+      new_line.cmdline = old_line.cmdline
+                             ? state.snapshot_arena.alloc_string_copy(old_line.cmdline)
+                             : "";
       if (old_line.death_time_ns == 0) {
         // Process just died
         new_line.death_time_ns = now_ns;
