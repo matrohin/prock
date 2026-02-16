@@ -224,57 +224,67 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                "+%s", line.name);
     }
     ImGui::Separator();
-    if (ImGui::MenuItem("CPU Chart")) {
-      cpu_chart_add(view_state.cpu_chart_state, pid, line.name);
+    if (ImGui::BeginMenu("Charts")) {
+      if (ImGui::MenuItem("CPU Chart")) {
+        cpu_chart_add(view_state.cpu_chart_state, pid, line.name);
+      }
+      if (ImGui::MenuItem("Memory Chart")) {
+        mem_chart_add(view_state.mem_chart_state, pid, line.name);
+      }
+      if (ImGui::MenuItem("I/O Chart")) {
+        io_chart_add(view_state.io_chart_state, pid, line.name);
+      }
+      if (ImGui::MenuItem("Network Chart")) {
+        net_chart_add(view_state.net_chart_state, pid, line.name);
+      }
+      ImGui::EndMenu();
     }
-    if (ImGui::MenuItem("Memory Chart")) {
-      mem_chart_add(view_state.mem_chart_state, pid, line.name);
-    }
-    if (ImGui::MenuItem("I/O Chart")) {
-      io_chart_add(view_state.io_chart_state, pid, line.name);
-    }
-    if (ImGui::MenuItem("Network Chart")) {
-      net_chart_add(view_state.net_chart_state, pid, line.name);
-    }
-    if (ImGui::MenuItem("Show Loaded Libraries")) {
-      library_viewer_request(view_state.library_viewer_state, *view_state.sync,
-                             pid, line.name);
-    }
-    if (ImGui::MenuItem("Show Environment")) {
-      environ_viewer_request(view_state.environ_viewer_state, *view_state.sync,
-                             pid, line.name);
-    }
-    if (ImGui::MenuItem("Show Threads")) {
-      threads_viewer_open(view_state.threads_viewer_state, *view_state.sync,
-                          pid, line.name);
-    }
-    if (ImGui::MenuItem("Show Sockets")) {
-      socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
+    ImGui::Separator();
+    if (ImGui::BeginMenu("Inspect")) {
+      if (ImGui::MenuItem("Loaded Libraries")) {
+        library_viewer_request(view_state.library_viewer_state,
+                               *view_state.sync, pid, line.name);
+      }
+      if (ImGui::MenuItem("Environment")) {
+        environ_viewer_request(view_state.environ_viewer_state,
+                               *view_state.sync, pid, line.name);
+      }
+      if (ImGui::MenuItem("Threads")) {
+        threads_viewer_open(view_state.threads_viewer_state, *view_state.sync,
                             pid, line.name);
+      }
+      if (ImGui::MenuItem("Sockets")) {
+        socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
+                              pid, line.name);
+      }
+      ImGui::EndMenu();
     }
     ImGui::Separator();
-    if (ImGui::MenuItem("Set Affinity...")) {
-      my_state.control_edit_pid = pid;
-      get_process_affinity(pid, my_state.affinity_edit_mask, num_cpus);
-      my_state.show_affinity_popup = true;
-    }
-    if (ImGui::MenuItem("Set Priority...")) {
-      my_state.control_edit_pid = pid;
-      my_state.priority_edit_nice = get_process_nice(pid);
-      my_state.show_priority_popup = true;
-    }
-    ImGui::Separator();
-    if (ImGui::MenuItem("Suspend Process")) {
-      if (kill(pid, SIGSTOP) != 0) {
-        snprintf(my_state.kill_error, sizeof(my_state.kill_error),
-                 "Failed to suspend %d: %s", pid, strerror(errno));
+    if (ImGui::BeginMenu("Control")) {
+      if (ImGui::MenuItem("Set Affinity...")) {
+        my_state.control_edit_pid = pid;
+        get_process_affinity(pid, my_state.affinity_edit_mask, num_cpus);
+        my_state.show_affinity_popup = true;
       }
-    }
-    if (ImGui::MenuItem("Resume Process")) {
-      if (kill(pid, SIGCONT) != 0) {
-        snprintf(my_state.kill_error, sizeof(my_state.kill_error),
-                 "Failed to resume %d: %s", pid, strerror(errno));
+      if (ImGui::MenuItem("Set Priority...")) {
+        my_state.control_edit_pid = pid;
+        my_state.priority_edit_nice = get_process_nice(pid);
+        my_state.show_priority_popup = true;
       }
+      ImGui::Separator();
+      if (ImGui::MenuItem("Suspend Process")) {
+        if (kill(pid, SIGSTOP) != 0) {
+          snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                   "Failed to suspend %d: %s", pid, strerror(errno));
+        }
+      }
+      if (ImGui::MenuItem("Resume Process")) {
+        if (kill(pid, SIGCONT) != 0) {
+          snprintf(my_state.kill_error, sizeof(my_state.kill_error),
+                   "Failed to resume %d: %s", pid, strerror(errno));
+        }
+      }
+      ImGui::EndMenu();
     }
     ImGui::Separator();
     if (ImGui::MenuItem("Kill Process", "Del") ||
