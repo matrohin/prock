@@ -31,7 +31,7 @@ enum BriefTableColumnId {
 struct BriefTableLine {
   int pid;
   int ppid;
-  const char *comm;
+  const char *name;
   char state;
   long num_threads;
 

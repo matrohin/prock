@@ -455,7 +455,7 @@ TEST_CASE("sort_brief_table_tree") {
   SUBCASE("single root process") {
     BriefTableState my_state = {};
     my_state.lines = Array<BriefTableLine>::create(arena, 1);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "init"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "init"};
 
     sort_brief_table_tree(my_state, arena);
 
@@ -467,10 +467,10 @@ TEST_CASE("sort_brief_table_tree") {
   SUBCASE("parent with children - DFS order") {
     BriefTableState my_state = {};
     my_state.lines = Array<BriefTableLine>::create(arena, 4);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "init"};
-    my_state.lines.data[1] = {.pid = 10, .ppid = 1, .comm = "child_a"};
-    my_state.lines.data[2] = {.pid = 20, .ppid = 1, .comm = "child_b"};
-    my_state.lines.data[3] = {.pid = 30, .ppid = 10, .comm = "grandchild"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "init"};
+    my_state.lines.data[1] = {.pid = 10, .ppid = 1, .name = "child_a"};
+    my_state.lines.data[2] = {.pid = 20, .ppid = 1, .name = "child_b"};
+    my_state.lines.data[3] = {.pid = 30, .ppid = 10, .name = "grandchild"};
 
     sort_brief_table_tree(my_state, arena);
 
@@ -490,9 +490,9 @@ TEST_CASE("sort_brief_table_tree") {
     BriefTableState my_state = {};
     my_state.lines = Array<BriefTableLine>::create(arena, 3);
     // All have ppid=0 or ppid not in list
-    my_state.lines.data[0] = {.pid = 5, .ppid = 999, .comm = "orphan"};
-    my_state.lines.data[1] = {.pid = 1, .ppid = 0, .comm = "init"};
-    my_state.lines.data[2] = {.pid = 2, .ppid = 0, .comm = "kthread"};
+    my_state.lines.data[0] = {.pid = 5, .ppid = 999, .name = "orphan"};
+    my_state.lines.data[1] = {.pid = 1, .ppid = 0, .name = "init"};
+    my_state.lines.data[2] = {.pid = 2, .ppid = 0, .name = "kthread"};
 
     sort_brief_table_tree(my_state, arena);
 
@@ -518,10 +518,10 @@ TEST_CASE("sort_brief_table_tree") {
   SUBCASE("deep hierarchy") {
     BriefTableState my_state = {};
     my_state.lines = Array<BriefTableLine>::create(arena, 4);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "root"};
-    my_state.lines.data[1] = {.pid = 2, .ppid = 1, .comm = "level1"};
-    my_state.lines.data[2] = {.pid = 3, .ppid = 2, .comm = "level2"};
-    my_state.lines.data[3] = {.pid = 4, .ppid = 3, .comm = "level3"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "root"};
+    my_state.lines.data[1] = {.pid = 2, .ppid = 1, .name = "level1"};
+    my_state.lines.data[2] = {.pid = 3, .ppid = 2, .name = "level2"};
+    my_state.lines.data[3] = {.pid = 4, .ppid = 3, .name = "level3"};
 
     sort_brief_table_tree(my_state, arena);
 
@@ -557,8 +557,8 @@ TEST_CASE("brief_table_update dead process handling") {
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     my_state.lines = Array<BriefTableLine>::create(arena, 2);
-    my_state.lines.data[0] = {.pid = 10, .ppid = 0, .comm = "proc_a"};
-    my_state.lines.data[1] = {.pid = 20, .ppid = 0, .comm = "proc_b"};
+    my_state.lines.data[0] = {.pid = 10, .ppid = 0, .name = "proc_a"};
+    my_state.lines.data[1] = {.pid = 20, .ppid = 0, .name = "proc_b"};
 
     brief_table_update(my_state, state);
 
@@ -592,12 +592,12 @@ TEST_CASE("brief_table_update dead process handling") {
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     my_state.lines = Array<BriefTableLine>::create(arena, 2);
-    my_state.lines.data[0] = {.pid = 10, .ppid = 0, .comm = "proc_a"};
+    my_state.lines.data[0] = {.pid = 10, .ppid = 0, .name = "proc_a"};
     my_state.lines.data[0].death_time_ns =
         (SteadyTimePoint{} + std::chrono::seconds(5))
             .time_since_epoch()
             .count();
-    my_state.lines.data[1] = {.pid = 20, .ppid = 0, .comm = "proc_b"};
+    my_state.lines.data[1] = {.pid = 20, .ppid = 0, .name = "proc_b"};
 
     brief_table_update(my_state, state);
 
@@ -646,7 +646,7 @@ TEST_CASE("brief_table_update dead process handling") {
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     my_state.lines = Array<BriefTableLine>::create(arena, 1);
-    my_state.lines.data[0] = {.pid = 10, .ppid = 0, .comm = "proc_a"};
+    my_state.lines.data[0] = {.pid = 10, .ppid = 0, .name = "proc_a"};
     my_state.lines.data[0].first_seen_ns = 1000000000; // was seen at 1s
 
     brief_table_update(my_state, state);
@@ -684,13 +684,13 @@ TEST_CASE("sort_brief_table_lines by columns") {
     my_state.sorted_by = eBriefTableColumnId_CpuTotalPerc;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     my_state.lines = Array<BriefTableLine>::create(arena, 3);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "high"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "high"};
     my_state.lines.data[0].derived_stat = {.cpu_user_perc = 80.0,
                                            .cpu_kernel_perc = 20.0};
-    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .comm = "low"};
+    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .name = "low"};
     my_state.lines.data[1].derived_stat = {.cpu_user_perc = 5.0,
                                            .cpu_kernel_perc = 1.0};
-    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .comm = "mid"};
+    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .name = "mid"};
     my_state.lines.data[2].derived_stat = {.cpu_user_perc = 30.0,
                                            .cpu_kernel_perc = 10.0};
 
@@ -706,13 +706,13 @@ TEST_CASE("sort_brief_table_lines by columns") {
     my_state.sorted_by = eBriefTableColumnId_CpuTotalPerc;
     my_state.sorted_order = ImGuiSortDirection_Descending;
     my_state.lines = Array<BriefTableLine>::create(arena, 3);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "low"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "low"};
     my_state.lines.data[0].derived_stat = {.cpu_user_perc = 5.0,
                                            .cpu_kernel_perc = 1.0};
-    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .comm = "high"};
+    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .name = "high"};
     my_state.lines.data[1].derived_stat = {.cpu_user_perc = 80.0,
                                            .cpu_kernel_perc = 20.0};
-    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .comm = "mid"};
+    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .name = "mid"};
     my_state.lines.data[2].derived_stat = {.cpu_user_perc = 30.0,
                                            .cpu_kernel_perc = 10.0};
 
@@ -728,11 +728,11 @@ TEST_CASE("sort_brief_table_lines by columns") {
     my_state.sorted_by = eBriefTableColumnId_MemRssBytes;
     my_state.sorted_order = ImGuiSortDirection_Descending;
     my_state.lines = Array<BriefTableLine>::create(arena, 3);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "small"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "small"};
     my_state.lines.data[0].derived_stat = {.mem_resident_bytes = 1024.0};
-    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .comm = "large"};
+    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .name = "large"};
     my_state.lines.data[1].derived_stat = {.mem_resident_bytes = 1048576.0};
-    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .comm = "medium"};
+    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .name = "medium"};
     my_state.lines.data[2].derived_stat = {.mem_resident_bytes = 65536.0};
 
     sort_brief_table_lines(my_state);
@@ -747,11 +747,11 @@ TEST_CASE("sort_brief_table_lines by columns") {
     my_state.sorted_by = eBriefTableColumnId_IoReadKbPerSec;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     my_state.lines = Array<BriefTableLine>::create(arena, 3);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "c"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "c"};
     my_state.lines.data[0].derived_stat = {.io_read_kb_per_sec = 500.0};
-    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .comm = "a"};
+    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .name = "a"};
     my_state.lines.data[1].derived_stat = {.io_read_kb_per_sec = 10.0};
-    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .comm = "b"};
+    my_state.lines.data[2] = {.pid = 3, .ppid = 0, .name = "b"};
     my_state.lines.data[2].derived_stat = {.io_read_kb_per_sec = 100.0};
 
     sort_brief_table_lines(my_state);
@@ -766,9 +766,9 @@ TEST_CASE("sort_brief_table_lines by columns") {
     my_state.sorted_by = eBriefTableColumnId_IoWriteKbPerSec;
     my_state.sorted_order = ImGuiSortDirection_Descending;
     my_state.lines = Array<BriefTableLine>::create(arena, 2);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "low"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "low"};
     my_state.lines.data[0].derived_stat = {.io_write_kb_per_sec = 5.0};
-    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .comm = "high"};
+    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .name = "high"};
     my_state.lines.data[1].derived_stat = {.io_write_kb_per_sec = 200.0};
 
     sort_brief_table_lines(my_state);
@@ -782,9 +782,9 @@ TEST_CASE("sort_brief_table_lines by columns") {
     my_state.sorted_by = eBriefTableColumnId_NetRecvKbPerSec;
     my_state.sorted_order = ImGuiSortDirection_Descending;
     my_state.lines = Array<BriefTableLine>::create(arena, 2);
-    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .comm = "slow"};
+    my_state.lines.data[0] = {.pid = 1, .ppid = 0, .name = "slow"};
     my_state.lines.data[0].derived_stat = {.net_recv_kb_per_sec = 10.0};
-    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .comm = "fast"};
+    my_state.lines.data[1] = {.pid = 2, .ppid = 0, .name = "fast"};
     my_state.lines.data[1].derived_stat = {.net_recv_kb_per_sec = 1000.0};
 
     sort_brief_table_lines(my_state);
