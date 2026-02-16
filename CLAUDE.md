@@ -1,55 +1,43 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Build Commands
-
-This is a CMake-based C++ project targeting Linux with OpenGL ES 2.0.
+## Build
 
 ```bash
-# Configure (from project root)
 cmake --preset debug
-
-# Build & Test
-./build.sh
+./scripts/build.sh
 ```
 
 ## Architecture
 
-**prock** is a Linux process monitor GUI application built with ImGui, ImPlot, and GLFW.
+Linux process monitor GUI built with ImGui, ImPlot, and GLFW (OpenGL ES 2.0).
 
 ### Unity Build
-The project uses a unity build pattern. `main.cpp` includes all application `.cpp` files directly, and `imgui_all.cpp` bundles ImGui/ImPlot sources. Do not add source files to CMakeLists.txt - include them in `main.cpp` instead.
+`main.cpp` includes all application `.cpp` files directly. `imgui_all.cpp` is a separate static library for ImGui/ImPlot sources. Do not add source files to CMakeLists.txt - include them in `main.cpp` instead.
 
-### Threading Model
-- **Main thread**: Handles GLFW window events, ImGui rendering, and state updates
-- **Gathering thread**: Reads `/proc` filesystem data and pushes snapshots via lock-free queue
-- **Library Loader thread**: Reads `/proc/<pid>/maps` for requests given by the main thread
+### Threading
+- **Main thread**: GLFW events, ImGui rendering, state updates
+- **Gathering thread**: Reads `/proc`, pushes snapshots via lock-free SPSC ring buffer
+- **Library Loader thread**: Reads `/proc/<pid>/maps` on demand from main thread
 
-### Key Components
+### Key Types
+- `src/base.h` - `BumpArena`, `Array`, `GrowingArray`, `LinkedList`
+- `src/state.h` - `State`, `StateSnapshot`, `ProcessDerivedStat`
+- `src/process_stat.h` - `ProcessStat` (mirrors `/proc/[pid]/stat` and `/proc/[pid]/statm`)
+- `src/sync.h` - `Sync` (atomic quit flag + `RingBuffer`)
 
-#### Core Types
-- `src/base.h` - `BumpArena` (bump allocator), `Array`, `GrowingArray`, `LinkedList`
-- `src/ring_buffer.h` - Lock-free SPSC ring buffer for inter-thread updates
-
-#### State Management
-- `src/state.h` - `State` (main app state), `StateSnapshot` (per-update process data), `ProcessDerivedStat` (computed metrics like CPU%)
-- `src/process_stat.h` - `ProcessStat` struct matching `/proc/[pid]/stat` and `/proc/[pid]/statm` fields
-- `src/sync.h` - `Sync` struct with atomic quit flag and `RingBuffer` for thread communication
-
-#### Views (src/views/)
-
+### Views (`src/views/`)
 Each view has update and draw functions called from `views_update()` and `views_draw()`:
-- `brief_table` - Compact process list
-- `full_table` - Detailed process table
-- `cpu_chart` - CPU usage chart (ImPlot)
-- `mem_chart` - Memory usage chart (ImPlot)
+- `brief_table` - Process list with tree view, filtering, type-to-search
+- `cpu_chart`, `mem_chart`, `io_chart`, `net_chart` - Per-process charts (ImPlot)
+- `system_cpu_chart`, `system_mem_chart`, `system_io_chart`, `system_net_chart` - System-wide charts
+- `threads_viewer`, `socket_viewer`, `environ_viewer`, `library_viewer` - Per-process inspectors
 
-### Memory Management
-Uses arena allocation (`BumpArena`) for per-frame data. The `snapshot_arena` is destroyed after each update cycle, so snapshot data is transient.
+### Memory
+Arena allocation (`BumpArena`) for per-frame data. `snapshot_arena` is destroyed after each update cycle.
 
 ## Coding Guidelines
 
-- **Use custom containers** - Use the custom types in `base.h`: `Array`, `GrowingArray`, `LinkedList`
-- **Arena allocation only** - All dynamic allocations must go through `BumpArena`. No raw `new`/`malloc` outside of arena internals
-- **Only modify `src/`** - Do not modify vendored libraries (`imgui/`, `implot/`, `glfw-3.4/`) or build configuration
+- Use custom containers from `base.h` (`Array`, `GrowingArray`, `LinkedList`)
+- All dynamic allocations through `BumpArena` - no raw `new`/`malloc`
+- Only modify `src/` - do not touch vendored libraries (`imgui/`, `implot/`, `glfw-3.4/`) or build configuration
+- Do not add co-authored-by to commits
