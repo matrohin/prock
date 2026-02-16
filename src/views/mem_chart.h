@@ -7,7 +7,7 @@ struct MemChartData {
   GrowingArray<double> times;
   GrowingArray<double> mem_resident_kb;
   ProcessWindowFlags flags;
-  bool y_axis_fitted;
+  int y_axis_fitted;
 };
 
 struct MemChartState {

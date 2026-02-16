@@ -14,7 +14,7 @@ struct SystemCpuChartState {
   int num_cores;
 
   bool stacked;
-  bool y_axis_fitted;
+  int y_axis_fitted;
 };
 
 void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state);

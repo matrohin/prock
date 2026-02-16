@@ -70,7 +70,7 @@ void net_chart_draw(ViewState &view_state) {
       if (ImPlot::BeginPlot("Network Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
         if (should_fit_y) {
-          chart.y_axis_fitted = true;
+          chart.y_axis_fitted++;
         }
 
         setup_chart(chart.times, format_io_rate_kb);

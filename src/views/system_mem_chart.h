@@ -7,7 +7,7 @@ struct SystemMemChartState {
   GrowingArray<double> available; // Available memory in KB
   GrowingArray<TopProcess> top_processes;
   size_t wasted_bytes;
-  bool y_axis_fitted;
+  int y_axis_fitted;
 };
 
 void system_mem_chart_update(SystemMemChartState &my_state, const State &state);

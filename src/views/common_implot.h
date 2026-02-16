@@ -60,13 +60,16 @@ constexpr ImPlotAxisFlags COMMON_X_FLAGS =
     ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
 constexpr ImPlotAxisFlags COMMON_Y_FLAGS = ImPlotAxisFlags_RangeFit;
 
-// Returns true if Y axis fit was requested; caller should set y_axis_fitted =
-// true after BeginPlot succeeds.
-inline bool try_initial_y_fit(bool y_axis_fitted, size_t data_size) {
-  if (y_axis_fitted || data_size < 3) {
+// Handles delayed Y axis fit: first frame lets X establish its range,
+// second frame fits Y using RangeFit against the established X range.
+// Returns true if caller should increment y_axis_fitted after BeginPlot.
+inline bool try_initial_y_fit(int y_axis_fitted, size_t data_size) {
+  if (y_axis_fitted >= 2 || data_size < 3) {
     return false;
   }
-  ImPlot::SetNextAxisToFit(ImAxis_Y1);
+  if (y_axis_fitted == 1) {
+    ImPlot::SetNextAxisToFit(ImAxis_Y1);
+  }
   return true;
 }
 

@@ -8,7 +8,7 @@ struct NetChartData {
   GrowingArray<double> recv_kb_per_sec;
   GrowingArray<double> send_kb_per_sec;
   ProcessWindowFlags flags;
-  bool y_axis_fitted;
+  int y_axis_fitted;
 };
 
 struct NetChartState {

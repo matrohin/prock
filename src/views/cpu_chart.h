@@ -10,7 +10,7 @@ struct CpuChartData {
   GrowingArray<double> times;
   GrowingArray<double> cpu_kernel_perc;
   GrowingArray<double> cpu_total_perc;
-  bool y_axis_fitted;
+  int y_axis_fitted;
 };
 
 struct CpuChartState {

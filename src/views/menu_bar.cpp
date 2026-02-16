@@ -130,7 +130,7 @@ void menu_bar_draw(ViewState &view_state) {
                           view_state.preferences_state.cpu_per_core)) {
         view_state.preferences_state.cpu_per_core =
             !view_state.preferences_state.cpu_per_core;
-        view_state.system_cpu_chart_state.y_axis_fitted = false;
+        view_state.system_cpu_chart_state.y_axis_fitted = 0;
       }
 
       if (ImGui::MenuItem("Stacked", nullptr,
@@ -138,7 +138,7 @@ void menu_bar_draw(ViewState &view_state) {
                           view_state.preferences_state.cpu_per_core)) {
         view_state.system_cpu_chart_state.stacked =
             !view_state.system_cpu_chart_state.stacked;
-        view_state.system_cpu_chart_state.y_axis_fitted = false;
+        view_state.system_cpu_chart_state.y_axis_fitted = 0;
       }
 
       if (view_state.process_host_state.focused_pid > 0) {

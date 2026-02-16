@@ -51,7 +51,7 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
     if (ImPlot::BeginPlot("##SystemIO", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       if (should_fit_y) {
-        my_state.y_axis_fitted = true;
+        my_state.y_axis_fitted++;
       }
       setup_chart(my_state.times, format_io_rate_mb);
 

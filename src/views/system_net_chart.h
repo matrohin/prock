@@ -8,7 +8,7 @@ struct SystemNetChartState {
   GrowingArray<double> total_mb_per_sec; // Combined for tooltip
   GrowingArray<TopProcess> top_processes;
   size_t wasted_bytes;
-  bool y_axis_fitted;
+  int y_axis_fitted;
 };
 
 void system_net_chart_update(SystemNetChartState &my_state, const State &state);

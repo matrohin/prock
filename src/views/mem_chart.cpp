@@ -67,7 +67,7 @@ void mem_chart_draw(ViewState &view_state) {
       if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
         if (should_fit_y) {
-          chart.y_axis_fitted = true;
+          chart.y_axis_fitted++;
         }
 
         setup_chart(chart.times, format_memory_kb);
