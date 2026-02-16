@@ -260,26 +260,12 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   }
 
   sscanf(after_comm + 1,
-         " %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld "
-         "%ld %ld %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu "
-         "%lu %d %d %u %u %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %d",
-         &stat.state, &stat.ppid, &stat.pgrp, &stat.session, &stat.tty_nr,
-         &stat.tpgid, &stat.flags, &stat.minflt, &stat.cminflt, &stat.majflt,
-         &stat.cmajflt, &stat.utime, &stat.stime, &stat.cutime, &stat.cstime,
-         &stat.priority, &stat.nice, &stat.num_threads, &stat.itrealvalue,
-         &stat.starttime, &stat.vsize, &stat.rss, &stat.rsslim, &stat.startcode,
-         &stat.endcode, &stat.startstack, &stat.kstkesp, &stat.kstkeip,
-         &stat.signal, &stat.blocked, &stat.sigignore, &stat.sigcatch,
-         &stat.wchan, &stat.nswap, &stat.cnswap, &stat.exit_signal,
-         &stat.processor, &stat.rt_priority, &stat.policy,
-         &stat.delayacct_blkio_ticks, &stat.guest_time, &stat.cguest_time,
-         &stat.start_data, &stat.end_data, &stat.start_brk, &stat.arg_start,
-         &stat.arg_end, &stat.env_start, &stat.env_end, &stat.exit_code);
+         " %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d "
+         "%*d %*d %ld %*d %*u %lu",
+         &stat.state, &stat.ppid, &stat.utime, &stat.stime, &stat.num_threads,
+         &stat.vsize);
 
-  ulong unused_lib = 0;
-  sscanf(statm_buf, "%lu %lu %lu %lu %lu %lu", &stat.statm_size,
-         &stat.statm_resident, &stat.statm_shared, &stat.statm_text,
-         &unused_lib, &stat.statm_data);
+  sscanf(statm_buf, "%*u %lu", &stat.statm_resident);
 
   return true;
 }
@@ -355,26 +341,12 @@ static bool read_process(const int pid, BumpArena &arena, ProcessStat *out) {
   }
 
   sscanf(after_comm + 1,
-         " %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld "
-         "%ld %ld %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu "
-         "%lu %d %d %u %u %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %d",
-         &stat.state, &stat.ppid, &stat.pgrp, &stat.session, &stat.tty_nr,
-         &stat.tpgid, &stat.flags, &stat.minflt, &stat.cminflt, &stat.majflt,
-         &stat.cmajflt, &stat.utime, &stat.stime, &stat.cutime, &stat.cstime,
-         &stat.priority, &stat.nice, &stat.num_threads, &stat.itrealvalue,
-         &stat.starttime, &stat.vsize, &stat.rss, &stat.rsslim, &stat.startcode,
-         &stat.endcode, &stat.startstack, &stat.kstkesp, &stat.kstkeip,
-         &stat.signal, &stat.blocked, &stat.sigignore, &stat.sigcatch,
-         &stat.wchan, &stat.nswap, &stat.cnswap, &stat.exit_signal,
-         &stat.processor, &stat.rt_priority, &stat.policy,
-         &stat.delayacct_blkio_ticks, &stat.guest_time, &stat.cguest_time,
-         &stat.start_data, &stat.end_data, &stat.start_brk, &stat.arg_start,
-         &stat.arg_end, &stat.env_start, &stat.env_end, &stat.exit_code);
+         " %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d "
+         "%*d %*d %ld %*d %*u %lu",
+         &stat.state, &stat.ppid, &stat.utime, &stat.stime, &stat.num_threads,
+         &stat.vsize);
 
-  ulong unused_lib = 0;
-  sscanf(statm_buf, "%lu %lu %lu %lu %lu %lu", &stat.statm_size,
-         &stat.statm_resident, &stat.statm_shared, &stat.statm_text,
-         &unused_lib, &stat.statm_data);
+  sscanf(statm_buf, "%*u %lu", &stat.statm_resident);
 
   // Read /proc/[pid]/io (may fail due to permissions, that's OK)
   FILE *io_file = fopen(io_filename, "r");
