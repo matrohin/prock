@@ -43,21 +43,28 @@ sudo pacman -Sy cmake gcc
 
 > **Note for GNOME users:** If the window title bar is not displayed on Wayland, this may be due to a [known mutter issue](https://gitlab.gnome.org/GNOME/mutter/-/issues/217). Use the `release-x11` preset instead to disable Wayland support.
 
-### Release build & Install
+### Install & Update
 
+Install:
 ```bash
-cmake --preset release
-cmake --build ./build/Release
+git clone https://github.com/matrohin/prock.git
+cd prock
 
-sudo cmake --install ./build/Release
-sudo cp prock.desktop /usr/share/applications/
+./scripts/install.sh
+```
+
+Update:
+```bash
+cd prock
+
+./scripts/update.sh
 ```
 
 ### Debug build & Run
 
 ```bash
 cmake --preset debug
-./build.sh
+./scripts/build.sh
 ./build/Debug/prock
 ```
 
