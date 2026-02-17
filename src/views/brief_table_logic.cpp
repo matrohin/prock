@@ -88,22 +88,21 @@ static void sort_flat(BriefTableState &my_state) {
   }
 }
 
-// Recursively add a process and its children to the output array (DFS)
-// Assumes lines are already sorted by PID
-static void add_tree_node(const Array<BriefTableLine> &src,
-                          BriefTableLine *dst, size_t &dst_idx, size_t src_idx,
-                          int depth) {
-  dst[dst_idx] = src.data[src_idx];
+struct TreeNode {
+  size_t first_child;
+  size_t next_sibling;
+};
+
+static void tree_dfs(const Array<BriefTableLine> &lines, const TreeNode *nodes,
+                     BriefTableLine *dst, size_t &dst_idx, size_t node_idx,
+                     int depth) {
+  dst[dst_idx] = lines.data[node_idx - 1];
   dst[dst_idx].tree_depth = depth;
   ++dst_idx;
 
-  const int parent_pid = src.data[src_idx].pid;
-
-  // Find and add all children (already sorted by PID since src is sorted)
-  for (size_t i = 0; i < src.size; ++i) {
-    if (src.data[i].ppid == parent_pid && src.data[i].pid != parent_pid) {
-      add_tree_node(src, dst, dst_idx, i, depth + 1);
-    }
+  for (size_t child = nodes[node_idx].first_child; child != 0;
+       child = nodes[child].next_sibling) {
+    tree_dfs(lines, nodes, dst, dst_idx, child, depth + 1);
   }
 }
 
@@ -111,33 +110,42 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
   Array<BriefTableLine> &lines = my_state.lines;
   if (lines.size == 0) return;
 
-  // Sort by PID first for consistent tree ordering
+  // Sort by PID first for consistent tree ordering and binary search
   std::sort(lines.data, lines.data + lines.size,
             [](const BriefTableLine &a, const BriefTableLine &b) {
               return a.pid < b.pid;
             });
 
-  // Allocate output array
-  BriefTableLine *sorted = arena.alloc_array_of<BriefTableLine>(lines.size);
-  size_t sorted_idx = 0;
+  const size_t n = lines.size;
 
-  // Find root processes (ppid not in our PID list) and add with DFS
-  for (size_t i = 0; i < lines.size; ++i) {
+  // Index 0 is the sentinel (virtual root). Real processes at indices 1..N.
+  TreeNode *nodes = arena.alloc_array_of<TreeNode>(n + 1);
+
+  // Build left-child/right-sibling tree using binary search for parent lookup.
+  // Iterate in reverse so that prepending produces ascending PID order.
+  for (size_t i = n; i-- > 0;) {
     const int ppid = lines.data[i].ppid;
-    // Root if ppid is 0, or if ppid is not found in our process list
-    bool is_root = (ppid == 0);
-    if (!is_root) {
-      is_root = true;
-      for (size_t j = 0; j < lines.size; ++j) {
-        if (lines.data[j].pid == ppid) {
-          is_root = false;
-          break;
-        }
+    size_t parent_node = 0; // sentinel = root
+    if (ppid != 0 && lines.data[i].pid != ppid) {
+      const size_t parent_idx = bin_search_exact(
+          n, [&lines](const size_t mid) { return lines.data[mid].pid; }, ppid);
+      if (parent_idx != SIZE_MAX) {
+        parent_node = parent_idx + 1;
       }
     }
-    if (is_root) {
-      add_tree_node(lines, sorted, sorted_idx, i, 0);
-    }
+    // Prepend this node as a child of parent_node
+    const size_t node_idx = i + 1;
+    nodes[node_idx].next_sibling = nodes[parent_node].first_child;
+    nodes[parent_node].first_child = node_idx;
+  }
+
+  // DFS from sentinel's children to produce sorted output
+  BriefTableLine *sorted = arena.alloc_array_of<BriefTableLine>(n);
+  size_t sorted_idx = 0;
+
+  for (size_t root = nodes[0].first_child; root != 0;
+       root = nodes[root].next_sibling) {
+    tree_dfs(lines, nodes, sorted, sorted_idx, root, 0);
   }
 
   // Copy back to lines array
