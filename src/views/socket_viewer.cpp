@@ -10,7 +10,7 @@
 #include <cerrno>
 #include <cstring>
 
-static constexpr size_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
+static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
 
 static const char *tcp_state_name(const int state) {
   switch (state) {
@@ -153,7 +153,7 @@ static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", SOCKET_COPY_HEADER);
 
-  for (size_t i = 0; i < win.sockets.size; ++i) {
+  for (uint32_t i = 0; i < win.sockets.size; ++i) {
     const SocketEntry &sock = win.sockets.data[i];
     char local_addr[64], remote_addr[64];
     format_address(local_addr, sizeof(local_addr), sock, true);
@@ -232,7 +232,7 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const int pid,
 void socket_viewer_update(SocketViewerState &state, Sync &sync) {
   SocketResponse response;
   while (sync.on_demand_reader.socket_response_queue.pop(response)) {
-    for (size_t i = 0; i < state.windows.size(); ++i) {
+    for (uint32_t i = 0; i < state.windows.size(); ++i) {
       SocketViewerWindow &win = state.windows.data()[i];
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
@@ -259,7 +259,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (size_t i = 0; i < state.windows.size(); ++i) {
+    for (uint32_t i = 0; i < state.windows.size(); ++i) {
       SocketViewerWindow &win = state.windows.data()[i];
       win.sockets = Array<SocketEntry>::copy_from(new_arena, win.sockets);
     }
@@ -273,9 +273,9 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
 void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   ZoneScoped;
   SocketViewerState &my_state = view_state.socket_viewer_state;
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.windows.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.windows.size(); ++i) {
     if (last != i) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
@@ -290,7 +290,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                win.pid, win.pid);
     } else {
       snprintf(title, sizeof(title),
-               "Sockets: %s (%d) - %zu sockets###Sockets%d", win.process_name,
+               "Sockets: %s (%d) - %u sockets###Sockets%d", win.process_name,
                win.pid, win.sockets.size, win.pid);
     }
 
@@ -341,7 +341,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                   [&] { sort_sockets(win); });
 
           char local_addr[64], remote_addr[64];
-          for (size_t j = 0; j < win.sockets.size; ++j) {
+          for (uint32_t j = 0; j < win.sockets.size; ++j) {
             const SocketEntry &sock = win.sockets.data[j];
 
             // Build filter string

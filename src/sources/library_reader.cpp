@@ -33,7 +33,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
 
   // First pass: count unique .so files
   GrowingArray<LibraryEntry> entries = {};
-  size_t wasted = 0;
+  uint32_t wasted = 0;
 
   char line[512];
   while (fgets(line, sizeof(line), file)) {
@@ -57,7 +57,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
 
     // Check if already in list (deduplicate)
     bool found = false;
-    for (size_t i = 0; i < entries.size(); ++i) {
+    for (uint32_t i = 0; i < entries.size(); ++i) {
       if (strcmp(entries.data()[i].path.data, pathname) == 0) {
         found = true;
         break;

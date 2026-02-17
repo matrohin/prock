@@ -7,7 +7,7 @@ struct SystemNetChartState {
   GrowingArray<double> send_mb_per_sec;  // Send throughput in MB/s
   GrowingArray<double> total_mb_per_sec; // Combined for tooltip
   GrowingArray<TopProcess> top_processes;
-  size_t wasted_bytes;
+  uint32_t wasted_bytes;
   int y_axis_fitted;
 };
 

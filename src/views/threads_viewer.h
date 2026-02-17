@@ -60,7 +60,7 @@ struct ThreadsViewerWindow {
 struct ThreadsViewerState {
   GrowingArray<ThreadsViewerWindow> windows;
   BumpArena cur_arena;
-  size_t wasted_bytes;
+  uint32_t wasted_bytes;
 };
 
 struct FrameContext;

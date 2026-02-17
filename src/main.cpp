@@ -99,7 +99,7 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
         fval < 0.75f ? 0.75f : (fval > 2.0f ? 2.0f : fval);
   } else if (strncmp(line, "FontPath=", 9) == 0) {
     const char *path = line + 9;
-    const size_t len = strlen(path);
+    const uint32_t len = static_cast<uint32_t>(strlen(path));
     if (len < sizeof(view_state->preferences_state.font_path)) {
       memcpy(view_state->preferences_state.font_path, path, len + 1);
     }

@@ -5,14 +5,14 @@
 #include <atomic>
 
 template <class T, size_t N> struct RingBuffer {
-  static constexpr size_t MASK = N - 1;
-  std::atomic<size_t> head;
-  std::atomic<size_t> tail;
+  static constexpr uint32_t MASK = N - 1;
+  std::atomic<uint32_t> head;
+  std::atomic<uint32_t> tail;
   T data[N];
 
   bool push(T item) {
-    size_t loaded_tail = tail.load();
-    const size_t new_tail = (loaded_tail + 1) & MASK;
+    uint32_t loaded_tail = tail.load();
+    const uint32_t new_tail = (loaded_tail + 1) & MASK;
     if (new_tail == head.load()) return false;
     data[loaded_tail] = item;
     tail.store(new_tail);
@@ -20,16 +20,16 @@ template <class T, size_t N> struct RingBuffer {
   }
 
   bool pop(T &out) {
-    size_t loaded_head = head.load();
+    uint32_t loaded_head = head.load();
     if (loaded_head == tail.load()) return false;
-    const size_t new_head = (loaded_head + 1) & MASK;
+    const uint32_t new_head = (loaded_head + 1) & MASK;
     out = data[loaded_head];
     head.store(new_head);
     return true;
   }
 
   bool peek(T &out) const {
-    size_t loaded_head = head.load();
+    uint32_t loaded_head = head.load();
     if (loaded_head == tail.load()) return false;
     out = data[loaded_head];
     return true;

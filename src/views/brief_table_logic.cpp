@@ -8,9 +8,9 @@
 // How long to keep dead processes visible (in nanoseconds)
 static constexpr int64_t DEAD_PROCESS_DISPLAY_NS = 2'000'000'000; // 2 seconds
 
-size_t binary_search_pid(const Array<ProcessStat> &stats, const int pid) {
+uint32_t binary_search_pid(const Array<ProcessStat> &stats, const int pid) {
   return bin_search_exact(
-      stats.size, [&stats](const size_t mid) { return stats.data[mid].pid; },
+      stats.size, [&stats](const uint32_t mid) { return stats.data[mid].pid; },
       pid);
 }
 
@@ -83,24 +83,24 @@ static void sort_flat(BriefTableState &my_state) {
   }
 
   // Reset tree depth for flat mode
-  for (size_t i = 0; i < my_state.lines.size; ++i) {
+  for (uint32_t i = 0; i < my_state.lines.size; ++i) {
     my_state.lines.data[i].tree_depth = 0;
   }
 }
 
 struct TreeNode {
-  size_t first_child;
-  size_t next_sibling;
+  uint32_t first_child;
+  uint32_t next_sibling;
 };
 
 static void tree_dfs(const Array<BriefTableLine> &lines, const TreeNode *nodes,
-                     BriefTableLine *dst, size_t &dst_idx, size_t node_idx,
+                     BriefTableLine *dst, uint32_t &dst_idx, uint32_t node_idx,
                      int depth) {
   dst[dst_idx] = lines.data[node_idx - 1];
   dst[dst_idx].tree_depth = depth;
   ++dst_idx;
 
-  for (size_t child = nodes[node_idx].first_child; child != 0;
+  for (uint32_t child = nodes[node_idx].first_child; child != 0;
        child = nodes[child].next_sibling) {
     tree_dfs(lines, nodes, dst, dst_idx, child, depth + 1);
   }
@@ -116,40 +116,40 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
               return a.pid < b.pid;
             });
 
-  const size_t n = lines.size;
+  const uint32_t n = lines.size;
 
   // Index 0 is the sentinel (virtual root). Real processes at indices 1..N.
   TreeNode *nodes = arena.alloc_array_of<TreeNode>(n + 1);
 
   // Build left-child/right-sibling tree using binary search for parent lookup.
   // Iterate in reverse so that prepending produces ascending PID order.
-  for (size_t i = n; i-- > 0;) {
+  for (uint32_t i = n; i-- > 0;) {
     const int ppid = lines.data[i].ppid;
-    size_t parent_node = 0; // sentinel = root
+    uint32_t parent_node = 0; // sentinel = root
     if (ppid != 0 && lines.data[i].pid != ppid) {
-      const size_t parent_idx = bin_search_exact(
-          n, [&lines](const size_t mid) { return lines.data[mid].pid; }, ppid);
-      if (parent_idx != SIZE_MAX) {
+      const uint32_t parent_idx = bin_search_exact(
+          n, [&lines](const uint32_t mid) { return lines.data[mid].pid; }, ppid);
+      if (parent_idx != UINT32_MAX) {
         parent_node = parent_idx + 1;
       }
     }
     // Prepend this node as a child of parent_node
-    const size_t node_idx = i + 1;
+    const uint32_t node_idx = i + 1;
     nodes[node_idx].next_sibling = nodes[parent_node].first_child;
     nodes[parent_node].first_child = node_idx;
   }
 
   // DFS from sentinel's children to produce sorted output
   BriefTableLine *sorted = arena.alloc_array_of<BriefTableLine>(n);
-  size_t sorted_idx = 0;
+  uint32_t sorted_idx = 0;
 
-  for (size_t root = nodes[0].first_child; root != 0;
+  for (uint32_t root = nodes[0].first_child; root != 0;
        root = nodes[root].next_sibling) {
     tree_dfs(lines, nodes, sorted, sorted_idx, root, 0);
   }
 
   // Copy back to lines array
-  for (size_t i = 0; i < sorted_idx; ++i) {
+  for (uint32_t i = 0; i < sorted_idx; ++i) {
     my_state.lines.data[i] = sorted[i];
   }
   my_state.lines.size = sorted_idx;
@@ -200,13 +200,13 @@ void brief_table_update(BriefTableState &my_state, State &state) {
       Array<bool>::create(state.snapshot_arena, new_snapshot.stats.size);
 
   // Allocate enough space for old lines + new processes
-  const size_t max_lines = old_lines.size + new_snapshot.stats.size;
+  const uint32_t max_lines = old_lines.size + new_snapshot.stats.size;
   Array<BriefTableLine> new_lines =
       Array<BriefTableLine>::create(state.snapshot_arena, max_lines);
-  size_t new_lines_count = 0;
+  uint32_t new_lines_count = 0;
 
   // Process old lines: keep alive ones, mark dead ones
-  for (size_t i = 0; i < old_lines.size; ++i) {
+  for (uint32_t i = 0; i < old_lines.size; ++i) {
     const BriefTableLine &old_line = old_lines.data[i];
 
     // Skip processes that have been dead too long
@@ -215,10 +215,10 @@ void brief_table_update(BriefTableState &my_state, State &state) {
       continue;
     }
 
-    const size_t state_index =
+    const uint32_t state_index =
         binary_search_pid(new_snapshot.stats, old_line.pid);
 
-    if (state_index != SIZE_MAX) {
+    if (state_index != UINT32_MAX) {
       // Process still alive
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[state_index],
@@ -246,7 +246,7 @@ void brief_table_update(BriefTableState &my_state, State &state) {
   // Add new processes
   // On first update (old_lines empty), use 0 to avoid marking all as "new"
   const int64_t new_process_first_seen = old_lines.size > 0 ? now_ns : 0;
-  for (size_t i = 0; i < new_snapshot.stats.size; ++i) {
+  for (uint32_t i = 0; i < new_snapshot.stats.size; ++i) {
     if (!added.data[i]) {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[i],

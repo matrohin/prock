@@ -63,9 +63,9 @@ void process_host_draw(ViewState &view_state) {
   if (!ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup)) {
     my_state.focused_pid = -1;
   }
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.windows.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.windows.size(); ++i) {
     if (last != i) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }

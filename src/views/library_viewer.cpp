@@ -13,7 +13,7 @@
 
 const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 
-static constexpr size_t CLEANUP_AFTER_N_UPDATES_LIBRARIES = 5;
+static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_LIBRARIES = 5;
 
 static void copy_library_row(const LibraryEntry &lib) {
   char buf[512];
@@ -30,7 +30,7 @@ static void copy_all_libraries(BumpArena &arena,
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", LIBRARY_COPY_HEADER);
 
-  for (size_t i = 0; i < win.libraries.size; ++i) {
+  for (uint32_t i = 0; i < win.libraries.size; ++i) {
     const LibraryEntry &lib = win.libraries.data[i];
     const unsigned long mapped_size = lib.addr_end - lib.addr_start;
     ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n",
@@ -98,14 +98,14 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
 void library_viewer_update(LibraryViewerState &state, Sync &sync) {
   LibraryResponse response;
   while (sync.on_demand_reader.library_response_queue.pop(response)) {
-    for (size_t i = 0; i < state.windows.size(); ++i) {
+    for (uint32_t i = 0; i < state.windows.size(); ++i) {
       LibraryViewerWindow &win = state.windows.data()[i];
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eLibraryViewerStatus_Ready;
           win.libraries = Array<LibraryEntry>::copy_from(state.cur_arena,
                                                          response.libraries);
-          for (size_t j = 0; j < win.libraries.size; ++j) {
+          for (uint32_t j = 0; j < win.libraries.size; ++j) {
             LibraryEntry &dst = win.libraries.data[j];
             dst.path = String::copy_from(state.cur_arena, dst.path);
           }
@@ -125,12 +125,12 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (size_t i = 0; i < state.windows.size(); ++i) {
+    for (uint32_t i = 0; i < state.windows.size(); ++i) {
       LibraryViewerWindow &win = state.windows.data()[i];
       if (win.libraries.size > 0) {
         win.libraries =
             Array<LibraryEntry>::copy_from(new_arena, win.libraries);
-        for (size_t j = 0; j < win.libraries.size; ++j) {
+        for (uint32_t j = 0; j < win.libraries.size; ++j) {
           LibraryEntry &dst = win.libraries.data[j];
           dst.path = String::copy_from(new_arena, dst.path);
         }
@@ -146,9 +146,9 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
 void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   ZoneScoped;
   LibraryViewerState &my_state = view_state.library_viewer_state;
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.windows.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.windows.size(); ++i) {
     if (last != i) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
@@ -163,7 +163,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                win.process_name, win.pid, win.pid);
     } else {
       snprintf(title, sizeof(title),
-               "Libraries: %s (%d) - %zu libraries###Libraries%d",
+               "Libraries: %s (%d) - %u libraries###Libraries%d",
                win.process_name, win.pid, win.libraries.size, win.pid);
     }
 
@@ -204,7 +204,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
                                   [&] { sort_libraries(win); });
 
-          for (size_t j = 0; j < win.libraries.size; ++j) {
+          for (uint32_t j = 0; j < win.libraries.size; ++j) {
             const LibraryEntry &lib = win.libraries.data[j];
             if (!filter.PassFilter(lib.path.data)) continue;
             const bool is_selected = win.selected_index == static_cast<int>(j);

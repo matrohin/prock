@@ -30,7 +30,7 @@ EnvironResponse read_process_environ(BumpArena &temp_arena,
 
   // Read entire file (environment variables are null-separated)
   GrowingArray<EnvironEntry> entries = {};
-  size_t wasted = 0;
+  uint32_t wasted = 0;
 
   char buf[4096];
   size_t total_read = 0;

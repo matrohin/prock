@@ -183,7 +183,7 @@ static void copy_all_processes(BumpArena &arena,
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", PROCESS_COPY_HEADER);
 
-  for (size_t i = 0; i < my_state.lines.size; ++i) {
+  for (uint32_t i = 0; i < my_state.lines.size; ++i) {
     const BriefTableLine &line = my_state.lines.data[i];
     const ProcessDerivedStat &derived = line.derived_stat;
     ptr += snprintf(ptr, buf_size - (ptr - buf),
@@ -215,7 +215,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       copy_all_processes(ctx.frame_arena, my_state);
     }
     if (ImGui::MenuItem("Filter to subtree")) {
-      size_t len = strlen(my_state.filter_text);
+      uint32_t len = static_cast<uint32_t>(strlen(my_state.filter_text));
       // Append comma if filter not empty
       if (len > 0 && len < sizeof(my_state.filter_text) - 2) {
         my_state.filter_text[len++] = ',';
@@ -308,7 +308,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       tree_pids[tree_count++] = pid;
       for (int ti = 0; ti < tree_count; ++ti) {
         const int parent = tree_pids[ti];
-        for (size_t li = 0; li < my_state.lines.size; ++li) {
+        for (uint32_t li = 0; li < my_state.lines.size; ++li) {
           const BriefTableLine &l = my_state.lines.data[li];
           if (l.ppid == parent && l.pid != parent &&
               tree_count < (int)(sizeof(tree_pids) / sizeof(tree_pids[0]))) {
@@ -332,7 +332,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
 static void compute_filter_visibility(const BriefTableState &my_state,
                                       const ImGuiTextFilter &filter) {
   // First pass: mark direct matches
-  for (size_t i = 0; i < my_state.lines.size; ++i) {
+  for (uint32_t i = 0; i < my_state.lines.size; ++i) {
     BriefTableLine &line = my_state.lines.data[i];
     char pid_str[32];
     snprintf(pid_str, sizeof(pid_str), "%d", line.pid);
@@ -356,12 +356,12 @@ static void compute_filter_visibility(const BriefTableState &my_state,
   bool changed = true;
   while (changed) {
     changed = false;
-    for (size_t i = 0; i < my_state.lines.size; ++i) {
+    for (uint32_t i = 0; i < my_state.lines.size; ++i) {
       BriefTableLine &line = my_state.lines.data[i];
       if (line.filter_state != 0) continue;
 
       // Check if parent is a subtree member
-      for (size_t j = 0; j < my_state.lines.size; ++j) {
+      for (uint32_t j = 0; j < my_state.lines.size; ++j) {
         if (my_state.lines.data[j].pid == line.ppid &&
             my_state.lines.data[j].filter_state == 3) {
           line.filter_state = 3; // Subtree member
@@ -377,7 +377,7 @@ static void compute_filter_visibility(const BriefTableState &my_state,
   // deeper visible node means this node is an ancestor of that visible node
   if (my_state.tree_mode) {
     int last_visible_depth = -1;
-    for (size_t i = my_state.lines.size; i-- > 0;) {
+    for (uint32_t i = my_state.lines.size; i-- > 0;) {
       BriefTableLine &line = my_state.lines.data[i];
       const int depth = line.tree_depth;
 
@@ -558,7 +558,7 @@ static Array<int> compute_visible_indices(const BriefTableState &my_state,
 
   if (!my_state.tree_mode) {
     // Flat mode: skip only filtered rows
-    for (size_t i = 0; i < my_state.lines.size; ++i) {
+    for (uint32_t i = 0; i < my_state.lines.size; ++i) {
       if (filter_active && my_state.lines.data[i].filter_state == 0) continue;
       buf.data[count++] = static_cast<int>(i);
     }
@@ -568,7 +568,7 @@ static Array<int> compute_visible_indices(const BriefTableState &my_state,
     ImGuiStorage *storage = window->DC.StateStorage;
     int collapsed_at_depth = -1;
 
-    for (size_t i = 0; i < my_state.lines.size; ++i) {
+    for (uint32_t i = 0; i < my_state.lines.size; ++i) {
       const BriefTableLine &line = my_state.lines.data[i];
 
       if (filter_active && line.filter_state == 0) continue;
@@ -587,7 +587,7 @@ static Array<int> compute_visible_indices(const BriefTableState &my_state,
 
       // Check if this node has visible children
       bool has_children = false;
-      for (size_t j = i + 1; j < my_state.lines.size; ++j) {
+      for (uint32_t j = i + 1; j < my_state.lines.size; ++j) {
         const BriefTableLine &next = my_state.lines.data[j];
         if (next.tree_depth <= line.tree_depth) break;
         if (!filter_active || next.filter_state != 0) {
@@ -609,7 +609,7 @@ static Array<int> compute_visible_indices(const BriefTableState &my_state,
     }
   }
 
-  return Array<int>{buf.data, static_cast<size_t>(count)};
+  return Array<int>{buf.data, static_cast<uint32_t>(count)};
 }
 
 void brief_table_draw(FrameContext &ctx, ViewState &view_state,
@@ -619,7 +619,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   int focus_scroll_to_idx = -1;
 
   char title[64];
-  snprintf(title, sizeof(title), "Process Table (%zu processes)###ProcessTable",
+  snprintf(title, sizeof(title), "Process Table (%u processes)###ProcessTable",
            my_state.lines.size);
   ImGui::Begin(title, nullptr, COMMON_VIEW_FLAGS);
 
@@ -734,14 +734,14 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       for (int n = 0; n < io.InputQueueCharacters.Size; ++n) {
         const ImWchar c = io.InputQueueCharacters[n];
         if (c >= 32 && c < 127) { // Printable ASCII
-          const size_t len = strlen(my_state.type_search);
+          const uint32_t len = static_cast<uint32_t>(strlen(my_state.type_search));
           if (len < sizeof(my_state.type_search) - 1) {
             my_state.type_search[len] = static_cast<char>(c);
             my_state.type_search[len + 1] = '\0';
             my_state.type_search_time_ns = now_ns;
             // Find current selection's index
             int current_idx = 0;
-            for (size_t j = 0; j < my_state.lines.size; ++j) {
+            for (uint32_t j = 0; j < my_state.lines.size; ++j) {
               if (my_state.lines.data[j].pid == my_state.selected_pid) {
                 current_idx = static_cast<int>(j);
                 break;
@@ -751,10 +751,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             // refining) First char: start from next to find something different
             // from current selection Subsequent chars: start from current to
             // refine the existing match
-            const size_t total = my_state.lines.size;
+            const uint32_t total = my_state.lines.size;
             if (len == 0) current_idx += 1;
-            for (size_t offset = 0; offset <= total; ++offset) {
-              const size_t j = (current_idx + offset) % total;
+            for (uint32_t offset = 0; offset <= total; ++offset) {
+              const uint32_t j = (current_idx + offset) % total;
               const BriefTableLine &l = my_state.lines.data[j];
               if (filter_active && l.filter_state == 0) continue;
               if (strncasecmp(l.name, my_state.type_search, len + 1) == 0) {
@@ -771,7 +771,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     // Convert focus_scroll_to_idx (line index) to clipper index
     int focus_clipper_idx = -1;
     if (focus_scroll_to_idx >= 0) {
-      for (size_t ci = 0; ci < visible_indices.size; ++ci) {
+      for (uint32_t ci = 0; ci < visible_indices.size; ++ci) {
         if (visible_indices.data[ci] == focus_scroll_to_idx) {
           focus_clipper_idx = static_cast<int>(ci);
           break;
@@ -834,7 +834,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           // Check if this node has children (scan original lines, not
           // visible_indices)
           bool has_children = false;
-          for (size_t j = i + 1; j < my_state.lines.size; ++j) {
+          for (uint32_t j = i + 1; j < my_state.lines.size; ++j) {
             const BriefTableLine &next = my_state.lines.data[j];
             if (next.tree_depth <= line.tree_depth) break;
             if (!filter_active || next.filter_state != 0) {
@@ -905,7 +905,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   if (my_state.selected_pid > 0) {
     // Ctrl+C to copy selected row
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-      for (size_t i = 0; i < my_state.lines.size; ++i) {
+      for (uint32_t i = 0; i < my_state.lines.size; ++i) {
         if (my_state.lines.data[i].pid == my_state.selected_pid) {
           copy_process_row(my_state.lines.data[i]);
           break;

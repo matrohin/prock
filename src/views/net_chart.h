@@ -14,7 +14,7 @@ struct NetChartData {
 struct NetChartState {
   BumpArena cur_arena;
   GrowingArray<NetChartData> charts;
-  size_t wasted_bytes;
+  uint32_t wasted_bytes;
 };
 
 void net_chart_update(NetChartState &my_state, const State &state);

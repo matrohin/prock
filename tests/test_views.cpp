@@ -21,12 +21,12 @@ using ImPlotShadedFlags = int;
 TEST_CASE("binary_search_pid") {
   BumpArena arena = BumpArena::create();
 
-  SUBCASE("empty array returns SIZE_MAX") {
+  SUBCASE("empty array returns UINT32_MAX") {
     Array<ProcessStat> stats = {};
     stats.size = 0;
     stats.data = nullptr;
 
-    CHECK(binary_search_pid(stats, 1) == SIZE_MAX);
+    CHECK(binary_search_pid(stats, 1) == UINT32_MAX);
   }
 
   SUBCASE("single element - found") {
@@ -42,8 +42,8 @@ TEST_CASE("binary_search_pid") {
     builder.add(100, 0, "test");
     StateSnapshot snapshot = builder.build();
 
-    CHECK(binary_search_pid(snapshot.stats, 50) == SIZE_MAX);
-    CHECK(binary_search_pid(snapshot.stats, 150) == SIZE_MAX);
+    CHECK(binary_search_pid(snapshot.stats, 50) == UINT32_MAX);
+    CHECK(binary_search_pid(snapshot.stats, 150) == UINT32_MAX);
   }
 
   SUBCASE("multiple elements - found at various positions") {
@@ -69,10 +69,10 @@ TEST_CASE("binary_search_pid") {
     builder.add(30, 0, "third");
     StateSnapshot snapshot = builder.build();
 
-    CHECK(binary_search_pid(snapshot.stats, 5) == SIZE_MAX);
-    CHECK(binary_search_pid(snapshot.stats, 15) == SIZE_MAX);
-    CHECK(binary_search_pid(snapshot.stats, 25) == SIZE_MAX);
-    CHECK(binary_search_pid(snapshot.stats, 35) == SIZE_MAX);
+    CHECK(binary_search_pid(snapshot.stats, 5) == UINT32_MAX);
+    CHECK(binary_search_pid(snapshot.stats, 15) == UINT32_MAX);
+    CHECK(binary_search_pid(snapshot.stats, 25) == UINT32_MAX);
+    CHECK(binary_search_pid(snapshot.stats, 35) == UINT32_MAX);
   }
 
   arena.destroy();
@@ -92,7 +92,7 @@ TEST_CASE("common_charts_sort_added") {
 
   SUBCASE("sorts by pid ascending") {
     GrowingArray<TestChartData> charts = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
     charts.emplace_back(arena, wasted)->pid = 50;
     charts.emplace_back(arena, wasted)->pid = 10;
     charts.emplace_back(arena, wasted)->pid = 30;
@@ -110,7 +110,7 @@ TEST_CASE("common_charts_sort_added") {
 
   SUBCASE("already sorted stays sorted") {
     GrowingArray<TestChartData> charts = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
     charts.emplace_back(arena, wasted)->pid = 1;
     charts.emplace_back(arena, wasted)->pid = 2;
     charts.emplace_back(arena, wasted)->pid = 3;

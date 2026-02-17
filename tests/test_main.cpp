@@ -118,7 +118,7 @@ TEST_CASE("GrowingArray basic operations") {
 
   SUBCASE("emplace_back adds elements") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
 
     *arr.emplace_back(arena, wasted) = 1;
     *arr.emplace_back(arena, wasted) = 2;
@@ -132,7 +132,7 @@ TEST_CASE("GrowingArray basic operations") {
 
   SUBCASE("grows automatically") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
 
     // Add many elements to force growth
     for (int i = 0; i < 100; ++i) {
@@ -147,7 +147,7 @@ TEST_CASE("GrowingArray basic operations") {
 
   SUBCASE("tracks wasted bytes on realloc") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
 
     // Force multiple reallocations
     for (int i = 0; i < 20; ++i) {
@@ -162,7 +162,7 @@ TEST_CASE("GrowingArray basic operations") {
 
   SUBCASE("shrink_to reduces size") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
 
     for (int i = 0; i < 10; ++i) {
       *arr.emplace_back(arena, wasted) = i;
@@ -179,7 +179,7 @@ TEST_CASE("GrowingArray basic operations") {
 
   SUBCASE("shrink_to with larger size does nothing") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
 
     for (int i = 0; i < 5; ++i) {
       *arr.emplace_back(arena, wasted) = i;
@@ -341,7 +341,7 @@ TEST_CASE("GrowingArray::last_or") {
 
   SUBCASE("returns last element with single element") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
     *arr.emplace_back(arena, wasted) = 99;
 
     CHECK(arr.last_or(0) == 99);
@@ -349,7 +349,7 @@ TEST_CASE("GrowingArray::last_or") {
 
   SUBCASE("returns last element with multiple elements") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
     *arr.emplace_back(arena, wasted) = 10;
     *arr.emplace_back(arena, wasted) = 20;
     *arr.emplace_back(arena, wasted) = 30;
@@ -359,7 +359,7 @@ TEST_CASE("GrowingArray::last_or") {
 
   SUBCASE("returns last after shrink") {
     GrowingArray<int> arr = {};
-    size_t wasted = 0;
+    uint32_t wasted = 0;
     *arr.emplace_back(arena, wasted) = 10;
     *arr.emplace_back(arena, wasted) = 20;
     *arr.emplace_back(arena, wasted) = 30;
@@ -447,24 +447,24 @@ TEST_CASE("bin_search_exact") {
     CHECK(bin_search_exact<int>(5, get, 50) == 4);
   }
 
-  SUBCASE("returns SIZE_MAX for missing values") {
+  SUBCASE("returns UINT32_MAX for missing values") {
     int arr[] = {10, 20, 30, 40, 50};
     auto get = [&](size_t i) { return arr[i]; };
-    CHECK(bin_search_exact<int>(5, get, 5) == SIZE_MAX);
-    CHECK(bin_search_exact<int>(5, get, 25) == SIZE_MAX);
-    CHECK(bin_search_exact<int>(5, get, 55) == SIZE_MAX);
+    CHECK(bin_search_exact<int>(5, get, 5) == UINT32_MAX);
+    CHECK(bin_search_exact<int>(5, get, 25) == UINT32_MAX);
+    CHECK(bin_search_exact<int>(5, get, 55) == UINT32_MAX);
   }
 
-  SUBCASE("empty array returns SIZE_MAX") {
+  SUBCASE("empty array returns UINT32_MAX") {
     auto get = [](size_t) { return 0; };
-    CHECK(bin_search_exact<int>(0, get, 10) == SIZE_MAX);
+    CHECK(bin_search_exact<int>(0, get, 10) == UINT32_MAX);
   }
 
   SUBCASE("single element - not found") {
     int arr[] = {10};
     auto get = [&](size_t i) { return arr[i]; };
-    CHECK(bin_search_exact<int>(1, get, 5) == SIZE_MAX);
-    CHECK(bin_search_exact<int>(1, get, 15) == SIZE_MAX);
+    CHECK(bin_search_exact<int>(1, get, 5) == UINT32_MAX);
+    CHECK(bin_search_exact<int>(1, get, 15) == UINT32_MAX);
   }
 }
 

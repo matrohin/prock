@@ -13,7 +13,7 @@
 
 const char *ENVIRON_COPY_HEADER = "Name\tValue\n";
 
-static constexpr size_t CLEANUP_AFTER_N_UPDATES_ENVIRON = 5;
+static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_ENVIRON = 5;
 
 static void copy_environ_row(const EnvironEntry &entry) {
   char buf[4400];
@@ -37,7 +37,7 @@ static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", ENVIRON_COPY_HEADER);
 
-  for (size_t i = 0; i < win.entries.size; ++i) {
+  for (uint32_t i = 0; i < win.entries.size; ++i) {
     const EnvironEntry &entry = win.entries.data[i];
     ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\n", entry.name.data,
                     entry.value.data);
@@ -50,7 +50,7 @@ static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
 static bool is_expandable_value(const String &value) {
   if (value.len < 10) return false; // Too short to benefit from expansion
   int colons = 0;
-  for (size_t i = 0; i < value.len; ++i) {
+  for (uint32_t i = 0; i < value.len; ++i) {
     if (value.data[i] == ':') {
       ++colons;
       if (colons >= 2) return true; // At least 3 segments
@@ -116,14 +116,14 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
 void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
   EnvironResponse response;
   while (sync.on_demand_reader.environ_response_queue.pop(response)) {
-    for (size_t i = 0; i < state.windows.size(); ++i) {
+    for (uint32_t i = 0; i < state.windows.size(); ++i) {
       EnvironViewerWindow &win = state.windows.data()[i];
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eEnvironViewerStatus_Ready;
           win.entries =
               Array<EnvironEntry>::copy_from(state.cur_arena, response.entries);
-          for (size_t j = 0; j < win.entries.size; ++j) {
+          for (uint32_t j = 0; j < win.entries.size; ++j) {
             EnvironEntry &dst = win.entries.data[j];
             dst.name = String::copy_from(state.cur_arena, dst.name);
             dst.value = String::copy_from(state.cur_arena, dst.value);
@@ -144,12 +144,12 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (size_t i = 0; i < state.windows.size(); ++i) {
+    for (uint32_t i = 0; i < state.windows.size(); ++i) {
       EnvironViewerWindow &win = state.windows.data()[i];
       if (win.entries.size > 0) {
         Array<EnvironEntry> new_entries =
             Array<EnvironEntry>::copy_from(state.cur_arena, win.entries);
-        for (size_t j = 0; j < win.entries.size; ++j) {
+        for (uint32_t j = 0; j < win.entries.size; ++j) {
           EnvironEntry &dst = new_entries.data[j];
           dst.name = String::copy_from(new_arena, dst.name);
           dst.value = String::copy_from(new_arena, dst.value);
@@ -167,9 +167,9 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
 void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   ZoneScoped;
   EnvironViewerState &my_state = view_state.environ_viewer_state;
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.windows.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.windows.size(); ++i) {
     if (last != i) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
@@ -184,7 +184,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                win.process_name, win.pid, win.pid);
     } else {
       snprintf(title, sizeof(title),
-               "Environment: %s (%d) - %zu variables###Environ%d",
+               "Environment: %s (%d) - %u variables###Environ%d",
                win.process_name, win.pid, win.entries.size, win.pid);
     }
 
@@ -221,7 +221,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
                                   [&] { sort_environ(win); });
 
-          for (size_t j = 0; j < win.entries.size; ++j) {
+          for (uint32_t j = 0; j < win.entries.size; ++j) {
             const EnvironEntry &entry = win.entries.data[j];
             // Filter by name or value
             if (filter.IsActive() && !filter.PassFilter(entry.name.data) &&

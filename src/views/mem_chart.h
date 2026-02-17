@@ -13,7 +13,7 @@ struct MemChartData {
 struct MemChartState {
   BumpArena cur_arena;
   GrowingArray<MemChartData> charts;
-  size_t wasted_bytes;
+  uint32_t wasted_bytes;
 };
 
 void mem_chart_update(MemChartState &my_state, const State &state);

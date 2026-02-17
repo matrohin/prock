@@ -16,7 +16,7 @@ struct TopProcess {
 template <class F>
 TopProcess find_top_process(const StateSnapshot &snapshot, F get_value) {
   TopProcess top = {0, {'\0'}, 0.0};
-  for (size_t i = 0; i < snapshot.stats.size; ++i) {
+  for (uint32_t i = 0; i < snapshot.stats.size; ++i) {
     const double val = get_value(snapshot.derived_stats.data[i]);
     if (val > top.value) {
       top.pid = snapshot.stats.data[i].pid;
@@ -48,8 +48,8 @@ constexpr const char *TITLE_SEND = "Send";
 template <class T, class F>
 void common_charts_update(GrowingArray<T> &charts, const State &state, F f) {
   const StateSnapshot &new_snapshot = state.snapshot;
-  size_t external_idx = 0;
-  for (size_t i = 0; i < charts.size(); ++i) {
+  uint32_t external_idx = 0;
+  for (uint32_t i = 0; i < charts.size(); ++i) {
     auto &chart = charts.data()[i];
     while (external_idx < new_snapshot.stats.size &&
            new_snapshot.stats.data[external_idx].pid < chart.pid) {

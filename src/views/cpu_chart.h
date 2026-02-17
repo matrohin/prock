@@ -16,7 +16,7 @@ struct CpuChartData {
 struct CpuChartState {
   BumpArena cur_arena;
   GrowingArray<CpuChartData> charts;
-  size_t wasted_bytes;
+  uint32_t wasted_bytes;
 };
 
 void cpu_chart_update(CpuChartState &my_state, const State &state);

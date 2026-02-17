@@ -35,7 +35,7 @@ struct SnapshotBuilder {
   BumpArena &arena;
   GrowingArray<ProcessStat> stats;
   GrowingArray<ProcessDerivedStat> derived;
-  size_t wasted = 0;
+  uint32_t wasted = 0;
 
   explicit SnapshotBuilder(BumpArena &a) : arena(a), stats{}, derived{} {}
 

@@ -13,8 +13,8 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   const double time_delta_secs =
       std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
 
-  size_t old_state_idx = 0;
-  for (size_t i = 0; i < derived_stats.size; ++i) {
+  uint32_t old_state_idx = 0;
+  for (uint32_t i = 0; i < derived_stats.size; ++i) {
     ProcessDerivedStat &result = derived_stats.data[i];
     const ProcessStat &new_stat = snapshot.stats.data[i];
 
@@ -71,7 +71,7 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
       Array<double>::create(arena, snapshot.cpu_stats.size),
       Array<double>::create(arena, snapshot.cpu_stats.size),
   };
-  for (size_t i = 0; i < snapshot.cpu_stats.size && i < old.cpu_stats.size;
+  for (uint32_t i = 0; i < snapshot.cpu_stats.size && i < old.cpu_stats.size;
        ++i) {
     const CpuCoreStat &cur = snapshot.cpu_stats.data[i];
     const CpuCoreStat &prev = old.cpu_stats.data[i];

@@ -34,7 +34,7 @@ void net_chart_update(NetChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (size_t i = 0; i < my_state.charts.size(); ++i) {
+    for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
       NetChartData &chart = my_state.charts.data()[i];
       chart.times.realloc(new_arena);
       chart.recv_kb_per_sec.realloc(new_arena);
@@ -50,9 +50,9 @@ void net_chart_update(NetChartState &my_state, const State &state) {
 void net_chart_draw(ViewState &view_state) {
   ZoneScoped;
   NetChartState &my_state = view_state.net_chart_state;
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.charts.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
     if (last != i) {
       my_state.charts.data()[last] = my_state.charts.data()[i];
     }

@@ -10,7 +10,7 @@ struct SystemCpuChartState {
   GrowingArray<double> interrupts_usage;
   GrowingArray<double> core_usage[MAX_CORES];
   GrowingArray<TopProcess> top_processes;
-  size_t wasted_bytes;
+  uint32_t wasted_bytes;
   int num_cores;
 
   bool stacked;

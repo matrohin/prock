@@ -30,7 +30,7 @@ static void copy_all_threads(BumpArena &arena, const ThreadsViewerWindow &win) {
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", THREAD_COPY_HEADER);
 
-  for (size_t i = 0; i < win.lines.size; ++i) {
+  for (uint32_t i = 0; i < win.lines.size; ++i) {
     const ThreadLine &line = win.lines.data[i];
     ptr +=
         snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n",
@@ -83,8 +83,8 @@ static void sort_thread_lines(ThreadsViewerWindow &win) {
 
 // Check if any other window still needs this PID watched
 static bool pid_still_needed(const ThreadsViewerState &state, const int pid,
-                             const size_t exclude_idx) {
-  for (size_t i = 0; i < state.windows.size(); ++i) {
+                             const uint32_t exclude_idx) {
+  for (uint32_t i = 0; i < state.windows.size(); ++i) {
     if (i != exclude_idx && state.windows.data()[i].pid == pid) {
       return true;
     }
@@ -126,12 +126,12 @@ void threads_viewer_update(ThreadsViewerState &state,
   const Array<ThreadSnapshot> &snapshots =
       state_data.snapshot.thread_snapshots;
 
-  for (size_t w = 0; w < state.windows.size(); ++w) {
+  for (uint32_t w = 0; w < state.windows.size(); ++w) {
     ThreadsViewerWindow &win = state.windows.data()[w];
 
     // Find matching snapshot
     const ThreadSnapshot *snap = nullptr;
-    for (size_t s = 0; s < snapshots.size; ++s) {
+    for (uint32_t s = 0; s < snapshots.size; ++s) {
       if (snapshots.data[s].pid == win.pid) {
         snap = &snapshots.data[s];
         break;
@@ -159,8 +159,8 @@ void threads_viewer_update(ThreadsViewerState &state,
         std::chrono::duration_cast<Seconds>(now - prev_at).count();
     const double ticks_passed = ticks_in_second * time_delta;
 
-    size_t prev_idx = 0;
-    for (size_t i = 0; i < snap->threads.size; ++i) {
+    uint32_t prev_idx = 0;
+    for (uint32_t i = 0; i < snap->threads.size; ++i) {
       const ProcessStat &thread = snap->threads.data[i];
       ThreadLine &line = win.lines.data[i];
 
@@ -209,7 +209,7 @@ void threads_viewer_update(ThreadsViewerState &state,
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (size_t i = 0; i < state.windows.size(); ++i) {
+    for (uint32_t i = 0; i < state.windows.size(); ++i) {
       ThreadsViewerWindow &win = state.windows.data()[i];
       if (win.lines.size > 0) {
         win.lines = Array<ThreadLine>::copy_from(new_arena, win.lines);
@@ -230,9 +230,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                          const State & /*state*/) {
   ZoneScoped;
   ThreadsViewerState &my_state = view_state.threads_viewer_state;
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.windows.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.windows.size(); ++i) {
     if (last != i) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
@@ -248,7 +248,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                win.pid, win.pid);
     } else {
       snprintf(title, sizeof(title),
-               "Threads: %s (%d) - %zu threads [Live]###Threads%d",
+               "Threads: %s (%d) - %u threads [Live]###Threads%d",
                win.process_name, win.pid, win.lines.size, win.pid);
     }
 
@@ -289,7 +289,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
                                   [&] { sort_thread_lines(win); });
 
-          for (size_t j = 0; j < win.lines.size; ++j) {
+          for (uint32_t j = 0; j < win.lines.size; ++j) {
             const ThreadLine &line = win.lines.data[j];
 
             if (!filter.PassFilter(line.comm)) continue;
@@ -339,7 +339,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
         // Ctrl+C to copy selected row
         if (win.selected_tid >= 0 &&
             ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-          for (size_t j = 0; j < win.lines.size; ++j) {
+          for (uint32_t j = 0; j < win.lines.size; ++j) {
             if (win.lines.data[j].tid == win.selected_tid) {
               copy_thread_row(win.lines.data[j]);
               break;

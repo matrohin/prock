@@ -17,9 +17,9 @@ enum ProcessWindowFlags_ {
 template <class T>
 void process_window_close(ImGuiID dock_id, GrowingArray<T> &windows, int pid) {
   T *data = windows.data();
-  const size_t size = windows.size();
-  const size_t i = bin_search_exact(
-      size, [data](const size_t mid) { return data[mid].pid; }, pid);
+  const uint32_t size = windows.size();
+  const uint32_t i = bin_search_exact(
+      size, [data](const uint32_t mid) { return data[mid].pid; }, pid);
   if (i < size && data[i].dock_id == dock_id) {
     data[i].flags |= eProcessWindowFlags_CloseRequested;
   }
@@ -28,9 +28,9 @@ void process_window_close(ImGuiID dock_id, GrowingArray<T> &windows, int pid) {
 template <class T>
 void process_window_redock(GrowingArray<T> &windows, const int pid) {
   T *data = windows.data();
-  const size_t size = windows.size();
-  const size_t i = bin_search_exact(
-      size, [data](const size_t mid) { return data[mid].pid; }, pid);
+  const uint32_t size = windows.size();
+  const uint32_t i = bin_search_exact(
+      size, [data](const uint32_t mid) { return data[mid].pid; }, pid);
   if (i < size) {
     data[i].flags |= eProcessWindowFlags_RedockRequested;
   }
@@ -40,9 +40,9 @@ void process_window_redock(GrowingArray<T> &windows, const int pid) {
 template <class T>
 bool process_window_focus(GrowingArray<T> &windows, const int pid) {
   T *data = windows.data();
-  const size_t size = windows.size();
-  const size_t i = bin_search_exact(
-      size, [data](const size_t mid) { return data[mid].pid; }, pid);
+  const uint32_t size = windows.size();
+  const uint32_t i = bin_search_exact(
+      size, [data](const uint32_t mid) { return data[mid].pid; }, pid);
   if (i < size) {
     data[i].flags |= eProcessWindowFlags_FocusRequested;
     return true;

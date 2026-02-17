@@ -53,7 +53,7 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (size_t i = 0; i < my_state.charts.size(); ++i) {
+    for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
       CpuChartData &chart = my_state.charts.data()[i];
       chart.times.realloc(new_arena);
       chart.cpu_total_perc.realloc(new_arena);
@@ -73,9 +73,9 @@ void cpu_chart_draw(ViewState &view_state) {
   const bool per_core = view_state.preferences_state.cpu_per_core;
   const double scale = (per_core || num_cores <= 0) ? 1.0 : 1.0 / num_cores;
 
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.charts.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
     if (last != i) {
       my_state.charts.data()[last] = my_state.charts.data()[i];
     }

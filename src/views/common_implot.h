@@ -17,8 +17,8 @@ void show_top_process_tooltip(const GrowingArray<double> &times,
     return;
   }
   ImPlotPoint mouse = ImPlot::GetPlotMousePos();
-  size_t idx = lower_bound(
-      times.size(), [&times](size_t i) { return times.data()[i]; }, mouse.x);
+  uint32_t idx = lower_bound(
+      times.size(), [&times](uint32_t i) { return times.data()[i]; }, mouse.x);
   if (idx >= times.size()) {
     return;
   }
@@ -63,7 +63,7 @@ constexpr ImPlotAxisFlags COMMON_Y_FLAGS = ImPlotAxisFlags_RangeFit;
 // Handles delayed Y axis fit: first frame lets X establish its range,
 // second frame fits Y using RangeFit against the established X range.
 // Returns true if caller should increment y_axis_fitted after BeginPlot.
-inline bool try_initial_y_fit(int y_axis_fitted, size_t data_size) {
+inline bool try_initial_y_fit(int y_axis_fitted, uint32_t data_size) {
   if (y_axis_fitted >= 2 || data_size < 3) {
     return false;
   }

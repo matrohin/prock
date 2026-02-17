@@ -117,7 +117,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
         chart_add_tooltip(TITLE_INTERRUPTS, "irq + softirq from /proc/stat");
       } else if (my_state.stacked) {
         // Stacked per-core view
-        const size_t n = my_state.core_usage[0].size();
+        const uint32_t n = my_state.core_usage[0].size();
         if (n > 0 && my_state.num_cores > 0) {
           Array<double> prev = Array<double>::create(ctx.frame_arena, n);
           Array<double> curr = Array<double>::create(ctx.frame_arena, n);
@@ -140,7 +140,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
               std::swap(prev.data, curr.data);
             } else {
               const double *core_data = my_state.core_usage[i].data();
-              for (size_t j = 0; j < n; ++j) {
+              for (uint32_t j = 0; j < n; ++j) {
                 curr.data[j] = prev.data[j] + core_data[j];
               }
             }

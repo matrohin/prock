@@ -87,7 +87,7 @@ inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
     // Ctrl+W: delete last filter entry (word)
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_W,
                         ImGuiInputFlags_RouteAlways)) {
-      size_t len = strlen(filter_text);
+      uint32_t len = static_cast<uint32_t>(strlen(filter_text));
       if (len > 0) {
         while (len > 0 && filter_text[len - 1] == ',') {
           len--;

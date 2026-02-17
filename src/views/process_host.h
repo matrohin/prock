@@ -16,7 +16,7 @@ struct ProcessHostWindow {
 struct ProcessHostState {
   GrowingArray<ProcessHostWindow> windows;
   BumpArena cur_arena;
-  size_t wasted_bytes;
+  uint32_t wasted_bytes;
   int focused_pid = -1;
 };
 

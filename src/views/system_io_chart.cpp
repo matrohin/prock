@@ -75,9 +75,9 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
       if (ImPlot::IsPlotHovered() && my_state.times.size() > 0) {
         ImPlotPoint mouse = ImPlot::GetPlotMousePos();
-        size_t idx = lower_bound(
+        uint32_t idx = lower_bound(
             my_state.times.size(),
-            [&](size_t i) { return my_state.times.data()[i]; }, mouse.x);
+            [&](uint32_t i) { return my_state.times.data()[i]; }, mouse.x);
         if (idx < my_state.times.size()) {
           char read_buf[32];
           char write_buf[32];

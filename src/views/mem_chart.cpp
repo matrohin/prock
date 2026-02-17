@@ -31,7 +31,7 @@ void mem_chart_update(MemChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (size_t i = 0; i < my_state.charts.size(); ++i) {
+    for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
       MemChartData &chart = my_state.charts.data()[i];
       chart.times.realloc(new_arena);
       chart.mem_resident_kb.realloc(new_arena);
@@ -46,9 +46,9 @@ void mem_chart_update(MemChartState &my_state, const State &state) {
 void mem_chart_draw(ViewState &view_state) {
   ZoneScoped;
   MemChartState &my_state = view_state.mem_chart_state;
-  size_t last = 0;
+  uint32_t last = 0;
 
-  for (size_t i = 0; i < my_state.charts.size(); ++i) {
+  for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
     if (last != i) {
       my_state.charts.data()[last] = my_state.charts.data()[i];
     }

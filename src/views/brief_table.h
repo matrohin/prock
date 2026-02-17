@@ -72,7 +72,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state);
 
 // Pure logic functions (exposed for testing)
-size_t binary_search_pid(const Array<ProcessStat> &stats, int pid);
+uint32_t binary_search_pid(const Array<ProcessStat> &stats, int pid);
 
 void sort_brief_table_lines(BriefTableState &my_state);
 void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena);
