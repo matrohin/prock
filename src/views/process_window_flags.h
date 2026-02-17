@@ -15,7 +15,7 @@ enum ProcessWindowFlags_ {
 };
 
 template <class T>
-void process_window_close(ImGuiID dock_id, GrowingArray<T> &windows, int pid) {
+void process_window_close(ImGuiID dock_id, GrowingArray<T> &windows, Pid pid) {
   T *data = windows.data();
   const uint32_t size = windows.size();
   const uint32_t i = bin_search_exact(
@@ -26,7 +26,7 @@ void process_window_close(ImGuiID dock_id, GrowingArray<T> &windows, int pid) {
 }
 
 template <class T>
-void process_window_redock(GrowingArray<T> &windows, const int pid) {
+void process_window_redock(GrowingArray<T> &windows, const Pid pid) {
   T *data = windows.data();
   const uint32_t size = windows.size();
   const uint32_t i = bin_search_exact(
@@ -38,7 +38,7 @@ void process_window_redock(GrowingArray<T> &windows, const int pid) {
 
 // Returns true if window exists and was marked for focus, false if not found
 template <class T>
-bool process_window_focus(GrowingArray<T> &windows, const int pid) {
+bool process_window_focus(GrowingArray<T> &windows, const Pid pid) {
   T *data = windows.data();
   const uint32_t size = windows.size();
   const uint32_t i = bin_search_exact(

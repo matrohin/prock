@@ -1,7 +1,7 @@
 #pragma once
 
 struct IoChartData {
-  int pid;
+  Pid pid;
   ImGuiID dock_id;
   char label[128];
   GrowingArray<double> times;
@@ -20,5 +20,5 @@ struct IoChartState {
 void io_chart_update(IoChartState &my_state, const State &state);
 void io_chart_draw(ViewState &view_state);
 
-void io_chart_add(IoChartState &my_state, int pid, const char *comm,
+void io_chart_add(IoChartState &my_state, Pid pid, const char *comm,
                   ImGuiID dock_id = 0, ProcessWindowFlags extra_flags = 0);

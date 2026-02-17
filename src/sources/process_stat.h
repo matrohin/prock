@@ -14,10 +14,10 @@ Fields used from /proc/[pid]/statm:
 */
 
 struct ProcessStat {
-  int pid;
+  Pid pid;
   const char *comm;
   char state;
-  int ppid;
+  Pid ppid;
   ulong utime;
   ulong stime;
   long num_threads;
@@ -79,7 +79,7 @@ struct NetIoStat {
 
 struct GatheringState {
   SteadyTimePoint last_update;
-  GrowingArray<int> watched_pids;
+  GrowingArray<Pid> watched_pids;
   BumpArena watched_pids_arena;
 };
 

@@ -9,11 +9,11 @@ struct LibraryEntry {
 };
 
 struct LibraryRequest {
-  int pid;
+  Pid pid;
 };
 
 struct LibraryResponse {
-  int pid;
+  Pid pid;
   int error_code; // 0=success, errno otherwise
   BumpArena owner_arena;
   Array<LibraryEntry> libraries;

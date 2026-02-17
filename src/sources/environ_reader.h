@@ -9,11 +9,11 @@ struct EnvironEntry {
 };
 
 struct EnvironRequest {
-  int pid;
+  Pid pid;
 };
 
 struct EnvironResponse {
-  int pid;
+  Pid pid;
   int error_code;
   BumpArena owner_arena;
   Array<EnvironEntry> entries;

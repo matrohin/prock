@@ -29,8 +29,8 @@ enum BriefTableColumnId {
 };
 
 struct BriefTableLine {
-  int pid;
-  int ppid;
+  Pid pid;
+  Pid ppid;
   const char *name;
   char state;
   long num_threads;
@@ -49,11 +49,11 @@ struct BriefTableState {
   Array<BriefTableLine> lines;
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
-  int selected_pid = -1;
+  Pid selected_pid = -1;
   char kill_error[128];
   char filter_text[256];
 
-  int control_edit_pid;           // PID being edited, 0 if none
+  Pid control_edit_pid;           // PID being edited, 0 if none
   uint64_t affinity_edit_mask;    // Affinity mask being edited
   int priority_edit_nice;         // Nice value being edited
   bool show_affinity_popup;

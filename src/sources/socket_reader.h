@@ -4,11 +4,11 @@
 #include "sources/process_stat.h"
 
 struct SocketRequest {
-  int pid;
+  Pid pid;
 };
 
 struct SocketResponse {
-  int pid;
+  Pid pid;
   int error_code;
   BumpArena owner_arena;
   Array<SocketEntry> sockets;

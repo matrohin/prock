@@ -7,7 +7,7 @@
 #include <cstring>
 
 struct TopProcess {
-  int pid;
+  Pid pid;
   char comm[16];  // Linux limits to 15 chars + null
   double value;
 };

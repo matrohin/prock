@@ -4,7 +4,7 @@
 #include "state.h"
 
 // Helper to create a ProcessStat with minimal required fields
-inline ProcessStat make_process_stat(BumpArena &arena, int pid, int ppid,
+inline ProcessStat make_process_stat(BumpArena &arena, Pid pid, Pid ppid,
                                      const char *comm, char state = 'S') {
   ProcessStat stat = {};
   stat.pid = pid;
@@ -39,7 +39,7 @@ struct SnapshotBuilder {
 
   explicit SnapshotBuilder(BumpArena &a) : arena(a), stats{}, derived{} {}
 
-  SnapshotBuilder &add(int pid, int ppid, const char *comm, char state = 'S',
+  SnapshotBuilder &add(Pid pid, Pid ppid, const char *comm, char state = 'S',
                        double cpu_user = 0.0, double cpu_kernel = 0.0,
                        double mem_bytes = 0.0) {
     *stats.emplace_back(arena, wasted) =

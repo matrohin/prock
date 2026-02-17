@@ -31,7 +31,7 @@ enum ThreadsViewerStatus {
 };
 
 struct ThreadsViewerWindow {
-  int pid;
+  Pid pid;
   char process_name[64];
   ImGuiID dock_id;
   ProcessWindowFlags flags;
@@ -67,7 +67,7 @@ struct FrameContext;
 struct ViewState;
 struct State;
 
-void threads_viewer_open(ThreadsViewerState &state, Sync &sync, int pid,
+void threads_viewer_open(ThreadsViewerState &state, Sync &sync, Pid pid,
                          const char *comm, ImGuiID dock_id = 0,
                          ProcessWindowFlags extra_flags = 0);
 void threads_viewer_update(ThreadsViewerState &state, const State &state_data);

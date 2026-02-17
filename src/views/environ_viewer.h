@@ -19,7 +19,7 @@ enum EnvironViewerColumnId {
 
 struct EnvironViewerWindow {
   EnvironViewerStatus status;
-  int pid;
+  Pid pid;
   ImGuiID dock_id;
   char process_name[64];
   int error_code;
@@ -47,11 +47,11 @@ struct FrameContext;
 struct ViewState;
 struct State;
 
-void environ_viewer_request(EnvironViewerState &state, Sync &sync, int pid,
+void environ_viewer_request(EnvironViewerState &state, Sync &sync, Pid pid,
                             const char *comm, ImGuiID dock_id = 0,
                             ProcessWindowFlags extra_flags = 0);
 void environ_viewer_update(EnvironViewerState &state, Sync &sync);
 void environ_viewer_draw(FrameContext &ctx, ViewState &view_state);
-void environ_viewer_close_if_docked_in(EnvironViewerState &state, int pid,
+void environ_viewer_close_if_docked_in(EnvironViewerState &state, Pid pid,
                                        ImGuiID dockspace_id);
-void environ_viewer_restore_layout_by_pid(EnvironViewerState &state, int pid);
+void environ_viewer_restore_layout_by_pid(EnvironViewerState &state, Pid pid);

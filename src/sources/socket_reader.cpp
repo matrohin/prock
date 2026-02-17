@@ -10,7 +10,7 @@
 
 // Collect socket inodes for a specific process from /proc/<pid>/fd
 static Array<unsigned long> collect_socket_inodes(BumpArena &arena,
-                                                  const int pid,
+                                                  const Pid pid,
                                                   int &out_errno) {
   GrowingArray<unsigned long> inodes = {};
   char fd_dir_path[64];
@@ -50,7 +50,7 @@ static Array<unsigned long> collect_socket_inodes(BumpArena &arena,
 SocketResponse read_process_sockets(BumpArena &temp_arena,
                                     const SocketRequest &request) {
   ZoneScoped;
-  const int pid = request.pid;
+  const Pid pid = request.pid;
 
   SocketResponse response = {};
   response.pid = pid;

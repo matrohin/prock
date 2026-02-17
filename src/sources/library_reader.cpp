@@ -16,7 +16,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
                                        const LibraryRequest &request) {
   ZoneScoped;
 
-  const int pid = request.pid;
+  const Pid pid = request.pid;
 
   LibraryResponse response = {};
   response.pid = pid;

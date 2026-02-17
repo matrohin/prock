@@ -124,7 +124,7 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
   // Build left-child/right-sibling tree using binary search for parent lookup.
   // Iterate in reverse so that prepending produces ascending PID order.
   for (uint32_t i = n; i-- > 0;) {
-    const int ppid = lines.data[i].ppid;
+    const Pid ppid = lines.data[i].ppid;
     uint32_t parent_node = 0; // sentinel = root
     if (ppid != 0 && lines.data[i].pid != ppid) {
       const uint32_t parent_idx = bin_search_exact(

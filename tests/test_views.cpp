@@ -79,7 +79,7 @@ TEST_CASE("binary_search_pid") {
 }
 
 struct TestChartData {
-  int pid;
+  Pid pid;
   char label[64];
 };
 

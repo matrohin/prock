@@ -82,7 +82,7 @@ static void sort_thread_lines(ThreadsViewerWindow &win) {
 }
 
 // Check if any other window still needs this PID watched
-static bool pid_still_needed(const ThreadsViewerState &state, const int pid,
+static bool pid_still_needed(const ThreadsViewerState &state, const Pid pid,
                              const uint32_t exclude_idx) {
   for (uint32_t i = 0; i < state.windows.size(); ++i) {
     if (i != exclude_idx && state.windows.data()[i].pid == pid) {
@@ -92,7 +92,7 @@ static bool pid_still_needed(const ThreadsViewerState &state, const int pid,
   return false;
 }
 
-void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const int pid,
+void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
                          const char *comm, const ImGuiID dock_id,
                          const ProcessWindowFlags extra_flags) {
   if (process_window_focus(state.windows, pid)) {

@@ -171,7 +171,7 @@ static bool is_loopback_socket(const SocketEntry &socket) {
 }
 
 // Read socket inodes owned by a process from /proc/[pid]/fd/
-static void read_process_socket_inodes(const int pid,
+static void read_process_socket_inodes(const Pid pid,
                                        GrowingArray<unsigned long> &out,
                                        BumpArena &arena) {
   char fd_path[64];
@@ -270,7 +270,7 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   return true;
 }
 
-static bool read_process(const int pid, BumpArena &arena, ProcessStat *out) {
+static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
   constexpr size_t PATH_BUF_SIZE = 64;
 
   char stat_filename[PATH_BUF_SIZE];
@@ -633,7 +633,7 @@ static NetIoStat read_net_io_stats() {
 // Reads /proc/meminfo for system-wide memory stats
 // Values are in kB (as reported by /proc/meminfo)
 // Read all threads for a process from /proc/[pid]/task/
-static Array<ProcessStat> read_process_threads(const int pid,
+static Array<ProcessStat> read_process_threads(const Pid pid,
                                                BumpArena &arena) {
   ZoneScoped;
   char task_path[64];
@@ -689,7 +689,7 @@ static Array<ProcessStat> read_process_threads(const int pid,
 
 // Read threads for all watched PIDs using the gathering thread's local array
 static Array<ThreadSnapshot>
-read_watched_threads(const GrowingArray<int> &watched_pids, BumpArena &arena) {
+read_watched_threads(const GrowingArray<Pid> &watched_pids, BumpArena &arena) {
   ZoneScoped;
   if (watched_pids.size() == 0) {
     return {};
@@ -759,7 +759,7 @@ void gather(GatheringState &state, Sync &sync) {
   }
 
   // Drain watch/unwatch queues to update local watched PIDs
-  int pid = 0;
+  Pid pid = 0;
   while (sync.thread_watch_queue.pop(pid)) {
     // Check if already watched
     bool found = false;

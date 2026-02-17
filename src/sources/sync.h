@@ -9,7 +9,7 @@
 #include <mutex>
 
 struct ThreadSnapshot {
-  int pid;
+  Pid pid;
   Array<ProcessStat> threads;  // Reuse ProcessStat - same format for threads
 };
 

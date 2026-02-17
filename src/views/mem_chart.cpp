@@ -103,7 +103,7 @@ void mem_chart_draw(ViewState &view_state) {
   my_state.charts.shrink_to(last);
 }
 
-void mem_chart_add(MemChartState &my_state, const int pid, const char *comm,
+void mem_chart_add(MemChartState &my_state, const Pid pid, const char *comm,
                    const ImGuiID dock_id, const ProcessWindowFlags extra_flags) {
   if (process_window_focus(my_state.charts, pid)) {
     return;

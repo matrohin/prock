@@ -13,7 +13,7 @@ EnvironResponse read_process_environ(BumpArena &temp_arena,
                                      const EnvironRequest &request) {
   ZoneScoped;
 
-  const int pid = request.pid;
+  const Pid pid = request.pid;
 
   EnvironResponse response = {};
   response.pid = pid;

@@ -84,14 +84,14 @@ static void sort_environ(EnvironViewerWindow &win) {
   }
 }
 
-static void send_environ_request(Sync &sync, const int pid) {
+static void send_environ_request(Sync &sync, const Pid pid) {
   const EnvironRequest req = {pid};
   sync.on_demand_reader.environ_request_queue.push(req);
   sync.on_demand_reader.library_cv.notify_one();
 }
 
 void environ_viewer_request(EnvironViewerState &state, Sync &sync,
-                            const int pid, const char *comm,
+                            const Pid pid, const char *comm,
                             const ImGuiID dock_id,
                             const ProcessWindowFlags extra_flags) {
   if (process_window_focus(state.windows, pid)) {

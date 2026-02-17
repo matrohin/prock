@@ -3,7 +3,7 @@
 #include "process_window_flags.h"
 
 struct CpuChartData {
-  int pid;
+  Pid pid;
   ImGuiID dock_id;
   ProcessWindowFlags flags;
   char label[128];
@@ -22,5 +22,5 @@ struct CpuChartState {
 void cpu_chart_update(CpuChartState &my_state, const State &state);
 void cpu_chart_draw(ViewState &view_state);
 
-void cpu_chart_add(CpuChartState &my_state, int pid, const char *comm,
+void cpu_chart_add(CpuChartState &my_state, Pid pid, const char *comm,
                    ImGuiID dock_id = 0);

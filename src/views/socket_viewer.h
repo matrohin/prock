@@ -23,7 +23,7 @@ enum SocketViewerColumnId {
 
 struct SocketViewerWindow {
   SocketViewerStatus status;
-  int pid;
+  Pid pid;
   ImGuiID dock_id;
   char process_name[64];
   char error_message[128];
@@ -50,7 +50,7 @@ struct SocketViewerState {
 struct FrameContext;
 struct ViewState;
 
-void socket_viewer_request(SocketViewerState &state, Sync &sync, int pid,
+void socket_viewer_request(SocketViewerState &state, Sync &sync, Pid pid,
                            const char *comm, ImGuiID dock_id = 0,
                            ProcessWindowFlags extra_flags = 0);
 void socket_viewer_update(SocketViewerState &state, Sync &sync);

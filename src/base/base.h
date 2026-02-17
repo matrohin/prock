@@ -12,6 +12,7 @@
 using uint = unsigned int;
 using ulong = unsigned long;
 using ulonglong = unsigned long long;
+using Pid = int;
 
 constexpr size_t SLAB_SIZE = 4096; // 4KB, matches page size
 

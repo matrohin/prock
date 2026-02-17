@@ -88,7 +88,7 @@ const char *PROCESS_COPY_HEADER =
     "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tNet Recv (KB/s)\tNet "
     "Send (KB/s)\tCommand Line\n";
 
-static void open_all_windows(const int pid, const char *comm,
+static void open_all_windows(const Pid pid, const char *comm,
                              ViewState &view_state) {
   const ImGuiID dock_id =
       process_host_open(view_state.process_host_state, pid, comm);
@@ -125,7 +125,7 @@ static void copy_process_row(const BriefTableLine &line) {
   ImGui::SetClipboardText(buf);
 }
 
-static bool get_process_affinity(const int pid, uint64_t &mask,
+static bool get_process_affinity(const Pid pid, uint64_t &mask,
                                  const int num_cpus) {
   cpu_set_t cpu_set;
   CPU_ZERO(&cpu_set);
@@ -137,7 +137,7 @@ static bool get_process_affinity(const int pid, uint64_t &mask,
   return true;
 }
 
-static bool set_process_affinity(const int pid, const uint64_t mask, char *err,
+static bool set_process_affinity(const Pid pid, const uint64_t mask, char *err,
                                  const size_t err_sz, int *err_code) {
   if (mask == 0) {
     snprintf(err, err_sz, "At least one CPU must be selected");
@@ -158,13 +158,13 @@ static bool set_process_affinity(const int pid, const uint64_t mask, char *err,
   return true;
 }
 
-static int get_process_nice(const int pid) {
+static int get_process_nice(const Pid pid) {
   errno = 0;
   const int nice = getpriority(PRIO_PROCESS, pid);
   return nice == -1 && errno != 0 ? 0 : nice;
 }
 
-static bool set_process_nice(const int pid, const int nice_val, char *err,
+static bool set_process_nice(const Pid pid, const int nice_val, char *err,
                              const size_t err_sz, int *err_code) {
   if (setpriority(PRIO_PROCESS, pid, nice_val) != 0) {
     *err_code = errno;
@@ -205,7 +205,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                                     BriefTableState &my_state,
                                     const BriefTableLine &line,
                                     const char *label, const int num_cpus) {
-  const int pid = line.pid;
+  const Pid pid = line.pid;
   if (ImGui::BeginPopupContextItem(label)) {
     my_state.selected_pid = pid;
     if (ImGui::MenuItem("Copy", "Ctrl+C")) {
@@ -303,11 +303,11 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     }
     if (ImGui::MenuItem("Kill Process Tree")) {
       // Collect all descendant PIDs by walking ppid relationships
-      int tree_pids[4096];
+      Pid tree_pids[4096];
       int tree_count = 0;
       tree_pids[tree_count++] = pid;
       for (int ti = 0; ti < tree_count; ++ti) {
-        const int parent = tree_pids[ti];
+        const Pid parent = tree_pids[ti];
         for (uint32_t li = 0; li < my_state.lines.size; ++li) {
           const BriefTableLine &l = my_state.lines.data[li];
           if (l.ppid == parent && l.pid != parent &&
