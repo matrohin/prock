@@ -31,8 +31,7 @@ void mem_chart_update(MemChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
-      MemChartData &chart = my_state.charts.data()[i];
+    for (MemChartData &chart : my_state.charts) {
       chart.times.realloc(new_arena);
       chart.mem_resident_kb.realloc(new_arena);
     }
@@ -104,7 +103,8 @@ void mem_chart_draw(ViewState &view_state) {
 }
 
 void mem_chart_add(MemChartState &my_state, const Pid pid, const char *comm,
-                   const ImGuiID dock_id, const ProcessWindowFlags extra_flags) {
+                   const ImGuiID dock_id,
+                   const ProcessWindowFlags extra_flags) {
   if (process_window_focus(my_state.charts, pid)) {
     return;
   }

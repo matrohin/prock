@@ -57,8 +57,8 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
 
     // Check if already in list (deduplicate)
     bool found = false;
-    for (uint32_t i = 0; i < entries.size(); ++i) {
-      if (strcmp(entries.data()[i].path.data, pathname) == 0) {
+    for (LibraryEntry &entry : entries) {
+      if (strcmp(entry.path.data, pathname) == 0) {
         found = true;
         break;
       }

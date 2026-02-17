@@ -8,7 +8,7 @@
 
 struct TopProcess {
   Pid pid;
-  char comm[16];  // Linux limits to 15 chars + null
+  char comm[16]; // Linux limits to 15 chars + null
   double value;
 };
 
@@ -49,8 +49,7 @@ template <class T, class F>
 void common_charts_update(GrowingArray<T> &charts, const State &state, F f) {
   const StateSnapshot &new_snapshot = state.snapshot;
   uint32_t external_idx = 0;
-  for (uint32_t i = 0; i < charts.size(); ++i) {
-    auto &chart = charts.data()[i];
+  for (T &chart : charts) {
     while (external_idx < new_snapshot.stats.size &&
            new_snapshot.stats.data[external_idx].pid < chart.pid) {
       ++external_idx;

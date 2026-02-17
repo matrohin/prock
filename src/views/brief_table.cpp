@@ -183,8 +183,7 @@ static void copy_all_processes(BumpArena &arena,
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", PROCESS_COPY_HEADER);
 
-  for (uint32_t i = 0; i < my_state.lines.size; ++i) {
-    const BriefTableLine &line = my_state.lines.data[i];
+  for (const BriefTableLine &line : my_state.lines) {
     const ProcessDerivedStat &derived = line.derived_stat;
     ptr += snprintf(ptr, buf_size - (ptr - buf),
                     "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%."
@@ -332,8 +331,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
 static void compute_filter_visibility(const BriefTableState &my_state,
                                       const ImGuiTextFilter &filter) {
   // First pass: mark direct matches
-  for (uint32_t i = 0; i < my_state.lines.size; ++i) {
-    BriefTableLine &line = my_state.lines.data[i];
+  for (BriefTableLine &line : my_state.lines) {
     char pid_str[32];
     snprintf(pid_str, sizeof(pid_str), "%d", line.pid);
 
@@ -356,8 +354,7 @@ static void compute_filter_visibility(const BriefTableState &my_state,
   bool changed = true;
   while (changed) {
     changed = false;
-    for (uint32_t i = 0; i < my_state.lines.size; ++i) {
-      BriefTableLine &line = my_state.lines.data[i];
+    for (BriefTableLine &line : my_state.lines) {
       if (line.filter_state != 0) continue;
 
       // Check if parent is a subtree member
@@ -551,7 +548,7 @@ static void process_error_popup_draw(BriefTableState &my_state) {
 }
 
 static Array<int> compute_visible_indices(const BriefTableState &my_state,
-                                          bool filter_active,
+                                          const bool filter_active,
                                           BumpArena &arena) {
   Array<int> buf = Array<int>::create(arena, my_state.lines.size);
   int count = 0;
@@ -905,9 +902,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   if (my_state.selected_pid > 0) {
     // Ctrl+C to copy selected row
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-      for (uint32_t i = 0; i < my_state.lines.size; ++i) {
-        if (my_state.lines.data[i].pid == my_state.selected_pid) {
-          copy_process_row(my_state.lines.data[i]);
+      for (BriefTableLine &line : my_state.lines) {
+        if (line.pid == my_state.selected_pid) {
+          copy_process_row(line);
           break;
         }
       }

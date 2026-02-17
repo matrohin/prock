@@ -382,7 +382,8 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
       }
       // Trim trailing space (was the final null)
       size_t len = nread;
-      while (len > 0 && cmdline_buf[len - 1] == ' ') --len;
+      while (len > 0 && cmdline_buf[len - 1] == ' ')
+        --len;
       stat.cmdline = arena.alloc_string_copy(cmdline_buf, len);
     }
   }
@@ -428,7 +429,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
 
   closedir(proc_dir);
 
-  std::sort(result.data, result.data + result.size,
+  std::sort(result.begin(), result.end(),
             [](const ProcessStat &left, const ProcessStat &right) {
               return left.pid < right.pid;
             });
@@ -437,15 +438,13 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
   const Array<SocketEntry> socket_stats = query_sockets_netlink(result_arena);
   if (socket_stats.size > 0) {
     GrowingArray<unsigned long> inodes = {};
-    for (uint32_t i = 0; i < result.size; ++i) {
-      ProcessStat &stat = result.data[i];
+    for (ProcessStat &stat : result) {
       inodes.shrink_to(0);
       read_process_socket_inodes(stat.pid, inodes, result_arena);
 
       ulonglong total_recv = 0;
       ulonglong total_send = 0;
-      for (uint32_t j = 0; j < inodes.size(); ++j) {
-        const unsigned long inode = inodes.data()[j];
+      for (const unsigned long inode : inodes) {
         const uint32_t found_inode = bin_search_exact(
             socket_stats.size,
             [&socket_stats](const uint32_t mid) {
@@ -699,7 +698,8 @@ read_watched_threads(const GrowingArray<Pid> &watched_pids, BumpArena &arena) {
       Array<ThreadSnapshot>::create(arena, watched_pids.size());
   for (uint32_t i = 0; i < watched_pids.size(); ++i) {
     result.data[i].pid = watched_pids.data()[i];
-    result.data[i].threads = read_process_threads(watched_pids.data()[i], arena);
+    result.data[i].threads =
+        read_process_threads(watched_pids.data()[i], arena);
   }
 
   return result;
@@ -763,8 +763,8 @@ void gather(GatheringState &state, Sync &sync) {
   while (sync.thread_watch_queue.pop(pid)) {
     // Check if already watched
     bool found = false;
-    for (uint32_t i = 0; i < state.watched_pids.size(); ++i) {
-      if (state.watched_pids.data()[i] == pid) {
+    for (const Pid watched_pid : state.watched_pids) {
+      if (watched_pid == pid) {
         found = true;
         break;
       }
@@ -774,11 +774,10 @@ void gather(GatheringState &state, Sync &sync) {
     }
   }
   while (sync.thread_unwatch_queue.pop(pid)) {
-    for (uint32_t i = 0; i < state.watched_pids.size(); ++i) {
-      if (state.watched_pids.data()[i] == pid) {
+    for (Pid &watched_pid : state.watched_pids) {
+      if (watched_pid == pid) {
         // Swap with last element and shrink
-        state.watched_pids.data()[i] =
-            state.watched_pids.data()[state.watched_pids.size() - 1];
+        watched_pid = state.watched_pids.data()[state.watched_pids.size() - 1];
         state.watched_pids.shrink_to(state.watched_pids.size() - 1);
         break;
       }

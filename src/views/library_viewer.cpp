@@ -30,8 +30,7 @@ static void copy_all_libraries(BumpArena &arena,
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", LIBRARY_COPY_HEADER);
 
-  for (uint32_t i = 0; i < win.libraries.size; ++i) {
-    const LibraryEntry &lib = win.libraries.data[i];
+  for (const LibraryEntry &lib : win.libraries) {
     const unsigned long mapped_size = lib.addr_end - lib.addr_start;
     ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n",
                     lib.path.data, mapped_size, lib.file_size);
@@ -98,8 +97,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
 void library_viewer_update(LibraryViewerState &state, Sync &sync) {
   LibraryResponse response;
   while (sync.on_demand_reader.library_response_queue.pop(response)) {
-    for (uint32_t i = 0; i < state.windows.size(); ++i) {
-      LibraryViewerWindow &win = state.windows.data()[i];
+    for (LibraryViewerWindow &win : state.windows) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eLibraryViewerStatus_Ready;
@@ -125,8 +123,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (uint32_t i = 0; i < state.windows.size(); ++i) {
-      LibraryViewerWindow &win = state.windows.data()[i];
+    for (LibraryViewerWindow &win : state.windows) {
       if (win.libraries.size > 0) {
         win.libraries =
             Array<LibraryEntry>::copy_from(new_arena, win.libraries);

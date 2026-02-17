@@ -153,8 +153,7 @@ static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", SOCKET_COPY_HEADER);
 
-  for (uint32_t i = 0; i < win.sockets.size; ++i) {
-    const SocketEntry &sock = win.sockets.data[i];
+  for (const SocketEntry &sock : win.sockets) {
     char local_addr[64], remote_addr[64];
     format_address(local_addr, sizeof(local_addr), sock, true);
     format_address(remote_addr, sizeof(remote_addr), sock, false);
@@ -232,8 +231,7 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const Pid pid,
 void socket_viewer_update(SocketViewerState &state, Sync &sync) {
   SocketResponse response;
   while (sync.on_demand_reader.socket_response_queue.pop(response)) {
-    for (uint32_t i = 0; i < state.windows.size(); ++i) {
-      SocketViewerWindow &win = state.windows.data()[i];
+    for (SocketViewerWindow &win : state.windows) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eSocketViewerStatus_Ready;
@@ -259,8 +257,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (uint32_t i = 0; i < state.windows.size(); ++i) {
-      SocketViewerWindow &win = state.windows.data()[i];
+    for (SocketViewerWindow &win : state.windows) {
       win.sockets = Array<SocketEntry>::copy_from(new_arena, win.sockets);
     }
 

@@ -34,8 +34,7 @@ void io_chart_update(IoChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
-      IoChartData &chart = my_state.charts.data()[i];
+    for (IoChartData &chart : my_state.charts) {
       chart.times.realloc(new_arena);
       chart.read_kb_per_sec.realloc(new_arena);
       chart.write_kb_per_sec.realloc(new_arena);

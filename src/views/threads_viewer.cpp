@@ -30,8 +30,7 @@ static void copy_all_threads(BumpArena &arena, const ThreadsViewerWindow &win) {
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", THREAD_COPY_HEADER);
 
-  for (uint32_t i = 0; i < win.lines.size; ++i) {
-    const ThreadLine &line = win.lines.data[i];
+  for (const ThreadLine &line : win.lines) {
     ptr +=
         snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n",
                  line.tid, line.comm, line.state,
@@ -209,8 +208,7 @@ void threads_viewer_update(ThreadsViewerState &state,
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (uint32_t i = 0; i < state.windows.size(); ++i) {
-      ThreadsViewerWindow &win = state.windows.data()[i];
+    for (ThreadsViewerWindow &win : state.windows) {
       if (win.lines.size > 0) {
         win.lines = Array<ThreadLine>::copy_from(new_arena, win.lines);
       }

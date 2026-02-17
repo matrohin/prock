@@ -53,8 +53,7 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (uint32_t i = 0; i < my_state.charts.size(); ++i) {
-      CpuChartData &chart = my_state.charts.data()[i];
+    for (CpuChartData &chart : my_state.charts) {
       chart.times.realloc(new_arena);
       chart.cpu_total_perc.realloc(new_arena);
       chart.cpu_kernel_perc.realloc(new_arena);

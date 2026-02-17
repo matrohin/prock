@@ -37,8 +37,7 @@ static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
   char *ptr = buf;
   ptr += snprintf(ptr, buf_size, "%s", ENVIRON_COPY_HEADER);
 
-  for (uint32_t i = 0; i < win.entries.size; ++i) {
-    const EnvironEntry &entry = win.entries.data[i];
+  for (const EnvironEntry &entry : win.entries) {
     ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\n", entry.name.data,
                     entry.value.data);
   }
@@ -116,8 +115,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
 void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
   EnvironResponse response;
   while (sync.on_demand_reader.environ_response_queue.pop(response)) {
-    for (uint32_t i = 0; i < state.windows.size(); ++i) {
-      EnvironViewerWindow &win = state.windows.data()[i];
+    for (EnvironViewerWindow &win : state.windows) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
           win.status = eEnvironViewerStatus_Ready;
@@ -144,8 +142,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
     BumpArena new_arena = BumpArena::create();
 
     state.windows.realloc(new_arena);
-    for (uint32_t i = 0; i < state.windows.size(); ++i) {
-      EnvironViewerWindow &win = state.windows.data()[i];
+    for (EnvironViewerWindow &win : state.windows) {
       if (win.entries.size > 0) {
         Array<EnvironEntry> new_entries =
             Array<EnvironEntry>::copy_from(state.cur_arena, win.entries);

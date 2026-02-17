@@ -81,11 +81,6 @@ static void sort_flat(BriefTableState &my_state) {
                        return sort_ascending(right, left);
                      });
   }
-
-  // Reset tree depth for flat mode
-  for (uint32_t i = 0; i < my_state.lines.size; ++i) {
-    my_state.lines.data[i].tree_depth = 0;
-  }
 }
 
 struct TreeNode {
@@ -95,7 +90,7 @@ struct TreeNode {
 
 static void tree_dfs(const Array<BriefTableLine> &lines, const TreeNode *nodes,
                      BriefTableLine *dst, uint32_t &dst_idx, uint32_t node_idx,
-                     int depth) {
+                     const int depth) {
   dst[dst_idx] = lines.data[node_idx - 1];
   dst[dst_idx].tree_depth = depth;
   ++dst_idx;
@@ -148,11 +143,7 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
     tree_dfs(lines, nodes, sorted, sorted_idx, root, 0);
   }
 
-  // Copy back to lines array
-  for (uint32_t i = 0; i < sorted_idx; ++i) {
-    my_state.lines.data[i] = sorted[i];
-  }
-  my_state.lines.size = sorted_idx;
+  my_state.lines.inplace_copy_from(sorted, sorted_idx);
 }
 
 void sort_brief_table_lines(BriefTableState &my_state) {
@@ -206,9 +197,7 @@ void brief_table_update(BriefTableState &my_state, State &state) {
   uint32_t new_lines_count = 0;
 
   // Process old lines: keep alive ones, mark dead ones
-  for (uint32_t i = 0; i < old_lines.size; ++i) {
-    const BriefTableLine &old_line = old_lines.data[i];
-
+  for (const BriefTableLine &old_line : old_lines) {
     // Skip processes that have been dead too long
     if (old_line.death_time_ns > 0 &&
         now_ns - old_line.death_time_ns > DEAD_PROCESS_DISPLAY_NS) {

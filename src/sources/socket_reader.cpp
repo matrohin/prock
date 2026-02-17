@@ -72,10 +72,10 @@ SocketResponse read_process_sockets(BumpArena &temp_arena,
   response.sockets =
       Array<SocketEntry>::create(response.owner_arena, inodes.size);
   uint32_t j = 0;
-  for (uint32_t i = 0; i < all_sockets.size; ++i) {
+  for (SocketEntry &socket : all_sockets) {
     if (std::binary_search(inodes.data, inodes.data + inodes.size,
-                           all_sockets.data[i].inode)) {
-      response.sockets.data[j++] = all_sockets.data[i];
+                           socket.inode)) {
+      response.sockets.data[j++] = socket;
     }
   }
   response.sockets.size = j;

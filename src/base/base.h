@@ -182,7 +182,16 @@ template <class T> struct Array {
     return copy_from(arena, from.data, from.size);
   }
 
+  void inplace_copy_from(const T *from, const uint32_t from_size) {
+    assert(from_size <= size);
+    memcpy(data, from, from_size * sizeof(T));
+    size = from_size;
+  }
+
   size_t byte_size() const { return size * sizeof(T); }
+
+  T *begin() const { return data; }
+  T *end() const { return data + size; }
 };
 
 template <class T> struct GrowingArray {
