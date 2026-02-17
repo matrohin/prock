@@ -27,6 +27,7 @@ struct UpdateSnapshot {
 
 struct Sync {
   std::atomic<bool> quit;
+  std::atomic<bool> data_ready;
   std::atomic<float> update_period{0.5f};  // seconds, 0 = paused
   std::mutex quit_mutex;
   std::condition_variable quit_cv;
@@ -38,3 +39,5 @@ struct Sync {
 
   OnDemandReaderSync on_demand_reader;
 };
+
+void notify_data_ready(Sync &sync);

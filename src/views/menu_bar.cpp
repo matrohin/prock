@@ -105,7 +105,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Separator();
 
     ImGui::SetNextItemWidth(100);
-    ImGui::SliderInt("Target FPS", &prefs.target_fps, 15, 60);
+    ImGui::SliderInt("FPS Limit", &prefs.target_fps, 15, 60);
 
     ImGui::Spacing();
     ImGui::Separator();

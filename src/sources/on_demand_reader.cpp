@@ -3,8 +3,6 @@
 #include "environ_reader.h"
 #include "sync.h"
 
-#include "GLFW/glfw3.h"
-
 #include <mutex>
 
 void on_demand_reader_loop(Sync &sync) {
@@ -47,7 +45,7 @@ void on_demand_reader_loop(Sync &sync) {
       }
     }
 
-    glfwPostEmptyEvent();
+    notify_data_ready(sync);
     if (temp_arena.cur_slab &&
         (temp_arena.cur_slab->prev ||
          temp_arena.cur_slab->left_size < SLAB_SIZE / 10)) {

@@ -21,6 +21,11 @@
 #include <thread>
 #include <unistd.h>
 
+void notify_data_ready(Sync &sync) {
+  sync.data_ready.store(true);
+  glfwPostEmptyEvent();
+}
+
 // UNITY BUILD:
 #include "base/base.cpp"
 #include "sources/environ_reader.cpp"
@@ -52,7 +57,7 @@
 // See https://github.com/ocornut/imgui/issues/1206
 // Sometimes imgui needs second frame update to handle some UI without delays.
 // Reproducible example: context menus
-static int g_needs_updates = 0;
+static int g_needs_updates = 1;
 static float g_applied_zoom_scale = 1.0f;
 static Theme g_applied_theme = Theme::Light;
 static float g_monitor_scale = 1.0f;
@@ -439,7 +444,7 @@ int main(int, char **) {
     GatheringState gathering_state = {};
     while (!sync.quit.load()) {
       gather(gathering_state, sync);
-      glfwPostEmptyEvent();
+      notify_data_ready(sync);
     }
   }};
 
@@ -451,11 +456,18 @@ int main(int, char **) {
   while (!glfwWindowShouldClose(window)) {
     FrameMark;
 
-    if (g_needs_updates > 0) {
-      glfwPollEvents();
-      --g_needs_updates;
-    } else {
-      glfwWaitEvents();
+    while (true) {
+      if (g_needs_updates > 0) {
+        glfwPollEvents();
+        --g_needs_updates;
+      } else {
+        glfwWaitEvents();
+        if (!sync.data_ready.exchange(false) &&
+            ImGui::GetCurrentContext()->InputEventsQueue.Size == 0) {
+          continue;
+        }
+      }
+      break;
     }
 
     // F3 toggles debug FPS display
