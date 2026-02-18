@@ -13,8 +13,8 @@ struct SystemCpuChartState {
   uint32_t wasted_bytes;
   int num_cores;
 
-  bool stacked;
   int y_axis_fitted;
+  bool stacked;
 };
 
 void system_cpu_chart_update(SystemCpuChartState &my_state, const State &state);

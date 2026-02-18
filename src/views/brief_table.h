@@ -29,19 +29,16 @@ enum BriefTableColumnId {
 };
 
 struct BriefTableLine {
-  Pid pid;
-  Pid ppid;
   const char *name;
-  char state;
   long num_threads;
-
   const char *cmdline;
-
   ProcessDerivedStat derived_stat;
-
   int64_t first_seen_ns;
   int64_t death_time_ns;
+  Pid pid;
+  Pid ppid;
   int tree_depth; // 0 for root, incremented for children (used in tree mode)
+  char state;
   uint8_t filter_state; // 0=hidden, 1=matches filter, 2=ancestor of match (grayed)
 };
 
@@ -55,15 +52,14 @@ struct BriefTableState {
 
   Pid control_edit_pid;           // PID being edited, 0 if none
   uint64_t affinity_edit_mask;    // Affinity mask being edited
+  int64_t type_search_time_ns;    // Last keystroke timestamp for timeout
   int priority_edit_nice;         // Nice value being edited
+  int process_error_code;         // errno value for pkexec option
   bool show_affinity_popup;
   bool show_priority_popup;
   bool tree_mode; // Toggle: false = flat, true = tree
   char process_error[128];        // Error buffer for affinity/priority ops
-  int process_error_code;         // errno value for pkexec option
-
   char type_search[32];           // Current search string
-  int64_t type_search_time_ns;    // Last keystroke timestamp for timeout
 };
 
 void brief_table_update(BriefTableState &my_state, State &state);

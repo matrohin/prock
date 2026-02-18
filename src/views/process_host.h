@@ -9,8 +9,8 @@ struct ProcessHostWindow {
   Pid pid;
   ImGuiID dockspace_id;
   char title[64];
-  bool open;
   ProcessWindowFlags flags;
+  bool open;
 };
 
 struct ProcessHostState {

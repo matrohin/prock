@@ -6,12 +6,12 @@
 #include "imgui.h"
 
 struct ThreadLine {
-  int tid;
-  char comm[64];
-  char state;
   double cpu_user_perc;
   double cpu_kernel_perc;
   long mem_resident_bytes;
+  int tid;
+  char comm[64];
+  char state;
 };
 
 enum ThreadsViewerColumnId {

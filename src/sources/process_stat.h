@@ -14,10 +14,8 @@ Fields used from /proc/[pid]/statm:
 */
 
 struct ProcessStat {
-  Pid pid;
   const char *comm;
-  char state;
-  Pid ppid;
+  const char *cmdline;
   ulong utime;
   ulong stime;
   long num_threads;
@@ -32,7 +30,9 @@ struct ProcessStat {
   ulonglong net_recv_bytes;
   ulonglong net_send_bytes;
 
-  const char *cmdline;
+  Pid pid;
+  Pid ppid;
+  char state;
 };
 
 // From /proc/stat - all values are cumulative ticks
@@ -108,19 +108,19 @@ enum TcpState {
 
 struct SocketEntry {
   unsigned long inode;
-  SocketProtocol protocol;
-  TcpState state;
-  unsigned int local_ip;
-  unsigned short local_port;
-  unsigned int remote_ip;
-  unsigned short remote_port;
-  unsigned int tx_queue;
-  unsigned int rx_queue;
-  unsigned char local_ip6[16];
-  unsigned char remote_ip6[16];
   // TCP info (only valid for TCP sockets)
   unsigned long long bytes_received;
   unsigned long long bytes_sent;
+  SocketProtocol protocol;
+  TcpState state;
+  unsigned int local_ip;
+  unsigned int remote_ip;
+  unsigned int tx_queue;
+  unsigned int rx_queue;
+  unsigned short local_port;
+  unsigned short remote_port;
+  unsigned char local_ip6[16];
+  unsigned char remote_ip6[16];
 };
 
 void gather(GatheringState &state, Sync &sync);
