@@ -225,9 +225,11 @@ void threads_viewer_update(ThreadsViewerState &state,
 }
 
 void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
-                         const State & /*state*/) {
+                         const State &state) {
   ZoneScoped;
   ThreadsViewerState &my_state = view_state.threads_viewer_state;
+  const int num_cpus = static_cast<int>(state.snapshot.cpu_stats.size) - 1;
+  const bool cpu_per_core = view_state.preferences_state.cpu_per_core;
   uint32_t last = 0;
 
   for (uint32_t i = 0; i < my_state.windows.size(); ++i) {
@@ -322,10 +324,13 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             table_item_draw_state(line.state);
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuTotal);
-            table_item_draw_float(line.cpu_user_perc + line.cpu_kernel_perc);
+            table_item_draw_float(scale_cpu_perc(
+                line.cpu_user_perc + line.cpu_kernel_perc, num_cpus,
+                cpu_per_core));
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuKernel);
-            table_item_draw_float(line.cpu_kernel_perc);
+            table_item_draw_float(
+                scale_cpu_perc(line.cpu_kernel_perc, num_cpus, cpu_per_core));
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Memory);
             table_item_draw_memory(line.mem_resident_bytes);
