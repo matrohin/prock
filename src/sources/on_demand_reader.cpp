@@ -3,6 +3,8 @@
 #include "environ_reader.h"
 #include "sync.h"
 
+#include "tracy/Tracy.hpp"
+
 #include <mutex>
 
 void on_demand_reader_loop(Sync &sync) {
@@ -24,6 +26,8 @@ void on_demand_reader_loop(Sync &sync) {
     if (sync.quit.load()) break;
 
     while (my_sync.library_request_queue.pop(lib_request)) {
+      ZoneScopedN("library_request");
+      ZoneValue(lib_request.pid);
       LibraryResponse response =
           read_process_libraries(temp_arena, lib_request);
       if (!my_sync.library_response_queue.push(response)) {
@@ -32,6 +36,8 @@ void on_demand_reader_loop(Sync &sync) {
     }
 
     while (my_sync.environ_request_queue.pop(env_request)) {
+      ZoneScopedN("environ_request");
+      ZoneValue(env_request.pid);
       EnvironResponse response = read_process_environ(temp_arena, env_request);
       if (!my_sync.environ_response_queue.push(response)) {
         response.owner_arena.destroy();
@@ -39,6 +45,8 @@ void on_demand_reader_loop(Sync &sync) {
     }
 
     while (my_sync.socket_request_queue.pop(sock_request)) {
+      ZoneScopedN("socket_request");
+      ZoneValue(sock_request.pid);
       SocketResponse response = read_process_sockets(temp_arena, sock_request);
       if (!my_sync.socket_response_queue.push(response)) {
         response.owner_arena.destroy();

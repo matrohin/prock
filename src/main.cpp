@@ -444,7 +444,6 @@ int main(int, char **) {
     GatheringState gathering_state = {};
     while (!sync.quit.load()) {
       gather(gathering_state, sync);
-      notify_data_ready(sync);
     }
   }};
 

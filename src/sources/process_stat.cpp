@@ -18,6 +18,7 @@
 // Query all TCP/UDP sockets via netlink SOCK_DIAG
 // Returns array sorted by inode for binary search
 Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
+  ZoneScoped;
   GrowingArray<SocketEntry> result = {};
   uint32_t wasted = 0;
 
@@ -174,6 +175,8 @@ static bool is_loopback_socket(const SocketEntry &socket) {
 static void read_process_socket_inodes(const Pid pid,
                                        GrowingArray<unsigned long> &out,
                                        BumpArena &arena) {
+  ZoneScoped;
+  ZoneValue(pid);
   char fd_path[64];
   snprintf(fd_path, sizeof(fd_path), "/proc/%d/fd", pid);
 
@@ -271,6 +274,8 @@ static bool read_thread_stat(const int tid, const char *stat_path,
 }
 
 static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
+  ZoneScoped;
+  ZoneValue(pid);
   constexpr size_t PATH_BUF_SIZE = 64;
 
   char stat_filename[PATH_BUF_SIZE];
@@ -437,6 +442,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
   // Query socket stats from netlink and distribute to processes
   const Array<SocketEntry> socket_stats = query_sockets_netlink(result_arena);
   if (socket_stats.size > 0) {
+    ZoneScopedN("distribute socket stats");
     GrowingArray<unsigned long> inodes = {};
     for (ProcessStat &stat : result) {
       inodes.shrink_to(0);
@@ -798,7 +804,9 @@ void gather(GatheringState &state, Sync &sync) {
   const bool pushed = sync.update_queue.push(UpdateSnapshot{
       arena, process_stats, cpu_stats, mem_info, disk_io_stats, net_io_stats,
       thread_snapshots, state.last_update, system_now});
-  if (!pushed) {
+  if (pushed) {
+    notify_data_ready(sync);
+  } else {
     arena.destroy();
   }
 }
