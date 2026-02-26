@@ -70,9 +70,11 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
     entry->addr_start = addr_start;
     entry->addr_end = addr_end;
 
-    // Get file size
+    // Get file size via /proc/<pid>/root to handle different mount namespaces
+    char proc_path[64 + PATH_MAX];
+    snprintf(proc_path, sizeof(proc_path), "/proc/%d/root%s", pid, pathname);
     struct stat st;
-    if (stat(pathname, &st) == 0) {
+    if (stat(proc_path, &st) == 0) {
       entry->file_size = st.st_size;
     } else {
       entry->file_size = -1;
