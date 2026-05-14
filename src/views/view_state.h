@@ -6,6 +6,7 @@
 #include "views/environ_viewer.h"
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
+#include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/mem_chart.h"
 #include "views/menu_bar.h"
@@ -71,6 +72,7 @@ enum FocusedView {
   eFocusedView_EnvironViewer,
   eFocusedView_ThreadsViewer,
   eFocusedView_SocketViewer,
+  eFocusedView_SmapsViewer,
 };
 
 struct ViewState {
@@ -90,5 +92,6 @@ struct ViewState {
   LibraryViewerState library_viewer_state;
   EnvironViewerState environ_viewer_state;
   ThreadsViewerState threads_viewer_state;
+  SmapsViewerState smaps_viewer_state;
   SocketViewerState socket_viewer_state;
 };

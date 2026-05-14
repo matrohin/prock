@@ -6,6 +6,7 @@
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
+#include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/threads_viewer.h"
 #include "views/view_state.h"
@@ -104,6 +105,8 @@ static void open_all_windows(const Pid pid, const char *comm,
                       comm, dock_id, no_focus);
   socket_viewer_request(view_state.socket_viewer_state, *view_state.sync, pid,
                         comm, dock_id, no_focus);
+  smaps_viewer_request(view_state.smaps_viewer_state, *view_state.sync, pid,
+                       comm, dock_id, no_focus);
 }
 
 static void copy_process_row(const BriefTableLine &line) {
@@ -245,6 +248,10 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       if (ImGui::MenuItem("Sockets")) {
         socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
                               pid, line.name);
+      }
+      if (ImGui::MenuItem("Memory Maps")) {
+        smaps_viewer_request(view_state.smaps_viewer_state, *view_state.sync,
+                             pid, line.name);
       }
       ImGui::EndMenu();
     }

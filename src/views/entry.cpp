@@ -7,6 +7,7 @@
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
 #include "views/process_host.h"
+#include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/system_cpu_chart.h"
 #include "views/system_io_chart.h"
@@ -35,6 +36,7 @@ void views_on_demand_update(ViewState &view_state) {
   library_viewer_update(view_state.library_viewer_state, *view_state.sync);
   environ_viewer_update(view_state.environ_viewer_state, *view_state.sync);
   socket_viewer_update(view_state.socket_viewer_state, *view_state.sync);
+  smaps_viewer_update(view_state.smaps_viewer_state, *view_state.sync);
 }
 
 
@@ -53,6 +55,7 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   environ_viewer_draw(ctx, view_state);
   threads_viewer_draw(ctx, view_state, state);
   socket_viewer_draw(ctx, view_state);
+  smaps_viewer_draw(ctx, view_state);
   brief_table_draw(ctx, view_state, state);
 }
 

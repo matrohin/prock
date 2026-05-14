@@ -3,6 +3,7 @@
 #include "../base/ring_buffer.h"
 #include "sources/environ_reader.h"
 #include "sources/library_reader.h"
+#include "sources/smaps_reader.h"
 #include "sources/socket_reader.h"
 
 #include <condition_variable>
@@ -14,6 +15,8 @@ struct OnDemandReaderSync {
   RingBuffer<EnvironResponse, 16> environ_response_queue;
   RingBuffer<SocketRequest, 16> socket_request_queue;
   RingBuffer<SocketResponse, 16> socket_response_queue;
+  RingBuffer<SmapsRequest, 16> smaps_request_queue;
+  RingBuffer<SmapsResponse, 16> smaps_response_queue;
   std::condition_variable library_cv;
 };
 

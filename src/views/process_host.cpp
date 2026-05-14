@@ -6,6 +6,7 @@
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
+#include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/threads_viewer.h"
 #include "views/view_state.h"
@@ -22,6 +23,7 @@ static void close_docked_children(const ImGuiID dock_id, ViewState &view_state,
   process_window_close(dock_id, view_state.environ_viewer_state.windows, pid);
   process_window_close(dock_id, view_state.threads_viewer_state.windows, pid);
   process_window_close(dock_id, view_state.socket_viewer_state.windows, pid);
+  process_window_close(dock_id, view_state.smaps_viewer_state.windows, pid);
 }
 
 void process_host_restore_layout(ViewState &view_state, const Pid pid) {
@@ -32,6 +34,7 @@ void process_host_restore_layout(ViewState &view_state, const Pid pid) {
   process_window_redock(view_state.environ_viewer_state.windows, pid);
   process_window_redock(view_state.threads_viewer_state.windows, pid);
   process_window_redock(view_state.socket_viewer_state.windows, pid);
+  process_window_redock(view_state.smaps_viewer_state.windows, pid);
 }
 
 ImGuiID process_host_open(ProcessHostState &state, const Pid pid,

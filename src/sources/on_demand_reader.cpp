@@ -1,6 +1,7 @@
 #include "on_demand_reader.h"
 
 #include "environ_reader.h"
+#include "smaps_reader.h"
 #include "sync.h"
 
 #include "tracy/Tracy.hpp"
@@ -14,13 +15,15 @@ void on_demand_reader_loop(Sync &sync) {
     LibraryRequest lib_request;
     EnvironRequest env_request;
     SocketRequest sock_request;
+    SmapsRequest smaps_request;
     {
       std::unique_lock<std::mutex> lock(sync.quit_mutex);
       my_sync.library_cv.wait(lock, [&] {
         return sync.quit.load() ||
                my_sync.library_request_queue.peek(lib_request) ||
                my_sync.environ_request_queue.peek(env_request) ||
-               my_sync.socket_request_queue.peek(sock_request);
+               my_sync.socket_request_queue.peek(sock_request) ||
+               my_sync.smaps_request_queue.peek(smaps_request);
       });
     }
     if (sync.quit.load()) break;
@@ -49,6 +52,15 @@ void on_demand_reader_loop(Sync &sync) {
       ZoneValue(sock_request.pid);
       SocketResponse response = read_process_sockets(temp_arena, sock_request);
       if (!my_sync.socket_response_queue.push(response)) {
+        response.owner_arena.destroy();
+      }
+    }
+
+    while (my_sync.smaps_request_queue.pop(smaps_request)) {
+      ZoneScopedN("smaps_request");
+      ZoneValue(smaps_request.pid);
+      SmapsResponse response = read_process_smaps(temp_arena, smaps_request);
+      if (!my_sync.smaps_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
     }
