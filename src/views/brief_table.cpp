@@ -6,7 +6,6 @@
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
-#include "views/net_chart.h"
 #include "views/socket_viewer.h"
 #include "views/threads_viewer.h"
 #include "views/view_state.h"
@@ -85,8 +84,7 @@ static constexpr ImU32 DEAD_PROCESS_COLOR = IM_COL32(180, 50, 50, 60);
 
 const char *PROCESS_COPY_HEADER =
     "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
-    "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tNet Recv (KB/s)\tNet "
-    "Send (KB/s)\tCommand Line\n";
+    "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tCommand Line\n";
 
 static void open_all_windows(const Pid pid, const char *comm,
                              ViewState &view_state) {
@@ -98,7 +96,6 @@ static void open_all_windows(const Pid pid, const char *comm,
   cpu_chart_add(view_state.cpu_chart_state, pid, comm, dock_id);
   mem_chart_add(view_state.mem_chart_state, pid, comm, dock_id, no_focus);
   io_chart_add(view_state.io_chart_state, pid, comm, dock_id, no_focus);
-  net_chart_add(view_state.net_chart_state, pid, comm, dock_id, no_focus);
   library_viewer_request(view_state.library_viewer_state, *view_state.sync, pid,
                          comm, dock_id, no_focus);
   environ_viewer_request(view_state.environ_viewer_state, *view_state.sync, pid,
@@ -113,15 +110,13 @@ static void copy_process_row(const BriefTableLine &line) {
   const ProcessDerivedStat &derived = line.derived_stat;
   char buf[4096];
   snprintf(buf, sizeof(buf),
-           "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%.1f\t"
-           "%.1f\t%s",
+           "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
            PROCESS_COPY_HEADER, line.pid, line.name, line.state,
            line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
            derived.cpu_user_perc, derived.cpu_kernel_perc,
            derived.mem_resident_bytes / 1024.0,
            derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
-           derived.io_write_kb_per_sec, derived.net_recv_kb_per_sec,
-           derived.net_send_kb_per_sec, line.cmdline);
+           derived.io_write_kb_per_sec, line.cmdline);
   ImGui::SetClipboardText(buf);
 }
 
@@ -186,15 +181,13 @@ static void copy_all_processes(BumpArena &arena,
   for (const BriefTableLine &line : my_state.lines) {
     const ProcessDerivedStat &derived = line.derived_stat;
     ptr += snprintf(ptr, buf_size - (ptr - buf),
-                    "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%."
-                    "1f\t%.1f\t%.1f\t%s\n",
+                    "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
                     line.pid, line.name, line.state, line.num_threads,
                     derived.cpu_user_perc + derived.cpu_kernel_perc,
                     derived.cpu_user_perc, derived.cpu_kernel_perc,
                     derived.mem_resident_bytes / 1024.0,
                     derived.mem_virtual_bytes / 1024.0,
                     derived.io_read_kb_per_sec, derived.io_write_kb_per_sec,
-                    derived.net_recv_kb_per_sec, derived.net_send_kb_per_sec,
                     line.cmdline);
   }
   ImGui::SetClipboardText(buf);
@@ -232,9 +225,6 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       }
       if (ImGui::MenuItem("I/O Chart")) {
         io_chart_add(view_state.io_chart_state, pid, line.name);
-      }
-      if (ImGui::MenuItem("Network Chart")) {
-        net_chart_add(view_state.net_chart_state, pid, line.name);
       }
       ImGui::EndMenu();
     }
@@ -422,10 +412,6 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
     table_item_draw_float(derived_stat.io_read_kb_per_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec))
     table_item_draw_float(derived_stat.io_write_kb_per_sec);
-  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_NetRecvKbPerSec))
-    table_item_draw_float(derived_stat.net_recv_kb_per_sec);
-  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_NetSendKbPerSec))
-    table_item_draw_float(derived_stat.net_send_kb_per_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CmdLine)) {
     ImGui::TextUnformatted(line.cmdline);
     if (ImGui::IsItemHovered())
@@ -676,14 +662,6 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_DefaultHide,
                             0.0f, eBriefTableColumnId_IoWriteKbPerSec);
-    ImGui::TableSetupColumn("Net Recv (KB/s)",
-                            ImGuiTableColumnFlags_PreferSortDescending |
-                                ImGuiTableColumnFlags_DefaultHide,
-                            0.0f, eBriefTableColumnId_NetRecvKbPerSec);
-    ImGui::TableSetupColumn("Net Send (KB/s)",
-                            ImGuiTableColumnFlags_PreferSortDescending |
-                                ImGuiTableColumnFlags_DefaultHide,
-                            0.0f, eBriefTableColumnId_NetSendKbPerSec);
     ImGui::TableSetupColumn("Command Line",
                             ImGuiTableColumnFlags_DefaultHide, 0.0f,
                             eBriefTableColumnId_CmdLine);

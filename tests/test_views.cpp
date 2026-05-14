@@ -777,22 +777,6 @@ TEST_CASE("sort_brief_table_lines by columns") {
     CHECK(my_state.lines.data[1].pid == 1); // 5 KB/s
   }
 
-  SUBCASE("sort by net recv") {
-    BriefTableState my_state = {};
-    my_state.sorted_by = eBriefTableColumnId_NetRecvKbPerSec;
-    my_state.sorted_order = ImGuiSortDirection_Descending;
-    my_state.lines = Array<BriefTableLine>::create(arena, 2);
-    my_state.lines.data[0] = {.name = "slow", .pid = 1, .ppid = 0};
-    my_state.lines.data[0].derived_stat = {.net_recv_kb_per_sec = 10.0};
-    my_state.lines.data[1] = {.name = "fast", .pid = 2, .ppid = 0};
-    my_state.lines.data[1].derived_stat = {.net_recv_kb_per_sec = 1000.0};
-
-    sort_brief_table_lines(my_state);
-
-    CHECK(my_state.lines.data[0].pid == 2);
-    CHECK(my_state.lines.data[1].pid == 1);
-  }
-
   arena.destroy();
 }
 
@@ -1021,45 +1005,6 @@ TEST_CASE("find_top_process") {
 TEST_CASE("state_snapshot_update network I/O") {
   BumpArena arena = BumpArena::create();
 
-  SUBCASE("process network I/O rate calculation") {
-    State old_state = {};
-    old_state.system.ticks_in_second = 100;
-    old_state.system.mem_page_size = 4096;
-
-    ProcessStat old_proc = {};
-    old_proc.pid = 100;
-    old_proc.net_recv_bytes = 1024 * 1024; // 1 MB
-    old_proc.net_send_bytes = 512 * 1024;  // 512 KB
-
-    ProcessDerivedStat old_derived = {};
-
-    old_state.snapshot.stats.data = &old_proc;
-    old_state.snapshot.stats.size = 1;
-    old_state.snapshot.derived_stats.data = &old_derived;
-    old_state.snapshot.derived_stats.size = 1;
-    old_state.snapshot.at = SteadyTimePoint{};
-
-    UpdateSnapshot update = {};
-    ProcessStat new_proc = {};
-    new_proc.pid = 100;
-    new_proc.net_recv_bytes = 1024 * 1024 + 102400; // +100 KB
-    new_proc.net_send_bytes = 512 * 1024 + 51200;   // +50 KB
-
-    update.stats.data = &new_proc;
-    update.stats.size = 1;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
-
-    StateSnapshot result = state_snapshot_update(arena, old_state, update);
-
-    REQUIRE(result.derived_stats.size == 1);
-    // 102400 bytes / 1024 / 1 sec = 100 KB/s
-    CHECK(result.derived_stats.data[0].net_recv_kb_per_sec ==
-          doctest::Approx(100.0));
-    // 51200 bytes / 1024 / 1 sec = 50 KB/s
-    CHECK(result.derived_stats.data[0].net_send_kb_per_sec ==
-          doctest::Approx(50.0));
-  }
-
   SUBCASE("system network I/O rate calculation") {
     State old_state = {};
     old_state.system.ticks_in_second = 100;
@@ -1083,33 +1028,6 @@ TEST_CASE("state_snapshot_update network I/O") {
     CHECK(result.net_io_rate.recv_mb_per_sec == doctest::Approx(1.0));
     // 524288 bytes / (1024*1024) / 1 sec = 0.5 MB/s
     CHECK(result.net_io_rate.send_mb_per_sec == doctest::Approx(0.5));
-  }
-
-  SUBCASE("new process gets zero network I/O rate") {
-    State old_state = {};
-    old_state.system.ticks_in_second = 100;
-    old_state.system.mem_page_size = 4096;
-    old_state.snapshot.stats.size = 0;
-    old_state.snapshot.derived_stats.size = 0;
-    old_state.snapshot.at = SteadyTimePoint{};
-
-    UpdateSnapshot update = {};
-    ProcessStat new_proc = {};
-    new_proc.pid = 100;
-    new_proc.net_recv_bytes = 1024;
-    new_proc.net_send_bytes = 512;
-
-    update.stats.data = &new_proc;
-    update.stats.size = 1;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
-
-    StateSnapshot result = state_snapshot_update(arena, old_state, update);
-
-    REQUIRE(result.derived_stats.size == 1);
-    CHECK(result.derived_stats.data[0].net_recv_kb_per_sec ==
-          doctest::Approx(0.0));
-    CHECK(result.derived_stats.data[0].net_send_kb_per_sec ==
-          doctest::Approx(0.0));
   }
 
   arena.destroy();

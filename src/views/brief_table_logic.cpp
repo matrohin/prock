@@ -50,12 +50,6 @@ static bool table_line_is_less(const BriefTableColumnId sorted_by,
   case eBriefTableColumnId_IoWriteKbPerSec:
     return left.derived_stat.io_write_kb_per_sec <
            right.derived_stat.io_write_kb_per_sec;
-  case eBriefTableColumnId_NetRecvKbPerSec:
-    return left.derived_stat.net_recv_kb_per_sec <
-           right.derived_stat.net_recv_kb_per_sec;
-  case eBriefTableColumnId_NetSendKbPerSec:
-    return left.derived_stat.net_send_kb_per_sec <
-           right.derived_stat.net_send_kb_per_sec;
   case eBriefTableColumnId_CmdLine:
     return strcmp(left.cmdline, right.cmdline) < 0;
   case eBriefTableColumnId_Count:

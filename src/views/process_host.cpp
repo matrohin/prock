@@ -6,7 +6,6 @@
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
-#include "views/net_chart.h"
 #include "views/socket_viewer.h"
 #include "views/threads_viewer.h"
 #include "views/view_state.h"
@@ -19,7 +18,6 @@ static void close_docked_children(const ImGuiID dock_id, ViewState &view_state,
   process_window_close(dock_id, view_state.cpu_chart_state.charts, pid);
   process_window_close(dock_id, view_state.mem_chart_state.charts, pid);
   process_window_close(dock_id, view_state.io_chart_state.charts, pid);
-  process_window_close(dock_id, view_state.net_chart_state.charts, pid);
   process_window_close(dock_id, view_state.library_viewer_state.windows, pid);
   process_window_close(dock_id, view_state.environ_viewer_state.windows, pid);
   process_window_close(dock_id, view_state.threads_viewer_state.windows, pid);
@@ -30,7 +28,6 @@ void process_host_restore_layout(ViewState &view_state, const Pid pid) {
   process_window_redock(view_state.cpu_chart_state.charts, pid);
   process_window_redock(view_state.mem_chart_state.charts, pid);
   process_window_redock(view_state.io_chart_state.charts, pid);
-  process_window_redock(view_state.net_chart_state.charts, pid);
   process_window_redock(view_state.library_viewer_state.windows, pid);
   process_window_redock(view_state.environ_viewer_state.windows, pid);
   process_window_redock(view_state.threads_viewer_state.windows, pid);

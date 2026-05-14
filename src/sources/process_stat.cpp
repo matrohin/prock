@@ -130,83 +130,6 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
   return result.to_array();
 }
 
-// Check if socket is on loopback (127.x.x.x or ::1)
-static bool is_loopback_socket(const SocketEntry &socket) {
-  // IPv4: Check if either end is 127.x.x.x
-  if (socket.protocol == eSocketProtocol_TCP ||
-      socket.protocol == eSocketProtocol_UDP) {
-    const uint32_t local_ip = socket.local_ip;
-    const uint32_t remote_ip = socket.remote_ip;
-    // 127.0.0.0/8 in network byte order (little-endian x86): first byte == 127
-    if ((local_ip & 0xff) == 127 || (remote_ip & 0xff) == 127) {
-      return true;
-    }
-  }
-
-  // IPv6: Check if either end is ::1 or ::ffff:127.x.x.x (IPv4-mapped loopback)
-  if (socket.protocol == eSocketProtocol_TCP6 ||
-      socket.protocol == eSocketProtocol_UDP6) {
-    static constexpr uint8_t ipv6_loopback[16] = {0, 0, 0, 0, 0, 0, 0, 0,
-                                                  0, 0, 0, 0, 0, 0, 0, 1};
-    static constexpr uint8_t ipv4_mapped_prefix[12] = {0, 0, 0, 0, 0,    0,
-                                                       0, 0, 0, 0, 0xff, 0xff};
-
-    // Pure IPv6 loopback (::1)
-    if (memcmp(socket.local_ip6, ipv6_loopback, 16) == 0 ||
-        memcmp(socket.remote_ip6, ipv6_loopback, 16) == 0) {
-      return true;
-    }
-
-    // IPv4-mapped loopback (::ffff:127.x.x.x)
-    if (memcmp(socket.local_ip6, ipv4_mapped_prefix, 12) == 0 &&
-        socket.local_ip6[12] == 127) {
-      return true;
-    }
-    if (memcmp(socket.remote_ip6, ipv4_mapped_prefix, 12) == 0 &&
-        socket.remote_ip6[12] == 127) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-// Read socket inodes owned by a process from /proc/[pid]/fd/
-static void read_process_socket_inodes(const Pid pid,
-                                       GrowingArray<unsigned long> &out,
-                                       BumpArena &arena) {
-  ZoneScoped;
-  ZoneValue(pid);
-  char fd_path[64];
-  snprintf(fd_path, sizeof(fd_path), "/proc/%d/fd", pid);
-
-  DIR *fd_dir = opendir(fd_path);
-  if (!fd_dir) return;
-
-  uint32_t wasted = 0;
-  char link_buf[128];
-  while (dirent *entry = readdir(fd_dir)) {
-    if (entry->d_type != DT_LNK) continue;
-
-    char full_path[512];
-    snprintf(full_path, sizeof(full_path), "%s/%s", fd_path, entry->d_name);
-
-    const ssize_t link_len =
-        readlink(full_path, link_buf, sizeof(link_buf) - 1);
-    if (link_len <= 0) continue;
-    link_buf[link_len] = '\0';
-
-    // Check for socket:[inode] pattern
-    if (strncmp(link_buf, "socket:[", 8) == 0) {
-      const unsigned long inode = strtoul(link_buf + 8, nullptr, 10);
-      if (inode > 0) {
-        *out.emplace_back(arena, wasted) = inode;
-      }
-    }
-  }
-  closedir(fd_dir);
-}
-
 // Read stat for a thread (or process) given explicit paths
 static bool read_thread_stat(const int tid, const char *stat_path,
                              const char *statm_path, const char *comm_path,
@@ -216,8 +139,6 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   stat.comm = "";
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
-  stat.net_recv_bytes = 0;
-  stat.net_send_bytes = 0;
 
   FILE *stat_file = fopen(stat_path, "r");
   FILE *statm_file = fopen(statm_path, "r");
@@ -296,8 +217,6 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
   stat.cmdline = "";
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
-  stat.net_recv_bytes = 0;
-  stat.net_send_bytes = 0;
 
   FILE *stat_file = fopen(stat_filename, "r");
   FILE *statm_file = fopen(statm_filename, "r");
@@ -438,39 +357,6 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
             [](const ProcessStat &left, const ProcessStat &right) {
               return left.pid < right.pid;
             });
-
-  // Query socket stats from netlink and distribute to processes
-  const Array<SocketEntry> socket_stats = query_sockets_netlink(result_arena);
-  if (socket_stats.size > 0) {
-    ZoneScopedN("distribute socket stats");
-    GrowingArray<unsigned long> inodes = {};
-    for (ProcessStat &stat : result) {
-      inodes.shrink_to(0);
-      read_process_socket_inodes(stat.pid, inodes, result_arena);
-
-      ulonglong total_recv = 0;
-      ulonglong total_send = 0;
-      for (const unsigned long inode : inodes) {
-        const uint32_t found_inode = bin_search_exact(
-            socket_stats.size,
-            [&socket_stats](const uint32_t mid) {
-              return socket_stats.data[mid].inode;
-            },
-            inode);
-        if (found_inode < socket_stats.size) {
-          const SocketEntry &socket = socket_stats.data[found_inode];
-          // Skip loopback sockets to match /proc/net/dev behavior
-          if (is_loopback_socket(socket)) {
-            continue;
-          }
-          total_recv += socket.bytes_received;
-          total_send += socket.bytes_sent;
-        }
-      }
-      stat.net_recv_bytes = total_recv;
-      stat.net_send_bytes = total_send;
-    }
-  }
 
   return result;
 }

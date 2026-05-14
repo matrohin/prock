@@ -3,10 +3,8 @@
 struct SystemNetChartState {
   BumpArena cur_arena;
   GrowingArray<double> times;
-  GrowingArray<double> recv_mb_per_sec;  // Receive throughput in MB/s
-  GrowingArray<double> send_mb_per_sec;  // Send throughput in MB/s
-  GrowingArray<double> total_mb_per_sec; // Combined for tooltip
-  GrowingArray<TopProcess> top_processes;
+  GrowingArray<double> recv_mb_per_sec;
+  GrowingArray<double> send_mb_per_sec;
   uint32_t wasted_bytes;
   int y_axis_fitted;
 };

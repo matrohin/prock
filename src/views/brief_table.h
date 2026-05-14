@@ -22,8 +22,6 @@ enum BriefTableColumnId {
   eBriefTableColumnId_MemVirtBytes,
   eBriefTableColumnId_IoReadKbPerSec,
   eBriefTableColumnId_IoWriteKbPerSec,
-  eBriefTableColumnId_NetRecvKbPerSec,
-  eBriefTableColumnId_NetSendKbPerSec,
   eBriefTableColumnId_CmdLine,
   eBriefTableColumnId_Count,
 };
