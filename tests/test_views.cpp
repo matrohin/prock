@@ -946,13 +946,13 @@ TEST_CASE("find_top_process") {
     StateSnapshot snapshot = builder.build();
 
     TopProcess top = find_top_process(
-        snapshot, [](const ProcessDerivedStat &d) {
+        snapshot, arena, [](const ProcessDerivedStat &d) {
           return d.cpu_user_perc + d.cpu_kernel_perc;
         });
 
     CHECK(top.pid == 20);
     CHECK(top.value == doctest::Approx(100.0));
-    CHECK(strcmp(top.comm, "high_cpu") == 0);
+    CHECK(strcmp(top.name, "high_cpu") == 0);
   }
 
   SUBCASE("finds process with highest memory") {
@@ -963,7 +963,7 @@ TEST_CASE("find_top_process") {
     StateSnapshot snapshot = builder.build();
 
     TopProcess top = find_top_process(
-        snapshot,
+        snapshot, arena,
         [](const ProcessDerivedStat &d) { return d.mem_resident_bytes; });
 
     CHECK(top.pid == 20);
@@ -976,7 +976,7 @@ TEST_CASE("find_top_process") {
     snapshot.derived_stats.size = 0;
 
     TopProcess top = find_top_process(
-        snapshot, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
+        snapshot, arena, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
 
     CHECK(top.pid == 0);
     CHECK(top.value == doctest::Approx(0.0));
@@ -988,11 +988,11 @@ TEST_CASE("find_top_process") {
     StateSnapshot snapshot = builder.build();
 
     TopProcess top = find_top_process(
-        snapshot, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
+        snapshot, arena, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
 
     CHECK(top.pid == 42);
     CHECK(top.value == doctest::Approx(50.0));
-    CHECK(strcmp(top.comm, "only_one") == 0);
+    CHECK(strcmp(top.name, "only_one") == 0);
   }
 
   arena.destroy();

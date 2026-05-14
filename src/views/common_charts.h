@@ -8,21 +8,37 @@
 
 struct TopProcess {
   Pid pid;
-  char comm[16]; // Linux limits to 15 chars + null
+  const char *name;
   double value;
 };
 
-// Find top process by a given metric extractor
+// Returns the basename of the first word in cmdline, allocated from arena.
+// Returns nullptr if cmdline is empty or has no useful basename.
+inline const char *cmdline_display_name(const char *cmdline, BumpArena &arena) {
+  if (!cmdline || !cmdline[0]) return nullptr;
+  const char *end = cmdline;
+  while (*end && *end != ' ') ++end;
+  const char *base = cmdline;
+  for (const char *p = cmdline; p < end; ++p)
+    if (*p == '/') base = p + 1;
+  if (base < end) return arena.alloc_string_copy(base, end - base);
+  return nullptr;
+}
+
+// Find top process by a given metric extractor. Name is allocated from arena.
 template <class F>
-TopProcess find_top_process(const StateSnapshot &snapshot, F get_value) {
-  TopProcess top = {0, {'\0'}, 0.0};
+TopProcess find_top_process(const StateSnapshot &snapshot, BumpArena &arena,
+                            F get_value) {
+  TopProcess top = {0, nullptr, 0.0};
   for (uint32_t i = 0; i < snapshot.stats.size; ++i) {
     const double val = get_value(snapshot.derived_stats.data[i]);
     if (val > top.value) {
       top.pid = snapshot.stats.data[i].pid;
       top.value = val;
-      strncpy(top.comm, snapshot.stats.data[i].comm, sizeof(top.comm) - 1);
-      top.comm[sizeof(top.comm) - 1] = '\0';
+      const char *display = cmdline_display_name(
+          snapshot.stats.data[i].cmdline, arena);
+      top.name = display ? display
+                         : arena.alloc_string_copy(snapshot.stats.data[i].comm);
     }
   }
   return top;

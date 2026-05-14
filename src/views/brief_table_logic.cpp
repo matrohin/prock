@@ -1,6 +1,7 @@
 #include "imgui.h"
 #include "state.h"
 #include "views/brief_table.h"
+#include "views/common_charts.h"
 
 #include <algorithm>
 #include <cstring>
@@ -144,16 +145,6 @@ void sort_brief_table_lines(BriefTableState &my_state) {
   sort_flat(my_state);
 }
 
-static const char *cmdline_display_name(const char *cmdline, BumpArena &arena) {
-  const char *end = cmdline;
-  while (*end && *end != ' ') ++end;
-  const char *base = cmdline;
-  for (const char *p = cmdline; p < end; ++p) {
-    if (*p == '/') base = p + 1;
-  }
-  if (base < end) return arena.alloc_string_copy(base, end - base);
-  return nullptr;
-}
 
 static void brief_table_line_init(BriefTableLine &new_line,
                                   const ProcessStat &stat,

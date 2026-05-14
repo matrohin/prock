@@ -35,9 +35,10 @@ void system_mem_chart_update(SystemMemChartState &my_state,
   // Find top memory process (store in KB to match system values)
   *my_state.top_processes.emplace_back(my_state.cur_arena,
                                        my_state.wasted_bytes) =
-      find_top_process(snapshot, [](const ProcessDerivedStat &d) {
-        return d.mem_resident_bytes / 1024.0;
-      });
+      find_top_process(snapshot, my_state.cur_arena,
+                       [](const ProcessDerivedStat &d) {
+                         return d.mem_resident_bytes / 1024.0;
+                       });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -47,6 +48,10 @@ void system_mem_chart_update(SystemMemChartState &my_state,
     my_state.used.realloc(new_arena);
     my_state.available.realloc(new_arena);
     my_state.top_processes.realloc(new_arena);
+    for (uint32_t i = 0; i < my_state.top_processes.size(); ++i) {
+      TopProcess &tp = my_state.top_processes.data()[i];
+      if (tp.name) tp.name = new_arena.alloc_string_copy(tp.name);
+    }
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
