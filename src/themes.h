@@ -6,7 +6,7 @@
 
 #include "imgui.h"
 
-enum class Theme : uint8_t { Dark, Light, Classic, Enemymouse, Nord, COUNT };
+enum class Theme : uint8_t { Dark, Light, Classic, Enemymouse, Nord, Onenord, COUNT };
 
 inline const char *theme_name(const Theme theme) {
   switch (theme) {
@@ -20,6 +20,8 @@ inline const char *theme_name(const Theme theme) {
     return "Enemymouse";
   case Theme::Nord:
     return "Nord";
+  case Theme::Onenord:
+    return "OneNord";
   default:
     return "Unknown";
   }
@@ -186,6 +188,90 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_TableRowBgAlt] = with_alpha(nord1, 0.30f);
     colors[ImGuiCol_TextSelectedBg] = with_alpha(nord10, 0.35f);
     colors[ImGuiCol_ModalWindowDimBg] = with_alpha(nord0, 0.73f);
+    break;
+  }
+
+  case Theme::Onenord: {
+    // OneNord: Nord structure + One Dark's more saturated accents
+    // Polar Night (slightly darker than Nord for more contrast)
+    constexpr ImVec4 on0(0.12f, 0.13f, 0.16f, 1.00f);  // #1E2127
+    constexpr ImVec4 on1(0.16f, 0.17f, 0.20f, 1.00f);  // #282C34
+    constexpr ImVec4 on2(0.18f, 0.19f, 0.23f, 1.00f);  // #2C313A
+    constexpr ImVec4 on3(0.24f, 0.27f, 0.32f, 1.00f);  // #3E4451
+    // Snow Storm (brighter text than Nord)
+    constexpr ImVec4 on_fg(0.93f, 0.95f, 0.96f, 1.00f);   // #ECEFF4 (nord6)
+    constexpr ImVec4 on_fg2(0.78f, 0.80f, 0.84f, 1.00f);  // #C8CCD4
+    // Frost (more saturated than Nord)
+    constexpr ImVec4 on_cyan(0.34f, 0.71f, 0.76f, 1.00f);   // #56B6C2
+    constexpr ImVec4 on_blue(0.38f, 0.69f, 0.94f, 1.00f);   // #61AFEF
+    constexpr ImVec4 on_blue2(0.29f, 0.55f, 0.72f, 1.00f);  // #4B8DB8
+    // Aurora (more saturated than Nord)
+    constexpr ImVec4 on_red(0.88f, 0.42f, 0.46f, 1.00f);    // #E06C75
+    constexpr ImVec4 on_yellow(0.90f, 0.75f, 0.48f, 1.00f); // #E5C07B
+    constexpr ImVec4 on_green(0.60f, 0.76f, 0.47f, 1.00f);  // #98C379
+
+    auto wa = [](ImVec4 c, float a) { return ImVec4(c.x, c.y, c.z, a); };
+
+    ImGui::StyleColorsDark(dst);
+    style->WindowRounding = 4.0f;
+    style->ChildRounding = 4.0f;
+    style->FrameRounding = 4.0f;
+    style->GrabRounding = 4.0f;
+    style->PopupRounding = 4.0f;
+    style->ScrollbarRounding = 4.0f;
+    style->TabRounding = 4.0f;
+
+    colors[ImGuiCol_Text] = on_fg;
+    colors[ImGuiCol_TextDisabled] = wa(on_fg2, 0.55f);
+    colors[ImGuiCol_WindowBg] = on0;
+    colors[ImGuiCol_ChildBg] = wa(on0, 0.00f);
+    colors[ImGuiCol_PopupBg] = wa(on1, 0.97f);
+    colors[ImGuiCol_Border] = wa(on3, 0.90f);
+    colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_FrameBg] = on1;
+    colors[ImGuiCol_FrameBgHovered] = on2;
+    colors[ImGuiCol_FrameBgActive] = on3;
+    colors[ImGuiCol_TitleBg] = on0;
+    colors[ImGuiCol_TitleBgActive] = on1;
+    colors[ImGuiCol_TitleBgCollapsed] = wa(on0, 0.75f);
+    colors[ImGuiCol_MenuBarBg] = on1;
+    colors[ImGuiCol_ScrollbarBg] = on0;
+    colors[ImGuiCol_ScrollbarGrab] = on3;
+    colors[ImGuiCol_ScrollbarGrabHovered] = on_blue2;
+    colors[ImGuiCol_ScrollbarGrabActive] = on_blue;
+    colors[ImGuiCol_CheckMark] = on_cyan;
+    colors[ImGuiCol_SliderGrab] = on_blue;
+    colors[ImGuiCol_SliderGrabActive] = on_cyan;
+    colors[ImGuiCol_Button] = wa(on_blue2, 0.60f);
+    colors[ImGuiCol_ButtonHovered] = wa(on_blue, 0.80f);
+    colors[ImGuiCol_ButtonActive] = on_cyan;
+    colors[ImGuiCol_Header] = wa(on_blue2, 0.45f);
+    colors[ImGuiCol_HeaderHovered] = wa(on_blue, 0.60f);
+    colors[ImGuiCol_HeaderActive] = wa(on_cyan, 0.80f);
+    colors[ImGuiCol_Separator] = wa(on3, 0.80f);
+    colors[ImGuiCol_SeparatorHovered] = wa(on_blue, 0.78f);
+    colors[ImGuiCol_SeparatorActive] = on_cyan;
+    colors[ImGuiCol_ResizeGrip] = wa(on_blue2, 0.40f);
+    colors[ImGuiCol_ResizeGripHovered] = wa(on_blue, 0.67f);
+    colors[ImGuiCol_ResizeGripActive] = wa(on_cyan, 0.95f);
+    colors[ImGuiCol_Tab] = on1;
+    colors[ImGuiCol_TabHovered] = wa(on_blue, 0.80f);
+    colors[ImGuiCol_TabSelected] = on_blue2;
+    colors[ImGuiCol_TabSelectedOverline] = on_cyan;
+    colors[ImGuiCol_TabDimmed] = on0;
+    colors[ImGuiCol_TabDimmedSelected] = on2;
+    colors[ImGuiCol_DockingPreview] = wa(on_cyan, 0.70f);
+    colors[ImGuiCol_PlotLines] = on_cyan;
+    colors[ImGuiCol_PlotLinesHovered] = on_red;
+    colors[ImGuiCol_PlotHistogram] = on_green;
+    colors[ImGuiCol_PlotHistogramHovered] = on_yellow;
+    colors[ImGuiCol_TableHeaderBg] = on1;
+    colors[ImGuiCol_TableBorderStrong] = on3;
+    colors[ImGuiCol_TableBorderLight] = wa(on3, 0.60f);
+    colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt] = wa(on1, 0.40f);
+    colors[ImGuiCol_TextSelectedBg] = wa(on_blue2, 0.35f);
+    colors[ImGuiCol_ModalWindowDimBg] = wa(on0, 0.73f);
     break;
   }
 
