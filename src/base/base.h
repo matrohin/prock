@@ -14,7 +14,7 @@ using ulong = unsigned long;
 using ulonglong = unsigned long long;
 using Pid = int;
 
-constexpr size_t SLAB_SIZE = 4096; // 4KB, matches page size
+constexpr size_t SLAB_SIZE = 256UL * 1024; // 256KB
 
 struct ArenaSlab {
   void *cur;
