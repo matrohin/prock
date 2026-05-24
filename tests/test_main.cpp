@@ -238,11 +238,11 @@ TEST_CASE("LinkedList basic operations") {
 }
 
 // ============================================================================
-// RingBuffer Tests
+// Channel Tests
 // ============================================================================
 
-TEST_CASE("RingBuffer basic operations") {
-  RingBuffer<int, 8> rb = {};
+TEST_CASE("Channel basic operations") {
+  Channel<int, 8> rb = {};
 
   SUBCASE("starts empty") {
     int out;
@@ -469,16 +469,16 @@ TEST_CASE("bin_search_exact") {
 }
 
 // ============================================================================
-// RingBuffer Tests (continued)
+// Channel Tests (continued)
 // ============================================================================
 
-TEST_CASE("RingBuffer with struct type") {
+TEST_CASE("Channel with struct type") {
   struct TestData {
     int x;
     int y;
   };
 
-  RingBuffer<TestData, 4> rb = {};
+  Channel<TestData, 4> rb = {};
 
   TestData d1 = {1, 2};
   TestData d2 = {3, 4};

@@ -31,11 +31,11 @@ struct Sync {
   std::atomic<float> update_period{0.5f};  // seconds, 0 = paused
   std::mutex quit_mutex;
   std::condition_variable quit_cv;
-  RingBuffer<UpdateSnapshot, 256> update_queue;
+  Channel<UpdateSnapshot, 256> update_queue;
 
   // Thread gathering: PIDs to watch/unwatch
-  RingBuffer<int, 16> thread_watch_queue;
-  RingBuffer<int, 16> thread_unwatch_queue;
+  Channel<int, 16> thread_watch_queue;
+  Channel<int, 16> thread_unwatch_queue;
 
   OnDemandReaderSync on_demand_reader;
 };

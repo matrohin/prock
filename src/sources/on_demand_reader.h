@@ -9,14 +9,14 @@
 #include <condition_variable>
 
 struct OnDemandReaderSync {
-  RingBuffer<LibraryRequest, 16> library_request_queue;
-  RingBuffer<LibraryResponse, 16> library_response_queue;
-  RingBuffer<EnvironRequest, 16> environ_request_queue;
-  RingBuffer<EnvironResponse, 16> environ_response_queue;
-  RingBuffer<SocketRequest, 16> socket_request_queue;
-  RingBuffer<SocketResponse, 16> socket_response_queue;
-  RingBuffer<SmapsRequest, 16> smaps_request_queue;
-  RingBuffer<SmapsResponse, 16> smaps_response_queue;
+  Channel<LibraryRequest, 16> library_request_queue;
+  Channel<LibraryResponse, 16> library_response_queue;
+  Channel<EnvironRequest, 16> environ_request_queue;
+  Channel<EnvironResponse, 16> environ_response_queue;
+  Channel<SocketRequest, 16> socket_request_queue;
+  Channel<SocketResponse, 16> socket_response_queue;
+  Channel<SmapsRequest, 16> smaps_request_queue;
+  Channel<SmapsResponse, 16> smaps_response_queue;
   std::condition_variable library_cv;
 };
 

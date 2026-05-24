@@ -4,7 +4,7 @@
 
 #include <atomic>
 
-template <class T, size_t N> struct RingBuffer {
+template <class T, size_t N> struct Channel {
   static constexpr uint32_t MASK = N - 1;
   std::atomic<uint32_t> head;
   std::atomic<uint32_t> tail;
