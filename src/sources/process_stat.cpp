@@ -1,4 +1,5 @@
 #include "process_stat.h"
+#include "proc_parsers.h"
 
 #include "sync.h"
 #include "tracy/Tracy.hpp"
@@ -178,20 +179,7 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   fclose(statm_file);
   fclose(stat_file);
 
-  char *after_comm = strrchr(stat_buf, ')');
-  if (!after_comm) {
-    return false;
-  }
-
-  sscanf(after_comm + 1,
-         " %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d "
-         "%*d %*d %ld %*d %*u %lu",
-         &stat.state, &stat.ppid, &stat.utime, &stat.stime, &stat.num_threads,
-         &stat.vsize);
-
-  sscanf(statm_buf, "%*u %lu", &stat.statm_resident);
-
-  return true;
+  return parse_proc_stat_bufs(stat_buf, statm_buf, out);
 }
 
 static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
@@ -258,34 +246,16 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
   fclose(statm_file);
   fclose(stat_file);
 
-  // Find last ')' - comm can contain unbalanced parens
-  const char *after_comm = strrchr(stat_buf, ')');
-  if (!after_comm) {
+  if (!parse_proc_stat_bufs(stat_buf, statm_buf, &stat)) {
     return false;
   }
-
-  sscanf(after_comm + 1,
-         " %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d "
-         "%*d %*d %ld %*d %*u %lu",
-         &stat.state, &stat.ppid, &stat.utime, &stat.stime, &stat.num_threads,
-         &stat.vsize);
-
-  sscanf(statm_buf, "%*u %lu", &stat.statm_resident);
 
   // Read /proc/[pid]/io (may fail due to permissions, that's OK)
   FILE *io_file = fopen(io_filename, "r");
   if (io_file) {
     char io_line[128];
     while (fgets(io_line, sizeof(io_line), io_file)) {
-      char key[32];
-      ulonglong value;
-      if (sscanf(io_line, "%31[^:]: %llu", key, &value) == 2) {
-        if (strcmp(key, "read_bytes") == 0) {
-          stat.io_read_bytes = value;
-        } else if (strcmp(key, "write_bytes") == 0) {
-          stat.io_write_bytes = value;
-        }
-      }
+      parse_io_line(io_line, &stat);
     }
     fclose(io_file);
   }

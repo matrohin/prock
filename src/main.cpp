@@ -31,6 +31,7 @@ void notify_data_ready(Sync &sync) {
 #include "sources/environ_reader.cpp"
 #include "sources/library_reader.cpp"
 #include "sources/on_demand_reader.cpp"
+#include "sources/proc_parsers.cpp"
 #include "sources/process_stat.cpp"
 #include "sources/smaps_reader.cpp"
 #include "sources/socket_reader.cpp"

@@ -56,6 +56,7 @@ if(BUILD_TESTS)
     tests/test_main.cpp
     tests/test_views.cpp
     src/base/base.cpp
+    src/sources/proc_parsers.cpp
     src/views/brief_table_logic.cpp
     src/state.cpp)
   target_include_directories(prock_tests PRIVATE

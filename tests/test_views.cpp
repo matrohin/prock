@@ -6,7 +6,8 @@
 // implot
 using ImPlotShadedFlags = int;
 
-#include "../src/sources/sync.h"
+#include "sources/proc_parsers.h"
+#include "sources/sync.h"
 #include "state.h"
 #include "test_helpers.h"
 #include "views/brief_table.h"
@@ -1031,4 +1032,128 @@ TEST_CASE("state_snapshot_update network I/O") {
   }
 
   arena.destroy();
+}
+
+// ============================================================================
+// parse_proc_stat_bufs Tests
+// ============================================================================
+
+// Helper: build a /proc/[pid]/stat line from components.
+// Fields after comm: state ppid pgrp session tty_nr tpgid flags
+//   minflt cminflt majflt cmajflt utime stime cutime cstime priority nice
+//   num_threads itrealvalue starttime vsize
+static const char *make_stat_line(char *buf, size_t buf_size, int pid,
+                                  const char *comm, char state, int ppid,
+                                  ulong utime, ulong stime, long num_threads,
+                                  ulong vsize) {
+  snprintf(buf, buf_size,
+           "%d (%s) %c %d 0 0 0 -1 0 0 0 0 0 %lu %lu 0 0 20 0 %ld 0 0 %lu",
+           pid, comm, state, ppid, utime, stime, num_threads, vsize);
+  return buf;
+}
+
+TEST_CASE("parse_proc_stat_bufs") {
+  ProcessStat stat = {};
+
+  SUBCASE("basic process") {
+    char stat_buf[256];
+    make_stat_line(stat_buf, sizeof(stat_buf), 1234, "bash", 'S', 100, 5, 2, 1,
+                   102400);
+    const char *statm_buf = "25600 2500 1000 100 0 3000 0";
+
+    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(stat.state == 'S');
+    CHECK(stat.ppid == 100);
+    CHECK(stat.utime == 5);
+    CHECK(stat.stime == 2);
+    CHECK(stat.num_threads == 1);
+    CHECK(stat.vsize == 102400);
+    CHECK(stat.statm_resident == 2500);
+  }
+
+  SUBCASE("process name with parentheses") {
+    // strrchr must find the last ')' to handle names like "(kworker/0:1)"
+    char stat_buf[256];
+    make_stat_line(stat_buf, sizeof(stat_buf), 456, "my (weird) proc", 'R', 1,
+                   10, 3, 2, 65536);
+    const char *statm_buf = "1000 500 0 0 0 0 0";
+
+    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(stat.state == 'R');
+    CHECK(stat.ppid == 1);
+    CHECK(stat.utime == 10);
+    CHECK(stat.stime == 3);
+    CHECK(stat.num_threads == 2);
+    CHECK(stat.statm_resident == 500);
+  }
+
+  SUBCASE("zombie process") {
+    char stat_buf[256];
+    make_stat_line(stat_buf, sizeof(stat_buf), 789, "zombie", 'Z', 1, 0, 0, 1,
+                   0);
+    const char *statm_buf = "0 0 0 0 0 0 0";
+
+    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(stat.state == 'Z');
+    CHECK(stat.vsize == 0);
+    CHECK(stat.statm_resident == 0);
+  }
+
+  SUBCASE("malformed stat_buf - no closing paren") {
+    const char *stat_buf = "999 (truncated";
+    const char *statm_buf = "0 0";
+
+    CHECK_FALSE(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+  }
+
+  SUBCASE("kernel thread - zero utime and stime") {
+    char stat_buf[256];
+    make_stat_line(stat_buf, sizeof(stat_buf), 2, "kthreadd", 'S', 0, 0, 0, 1,
+                   0);
+    const char *statm_buf = "0 0 0 0 0 0 0";
+
+    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(stat.utime == 0);
+    CHECK(stat.stime == 0);
+    CHECK(stat.ppid == 0);
+  }
+}
+
+// ============================================================================
+// parse_io_line Tests
+// ============================================================================
+
+TEST_CASE("parse_io_line") {
+  ProcessStat stat = {};
+
+  SUBCASE("read_bytes line") {
+    parse_io_line("read_bytes: 1024\n", &stat);
+    CHECK(stat.io_read_bytes == 1024);
+    CHECK(stat.io_write_bytes == 0);
+  }
+
+  SUBCASE("write_bytes line") {
+    parse_io_line("write_bytes: 512\n", &stat);
+    CHECK(stat.io_read_bytes == 0);
+    CHECK(stat.io_write_bytes == 512);
+  }
+
+  SUBCASE("unrelated key is ignored") {
+    parse_io_line("rchar: 99999\n", &stat);
+    CHECK(stat.io_read_bytes == 0);
+    CHECK(stat.io_write_bytes == 0);
+  }
+
+  SUBCASE("large byte counts") {
+    parse_io_line("read_bytes: 10737418240\n", &stat);  // 10 GB
+    CHECK(stat.io_read_bytes == 10737418240ULL);
+  }
+
+  SUBCASE("multiple lines accumulate correctly") {
+    parse_io_line("rchar: 12345\n", &stat);
+    parse_io_line("read_bytes: 1024\n", &stat);
+    parse_io_line("write_bytes: 512\n", &stat);
+    CHECK(stat.io_read_bytes == 1024);
+    CHECK(stat.io_write_bytes == 512);
+  }
 }
