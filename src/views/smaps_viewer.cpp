@@ -21,73 +21,57 @@ static void format_kb(char *buf, const int size, const ulong kb) {
   format_memory_bytes(kb * 1024.0, buf, size);
 }
 
+const char *SMAPS_COPY_HEADER =
+    "Address\tPerms\tSize(kB)\tRSS(kB)\tPSS(kB)\tPrivate(kB)\tSwap(kB)\tMapping\n";
+
 static void copy_smaps_row(const SmapsSegment &seg) {
   char buf[512];
-  snprintf(buf, sizeof(buf),
-           "Address\tPerms\tSize(kB)\tRSS(kB)\tPSS(kB)\tPrivate(kB)\tSwap("
-           "kB)\tMapping\n"
-           "%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s",
-           seg.start_addr, seg.end_addr, seg.perms, seg.size_kb, seg.rss_kb,
-           seg.pss_kb, seg.private_clean_kb + seg.private_dirty_kb, seg.swap_kb,
+  snprintf(buf, sizeof(buf), "%s%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s",
+           SMAPS_COPY_HEADER, seg.start_addr, seg.end_addr, seg.perms,
+           seg.size_kb, seg.rss_kb, seg.pss_kb,
+           seg.private_clean_kb + seg.private_dirty_kb, seg.swap_kb,
            segment_label(seg));
   ImGui::SetClipboardText(buf);
 }
 
 static void copy_all_smaps(BumpArena &arena, const SmapsViewerWindow &win) {
-  const size_t buf_size = 128 + win.segments.size * 160;
-  char *buf = arena.alloc_string(buf_size);
-  char *ptr = buf;
-  ptr += snprintf(ptr, buf_size,
-                  "Address\tPerms\tSize(kB)\tRSS(kB)\tPSS(kB)\tPrivate(kB)"
-                  "\tSwap(kB)\tMapping\n");
-
-  for (const SmapsSegment &seg : win.segments) {
-    ptr += snprintf(ptr, buf_size - (ptr - buf),
-                    "%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s\n",
-                    seg.start_addr, seg.end_addr, seg.perms, seg.size_kb,
-                    seg.rss_kb, seg.pss_kb,
-                    seg.private_clean_kb + seg.private_dirty_kb, seg.swap_kb,
-                    segment_label(seg));
-  }
-  ImGui::SetClipboardText(buf);
+  copy_all_to_clipboard(
+      arena, win.segments.data, win.segments.size, 160, SMAPS_COPY_HEADER,
+      [](char *ptr, size_t rem, const SmapsSegment &seg) {
+        return snprintf(ptr, rem, "%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s\n",
+                        seg.start_addr, seg.end_addr, seg.perms, seg.size_kb,
+                        seg.rss_kb, seg.pss_kb,
+                        seg.private_clean_kb + seg.private_dirty_kb,
+                        seg.swap_kb, segment_label(seg));
+      });
 }
 
 static void sort_segments(SmapsViewerWindow &win) {
-  if (win.segments.size == 0) return;
-
-  const auto compare = [&](const SmapsSegment &a, const SmapsSegment &b) {
-    switch (win.sorted_by) {
-    case eSmapsViewerColumnId_Address:
-      return a.start_addr < b.start_addr;
-    case eSmapsViewerColumnId_Perms:
-      return strncmp(a.perms, b.perms, sizeof(a.perms)) < 0;
-    case eSmapsViewerColumnId_Size:
-      return a.size_kb < b.size_kb;
-    case eSmapsViewerColumnId_Rss:
-      return a.rss_kb < b.rss_kb;
-    case eSmapsViewerColumnId_Pss:
-      return a.pss_kb < b.pss_kb;
-    case eSmapsViewerColumnId_Private:
-      return (a.private_clean_kb + a.private_dirty_kb) <
-             (b.private_clean_kb + b.private_dirty_kb);
-    case eSmapsViewerColumnId_Swap:
-      return a.swap_kb < b.swap_kb;
-    case eSmapsViewerColumnId_Mapping:
-      return strcmp(segment_label(a), segment_label(b)) < 0;
-    default:
-      return false;
-    }
-  };
-
-  if (win.sorted_order == ImGuiSortDirection_Ascending) {
-    std::stable_sort(win.segments.data, win.segments.data + win.segments.size,
-                     compare);
-  } else {
-    std::stable_sort(win.segments.data, win.segments.data + win.segments.size,
-                     [&](const SmapsSegment &a, const SmapsSegment &b) {
-                       return compare(b, a);
-                     });
-  }
+  sort_bidirectional(
+      win.segments.data, win.segments.size, win.sorted_order,
+      [&](const SmapsSegment &a, const SmapsSegment &b) {
+        switch (win.sorted_by) {
+        case eSmapsViewerColumnId_Address:
+          return a.start_addr < b.start_addr;
+        case eSmapsViewerColumnId_Perms:
+          return strncmp(a.perms, b.perms, sizeof(a.perms)) < 0;
+        case eSmapsViewerColumnId_Size:
+          return a.size_kb < b.size_kb;
+        case eSmapsViewerColumnId_Rss:
+          return a.rss_kb < b.rss_kb;
+        case eSmapsViewerColumnId_Pss:
+          return a.pss_kb < b.pss_kb;
+        case eSmapsViewerColumnId_Private:
+          return (a.private_clean_kb + a.private_dirty_kb) <
+                 (b.private_clean_kb + b.private_dirty_kb);
+        case eSmapsViewerColumnId_Swap:
+          return a.swap_kb < b.swap_kb;
+        case eSmapsViewerColumnId_Mapping:
+          return strcmp(segment_label(a), segment_label(b)) < 0;
+        default:
+          return false;
+        }
+      });
 }
 
 static void send_smaps_request(Sync &sync, const Pid pid) {

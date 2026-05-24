@@ -6,7 +6,6 @@
 #include "imgui.h"
 #include "tracy/Tracy.hpp"
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <unistd.h>
@@ -25,45 +24,30 @@ static void copy_library_row(const LibraryEntry &lib) {
 
 static void copy_all_libraries(BumpArena &arena,
                                const LibraryViewerWindow &win) {
-  const size_t buf_size = 128 + win.libraries.size * 320;
-  char *buf = arena.alloc_string(buf_size);
-  char *ptr = buf;
-  ptr += snprintf(ptr, buf_size, "%s", LIBRARY_COPY_HEADER);
-
-  for (const LibraryEntry &lib : win.libraries) {
-    const unsigned long mapped_size = lib.addr_end - lib.addr_start;
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%lu\t%ld\n",
-                    lib.path.data, mapped_size, lib.file_size);
-  }
-  ImGui::SetClipboardText(buf);
+  copy_all_to_clipboard(
+      arena, win.libraries.data, win.libraries.size, 320, LIBRARY_COPY_HEADER,
+      [](char *ptr, size_t rem, const LibraryEntry &lib) {
+        const unsigned long mapped_size = lib.addr_end - lib.addr_start;
+        return snprintf(ptr, rem, "%s\t%lu\t%ld\n", lib.path.data, mapped_size,
+                        lib.file_size);
+      });
 }
 
 static void sort_libraries(LibraryViewerWindow &win) {
-  if (win.libraries.size == 0) return;
-
-  const auto compare = [&](const LibraryEntry &a, const LibraryEntry &b) {
-    switch (win.sorted_by) {
-    case eLibraryViewerColumnId_Path:
-      return strcmp(a.path.data, b.path.data) < 0;
-    case eLibraryViewerColumnId_MappedSize:
-      return a.addr_end - a.addr_start < b.addr_end - b.addr_start;
-    case eLibraryViewerColumnId_FileSize:
-      return a.file_size < b.file_size;
-    default:
-      return false;
-    }
-  };
-
-  if (win.sorted_order == ImGuiSortDirection_Ascending) {
-    std::stable_sort(win.libraries.data,
-                     win.libraries.data + win.libraries.size, compare);
-  } else {
-    std::stable_sort(win.libraries.data,
-                     win.libraries.data + win.libraries.size,
-                     [&](const LibraryEntry &a, const LibraryEntry &b) {
-                       return compare(b, a);
-                     });
-  }
+  sort_bidirectional(
+      win.libraries.data, win.libraries.size, win.sorted_order,
+      [&](const LibraryEntry &a, const LibraryEntry &b) {
+        switch (win.sorted_by) {
+        case eLibraryViewerColumnId_Path:
+          return strcmp(a.path.data, b.path.data) < 0;
+        case eLibraryViewerColumnId_MappedSize:
+          return a.addr_end - a.addr_start < b.addr_end - b.addr_start;
+        case eLibraryViewerColumnId_FileSize:
+          return a.file_size < b.file_size;
+        default:
+          return false;
+        }
+      });
 }
 
 static void send_library_request(Sync &sync, const Pid pid) {

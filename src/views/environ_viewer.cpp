@@ -6,7 +6,6 @@
 #include "imgui.h"
 #include "tracy/Tracy.hpp"
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <unistd.h>
@@ -32,16 +31,12 @@ static void copy_path_segment(const char *start, const char *end) {
 }
 
 static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
-  const size_t buf_size = 128 + win.entries.size * 4400;
-  char *buf = arena.alloc_string(buf_size);
-  char *ptr = buf;
-  ptr += snprintf(ptr, buf_size, "%s", ENVIRON_COPY_HEADER);
-
-  for (const EnvironEntry &entry : win.entries) {
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\n", entry.name.data,
-                    entry.value.data);
-  }
-  ImGui::SetClipboardText(buf);
+  copy_all_to_clipboard(arena, win.entries.data, win.entries.size, 4400,
+                        ENVIRON_COPY_HEADER,
+                        [](char *ptr, size_t rem, const EnvironEntry &entry) {
+                          return snprintf(ptr, rem, "%s\t%s\n",
+                                         entry.name.data, entry.value.data);
+                        });
 }
 
 // Returns true if value looks like a PATH-style variable (multiple
@@ -59,28 +54,18 @@ static bool is_expandable_value(const String &value) {
 }
 
 static void sort_environ(EnvironViewerWindow &win) {
-  if (win.entries.size == 0) return;
-
-  const auto compare = [&](const EnvironEntry &a, const EnvironEntry &b) {
-    switch (win.sorted_by) {
-    case eEnvironViewerColumnId_Name:
-      return strcmp(a.name.data, b.name.data) < 0;
-    case eEnvironViewerColumnId_Value:
-      return strcmp(a.value.data, b.value.data) < 0;
-    default:
-      return false;
-    }
-  };
-
-  if (win.sorted_order == ImGuiSortDirection_Ascending) {
-    std::stable_sort(win.entries.data, win.entries.data + win.entries.size,
-                     compare);
-  } else {
-    std::stable_sort(win.entries.data, win.entries.data + win.entries.size,
-                     [&](const EnvironEntry &a, const EnvironEntry &b) {
-                       return compare(b, a);
-                     });
-  }
+  sort_bidirectional(
+      win.entries.data, win.entries.size, win.sorted_order,
+      [&](const EnvironEntry &a, const EnvironEntry &b) {
+        switch (win.sorted_by) {
+        case eEnvironViewerColumnId_Name:
+          return strcmp(a.name.data, b.name.data) < 0;
+        case eEnvironViewerColumnId_Value:
+          return strcmp(a.value.data, b.value.data) < 0;
+        default:
+          return false;
+        }
+      });
 }
 
 static void send_environ_request(Sync &sync, const Pid pid) {

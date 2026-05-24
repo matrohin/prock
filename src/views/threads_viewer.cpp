@@ -25,19 +25,14 @@ static void copy_thread_row(const ThreadLine &line) {
 }
 
 static void copy_all_threads(BumpArena &arena, const ThreadsViewerWindow &win) {
-  const size_t buf_size = 128 + win.lines.size * 256;
-  char *buf = arena.alloc_string(buf_size);
-  char *ptr = buf;
-  ptr += snprintf(ptr, buf_size, "%s", THREAD_COPY_HEADER);
-
-  for (const ThreadLine &line : win.lines) {
-    ptr +=
-        snprintf(ptr, buf_size - (ptr - buf), "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n",
-                 line.tid, line.comm, line.state,
-                 line.cpu_user_perc + line.cpu_kernel_perc,
-                 line.cpu_kernel_perc, line.mem_resident_bytes);
-  }
-  ImGui::SetClipboardText(buf);
+  copy_all_to_clipboard(
+      arena, win.lines.data, win.lines.size, 256, THREAD_COPY_HEADER,
+      [](char *ptr, size_t rem, const ThreadLine &line) {
+        return snprintf(ptr, rem, "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n", line.tid,
+                        line.comm, line.state,
+                        line.cpu_user_perc + line.cpu_kernel_perc,
+                        line.cpu_kernel_perc, line.mem_resident_bytes);
+      });
 }
 
 static bool thread_line_is_less(const ThreadsViewerColumnId sorted_by,
@@ -62,22 +57,11 @@ static bool thread_line_is_less(const ThreadsViewerColumnId sorted_by,
 }
 
 static void sort_thread_lines(ThreadsViewerWindow &win) {
-  if (win.lines.size == 0) return;
-
-  const auto sort_ascending =
+  sort_bidirectional(
+      win.lines.data, win.lines.size, win.sorted_order,
       [sorted_by = win.sorted_by](const ThreadLine &a, const ThreadLine &b) {
         return thread_line_is_less(sorted_by, a, b);
-      };
-
-  if (win.sorted_order == ImGuiSortDirection_Ascending) {
-    std::stable_sort(win.lines.data, win.lines.data + win.lines.size,
-                     sort_ascending);
-  } else {
-    std::stable_sort(win.lines.data, win.lines.data + win.lines.size,
-                     [&](const ThreadLine &a, const ThreadLine &b) {
-                       return sort_ascending(b, a);
-                     });
-  }
+      });
 }
 
 // Check if any other window still needs this PID watched

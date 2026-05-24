@@ -3,6 +3,7 @@
 #include "cpu_chart.h"
 #include "imgui_internal.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <unistd.h>
 
@@ -195,4 +196,30 @@ inline bool popup_close_on_escape() {
 inline double scale_cpu_perc(double value, int num_cores, bool per_core) {
   if (per_core || num_cores <= 0) return value;
   return value / num_cores;
+}
+
+template <typename T, typename Compare>
+void sort_bidirectional(T *data, uint32_t size, ImGuiSortDirection dir,
+                        Compare cmp) {
+  if (size == 0) return;
+  if (dir == ImGuiSortDirection_Ascending) {
+    std::stable_sort(data, data + size, cmp);
+  } else {
+    std::stable_sort(data, data + size,
+                     [&](const T &a, const T &b) { return cmp(b, a); });
+  }
+}
+
+template <typename T, typename FormatFn>
+void copy_all_to_clipboard(BumpArena &arena, const T *data, uint32_t count,
+                           size_t per_item_estimate, const char *header,
+                           FormatFn fmt) {
+  const size_t buf_size = 128 + count * per_item_estimate;
+  char *buf = arena.alloc_string(buf_size);
+  char *ptr = buf;
+  ptr += snprintf(ptr, buf_size, "%s", header);
+  for (uint32_t i = 0; i < count; ++i) {
+    ptr += fmt(ptr, buf_size - static_cast<size_t>(ptr - buf), data[i]);
+  }
+  ImGui::SetClipboardText(buf);
 }

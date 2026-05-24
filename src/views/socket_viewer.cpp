@@ -6,7 +6,6 @@
 #include "imgui.h"
 #include "tracy/Tracy.hpp"
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 
@@ -148,57 +147,43 @@ static void copy_socket_row(const SocketEntry &sock) {
 }
 
 static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
-  const size_t buf_size = 128 + win.sockets.size * 256;
-  char *buf = arena.alloc_string(buf_size);
-  char *ptr = buf;
-  ptr += snprintf(ptr, buf_size, "%s", SOCKET_COPY_HEADER);
-
-  for (const SocketEntry &sock : win.sockets) {
-    char local_addr[64], remote_addr[64];
-    format_address(local_addr, sizeof(local_addr), sock, true);
-    format_address(remote_addr, sizeof(remote_addr), sock, false);
-
-    ptr += snprintf(ptr, buf_size - (ptr - buf), "%s\t%s\t%s\t%s\t%u\t%u\n",
-                    protocol_name(sock.protocol), local_addr, remote_addr,
-                    is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
-                    sock.rx_queue, sock.tx_queue);
-  }
-  ImGui::SetClipboardText(buf);
+  copy_all_to_clipboard(
+      arena, win.sockets.data, win.sockets.size, 256, SOCKET_COPY_HEADER,
+      [](char *ptr, size_t rem, const SocketEntry &sock) {
+        char local_addr[64], remote_addr[64];
+        format_address(local_addr, sizeof(local_addr), sock, true);
+        format_address(remote_addr, sizeof(remote_addr), sock, false);
+        return snprintf(
+            ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n", protocol_name(sock.protocol),
+            local_addr, remote_addr,
+            is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
+            sock.rx_queue, sock.tx_queue);
+      });
 }
 
 static void sort_sockets(SocketViewerWindow &win) {
-  if (win.sockets.size == 0) return;
-
-  const auto compare = [&](const SocketEntry &a, const SocketEntry &b) {
-    switch (win.sorted_by) {
-    case eSocketViewerColumnId_Protocol:
-      return a.protocol < b.protocol;
-    case eSocketViewerColumnId_LocalAddress:
-      if (a.local_ip != b.local_ip) return a.local_ip < b.local_ip;
-      return a.local_port < b.local_port;
-    case eSocketViewerColumnId_RemoteAddress:
-      if (a.remote_ip != b.remote_ip) return a.remote_ip < b.remote_ip;
-      return a.remote_port < b.remote_port;
-    case eSocketViewerColumnId_State:
-      return a.state < b.state;
-    case eSocketViewerColumnId_RecvQ:
-      return a.rx_queue < b.rx_queue;
-    case eSocketViewerColumnId_SendQ:
-      return a.tx_queue < b.tx_queue;
-    default:
-      return false;
-    }
-  };
-
-  if (win.sorted_order == ImGuiSortDirection_Ascending) {
-    std::stable_sort(win.sockets.data, win.sockets.data + win.sockets.size,
-                     compare);
-  } else {
-    std::stable_sort(win.sockets.data, win.sockets.data + win.sockets.size,
-                     [&](const SocketEntry &a, const SocketEntry &b) {
-                       return compare(b, a);
-                     });
-  }
+  sort_bidirectional(
+      win.sockets.data, win.sockets.size, win.sorted_order,
+      [&](const SocketEntry &a, const SocketEntry &b) {
+        switch (win.sorted_by) {
+        case eSocketViewerColumnId_Protocol:
+          return a.protocol < b.protocol;
+        case eSocketViewerColumnId_LocalAddress:
+          if (a.local_ip != b.local_ip) return a.local_ip < b.local_ip;
+          return a.local_port < b.local_port;
+        case eSocketViewerColumnId_RemoteAddress:
+          if (a.remote_ip != b.remote_ip) return a.remote_ip < b.remote_ip;
+          return a.remote_port < b.remote_port;
+        case eSocketViewerColumnId_State:
+          return a.state < b.state;
+        case eSocketViewerColumnId_RecvQ:
+          return a.rx_queue < b.rx_queue;
+        case eSocketViewerColumnId_SendQ:
+          return a.tx_queue < b.tx_queue;
+        default:
+          return false;
+        }
+      });
 }
 
 static void send_socket_request(Sync &sync, const Pid pid) {
