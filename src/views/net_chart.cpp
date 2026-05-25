@@ -113,7 +113,8 @@ void net_chart_draw(ViewState &view_state) {
 }
 
 void net_chart_add(NetChartState &my_state, const Pid pid, const char *comm,
-                   const ImGuiID dock_id, const ProcessWindowFlags extra_flags) {
+                   const ImGuiID dock_id,
+                   const ProcessWindowFlags extra_flags) {
   if (process_window_focus(my_state.charts, pid)) {
     return;
   }

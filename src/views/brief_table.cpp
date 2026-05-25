@@ -183,15 +183,14 @@ static void copy_all_processes(BumpArena &arena,
 
   for (const BriefTableLine &line : my_state.lines) {
     const ProcessDerivedStat &derived = line.derived_stat;
-    ptr += snprintf(ptr, buf_size - (ptr - buf),
-                    "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
-                    line.pid, line.name, line.state, line.num_threads,
-                    derived.cpu_user_perc + derived.cpu_kernel_perc,
-                    derived.cpu_user_perc, derived.cpu_kernel_perc,
-                    derived.mem_resident_bytes / 1024.0,
-                    derived.mem_virtual_bytes / 1024.0,
-                    derived.io_read_kb_per_sec, derived.io_write_kb_per_sec,
-                    line.cmdline);
+    ptr += snprintf(
+        ptr, buf_size - (ptr - buf),
+        "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
+        line.pid, line.name, line.state, line.num_threads,
+        derived.cpu_user_perc + derived.cpu_kernel_perc, derived.cpu_user_perc,
+        derived.cpu_kernel_perc, derived.mem_resident_bytes / 1024.0,
+        derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
+        derived.io_write_kb_per_sec, line.cmdline);
   }
   ImGui::SetClipboardText(buf);
 }
@@ -421,8 +420,7 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
     table_item_draw_float(derived_stat.io_write_kb_per_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CmdLine)) {
     ImGui::TextUnformatted(line.cmdline);
-    if (ImGui::IsItemHovered())
-      ImGui::SetItemTooltip("%s", line.cmdline);
+    if (ImGui::IsItemHovered()) ImGui::SetItemTooltip("%s", line.cmdline);
   }
 }
 
@@ -638,8 +636,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f,
                             eBriefTableColumnId_Name);
-    ImGui::TableSetupColumn("State",
-                            ImGuiTableColumnFlags_WidthFixed, 50.0f,
+    ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 50.0f,
                             eBriefTableColumnId_State);
     ImGui::TableSetupColumn("Threads",
                             ImGuiTableColumnFlags_PreferSortDescending |
@@ -723,7 +720,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       for (int n = 0; n < io.InputQueueCharacters.Size; ++n) {
         const ImWchar c = io.InputQueueCharacters[n];
         if (c >= 32 && c < 127) { // Printable ASCII
-          const uint32_t len = static_cast<uint32_t>(strlen(my_state.type_search));
+          const uint32_t len =
+              static_cast<uint32_t>(strlen(my_state.type_search));
           if (len < sizeof(my_state.type_search) - 1) {
             my_state.type_search[len] = static_cast<char>(c);
             my_state.type_search[len + 1] = '\0';
@@ -774,8 +772,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
     ImGuiListClipper clipper;
     clipper.Begin(static_cast<int>(visible_indices.size));
-    if (focus_clipper_idx >= 0)
-      clipper.IncludeItemByIndex(focus_clipper_idx);
+    if (focus_clipper_idx >= 0) clipper.IncludeItemByIndex(focus_clipper_idx);
 
     while (clipper.Step()) {
       for (int ci = clipper.DisplayStart; ci < clipper.DisplayEnd; ++ci) {
@@ -790,8 +787,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
         // Set indent for tree mode before TableNextRow
         if (my_state.tree_mode) {
-          window->DC.Indent.x =
-              base_indent + line.tree_depth * indent_spacing;
+          window->DC.Indent.x = base_indent + line.tree_depth * indent_spacing;
         }
 
         ImGui::TableNextRow();
@@ -832,11 +828,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             }
           }
 
-          ImGuiTreeNodeFlags flags =
-              ImGuiTreeNodeFlags_SpanAllColumns |
-              ImGuiTreeNodeFlags_DefaultOpen |
-              ImGuiTreeNodeFlags_OpenOnArrow |
-              ImGuiTreeNodeFlags_NoTreePushOnOpen;
+          ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns |
+                                     ImGuiTreeNodeFlags_DefaultOpen |
+                                     ImGuiTreeNodeFlags_OpenOnArrow |
+                                     ImGuiTreeNodeFlags_NoTreePushOnOpen;
           if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf;
           if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
 
@@ -854,8 +849,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                                   num_cpus);
           if (is_grayed)
             ImGui::PushStyleColor(
-                ImGuiCol_Text,
-                ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
           data_columns_draw(line, num_cpus, cpu_per_core);
         } else {
           if (ImGui::Selectable(label, is_selected,
@@ -873,8 +867,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                                   num_cpus);
           if (is_grayed)
             ImGui::PushStyleColor(
-                ImGuiCol_Text,
-                ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
           data_columns_draw(line, num_cpus, cpu_per_core);
         }
 

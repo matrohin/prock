@@ -34,20 +34,20 @@ static void copy_all_libraries(BumpArena &arena,
 }
 
 static void sort_libraries(LibraryViewerWindow &win) {
-  sort_bidirectional(
-      win.libraries.data, win.libraries.size, win.sorted_order,
-      [&](const LibraryEntry &a, const LibraryEntry &b) {
-        switch (win.sorted_by) {
-        case eLibraryViewerColumnId_Path:
-          return strcmp(a.path.data, b.path.data) < 0;
-        case eLibraryViewerColumnId_MappedSize:
-          return a.addr_end - a.addr_start < b.addr_end - b.addr_start;
-        case eLibraryViewerColumnId_FileSize:
-          return a.file_size < b.file_size;
-        default:
-          return false;
-        }
-      });
+  sort_bidirectional(win.libraries.data, win.libraries.size, win.sorted_order,
+                     [&](const LibraryEntry &a, const LibraryEntry &b) {
+                       switch (win.sorted_by) {
+                       case eLibraryViewerColumnId_Path:
+                         return strcmp(a.path.data, b.path.data) < 0;
+                       case eLibraryViewerColumnId_MappedSize:
+                         return a.addr_end - a.addr_start <
+                                b.addr_end - b.addr_start;
+                       case eLibraryViewerColumnId_FileSize:
+                         return a.file_size < b.file_size;
+                       default:
+                         return false;
+                       }
+                     });
 }
 
 static void send_library_request(Sync &sync, const Pid pid) {

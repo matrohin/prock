@@ -6,7 +6,15 @@
 
 #include "imgui.h"
 
-enum class Theme : uint8_t { Dark, Light, Classic, Enemymouse, Nord, Onenord, COUNT };
+enum class Theme : uint8_t {
+  Dark,
+  Light,
+  Classic,
+  Enemymouse,
+  Nord,
+  Onenord,
+  COUNT
+};
 
 inline const char *theme_name(const Theme theme) {
   switch (theme) {
@@ -194,17 +202,17 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
   case Theme::Onenord: {
     // OneNord: Nord structure + One Dark's more saturated accents
     // Polar Night (slightly darker than Nord for more contrast)
-    constexpr ImVec4 on0(0.12f, 0.13f, 0.16f, 1.00f);  // #1E2127
-    constexpr ImVec4 on1(0.16f, 0.17f, 0.20f, 1.00f);  // #282C34
-    constexpr ImVec4 on2(0.18f, 0.19f, 0.23f, 1.00f);  // #2C313A
-    constexpr ImVec4 on3(0.24f, 0.27f, 0.32f, 1.00f);  // #3E4451
+    constexpr ImVec4 on0(0.12f, 0.13f, 0.16f, 1.00f); // #1E2127
+    constexpr ImVec4 on1(0.16f, 0.17f, 0.20f, 1.00f); // #282C34
+    constexpr ImVec4 on2(0.18f, 0.19f, 0.23f, 1.00f); // #2C313A
+    constexpr ImVec4 on3(0.24f, 0.27f, 0.32f, 1.00f); // #3E4451
     // Snow Storm (brighter text than Nord)
-    constexpr ImVec4 on_fg(0.93f, 0.95f, 0.96f, 1.00f);   // #ECEFF4 (nord6)
-    constexpr ImVec4 on_fg2(0.78f, 0.80f, 0.84f, 1.00f);  // #C8CCD4
+    constexpr ImVec4 on_fg(0.93f, 0.95f, 0.96f, 1.00f);  // #ECEFF4 (nord6)
+    constexpr ImVec4 on_fg2(0.78f, 0.80f, 0.84f, 1.00f); // #C8CCD4
     // Frost (more saturated than Nord)
-    constexpr ImVec4 on_cyan(0.34f, 0.71f, 0.76f, 1.00f);   // #56B6C2
-    constexpr ImVec4 on_blue(0.38f, 0.69f, 0.94f, 1.00f);   // #61AFEF
-    constexpr ImVec4 on_blue2(0.29f, 0.55f, 0.72f, 1.00f);  // #4B8DB8
+    constexpr ImVec4 on_cyan(0.34f, 0.71f, 0.76f, 1.00f);  // #56B6C2
+    constexpr ImVec4 on_blue(0.38f, 0.69f, 0.94f, 1.00f);  // #61AFEF
+    constexpr ImVec4 on_blue2(0.29f, 0.55f, 0.72f, 1.00f); // #4B8DB8
     // Aurora (more saturated than Nord)
     constexpr ImVec4 on_red(0.88f, 0.42f, 0.46f, 1.00f);    // #E06C75
     constexpr ImVec4 on_yellow(0.90f, 0.75f, 0.48f, 1.00f); // #E5C07B

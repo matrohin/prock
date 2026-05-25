@@ -9,9 +9,8 @@
 #include <unistd.h>
 
 // Collect socket inodes for a specific process from /proc/<pid>/fd
-static Array<unsigned long> collect_socket_inodes(BumpArena &arena,
-                                                  const Pid pid,
-                                                  int &out_errno) {
+static Array<unsigned long>
+collect_socket_inodes(BumpArena &arena, const Pid pid, int &out_errno) {
   GrowingArray<unsigned long> inodes = {};
   char fd_dir_path[64];
   snprintf(fd_dir_path, sizeof(fd_dir_path), "/proc/%d/fd", pid);

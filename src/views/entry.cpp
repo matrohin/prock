@@ -39,7 +39,6 @@ void views_on_demand_update(ViewState &view_state) {
   smaps_viewer_update(view_state.smaps_viewer_state, *view_state.sync);
 }
 
-
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   ZoneScoped;
   menu_bar_draw(view_state);
@@ -58,4 +57,3 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   smaps_viewer_draw(ctx, view_state);
   brief_table_draw(ctx, view_state, state);
 }
-

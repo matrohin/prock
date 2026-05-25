@@ -37,7 +37,8 @@ struct BriefTableLine {
   Pid ppid;
   int tree_depth; // 0 for root, incremented for children (used in tree mode)
   char state;
-  uint8_t filter_state; // 0=hidden, 1=matches filter, 2=ancestor of match (grayed)
+  uint8_t
+      filter_state; // 0=hidden, 1=matches filter, 2=ancestor of match (grayed)
 };
 
 struct BriefTableState {
@@ -48,16 +49,16 @@ struct BriefTableState {
   char kill_error[128];
   char filter_text[256];
 
-  Pid control_edit_pid;           // PID being edited, 0 if none
-  uint64_t affinity_edit_mask;    // Affinity mask being edited
-  int64_t type_search_time_ns;    // Last keystroke timestamp for timeout
-  int priority_edit_nice;         // Nice value being edited
-  int process_error_code;         // errno value for pkexec option
+  Pid control_edit_pid;        // PID being edited, 0 if none
+  uint64_t affinity_edit_mask; // Affinity mask being edited
+  int64_t type_search_time_ns; // Last keystroke timestamp for timeout
+  int priority_edit_nice;      // Nice value being edited
+  int process_error_code;      // errno value for pkexec option
   bool show_affinity_popup;
   bool show_priority_popup;
   bool tree_mode = true;
-  char process_error[128];        // Error buffer for affinity/priority ops
-  char type_search[32];           // Current search string
+  char process_error[128]; // Error buffer for affinity/priority ops
+  char type_search[32];    // Current search string
 };
 
 void brief_table_update(BriefTableState &my_state, State &state);

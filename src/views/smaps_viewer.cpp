@@ -21,8 +21,8 @@ static void format_kb(char *buf, const int size, const ulong kb) {
   format_memory_bytes(kb * 1024.0, buf, size);
 }
 
-const char *SMAPS_COPY_HEADER =
-    "Address\tPerms\tSize(kB)\tRSS(kB)\tPSS(kB)\tPrivate(kB)\tSwap(kB)\tMapping\n";
+const char *SMAPS_COPY_HEADER = "Address\tPerms\tSize(kB)\tRSS(kB)\tPSS(kB)"
+                                "\tPrivate(kB)\tSwap(kB)\tMapping\n";
 
 static void copy_smaps_row(const SmapsSegment &seg) {
   char buf[512];
@@ -47,31 +47,30 @@ static void copy_all_smaps(BumpArena &arena, const SmapsViewerWindow &win) {
 }
 
 static void sort_segments(SmapsViewerWindow &win) {
-  sort_bidirectional(
-      win.segments.data, win.segments.size, win.sorted_order,
-      [&](const SmapsSegment &a, const SmapsSegment &b) {
-        switch (win.sorted_by) {
-        case eSmapsViewerColumnId_Address:
-          return a.start_addr < b.start_addr;
-        case eSmapsViewerColumnId_Perms:
-          return strncmp(a.perms, b.perms, sizeof(a.perms)) < 0;
-        case eSmapsViewerColumnId_Size:
-          return a.size_kb < b.size_kb;
-        case eSmapsViewerColumnId_Rss:
-          return a.rss_kb < b.rss_kb;
-        case eSmapsViewerColumnId_Pss:
-          return a.pss_kb < b.pss_kb;
-        case eSmapsViewerColumnId_Private:
-          return (a.private_clean_kb + a.private_dirty_kb) <
-                 (b.private_clean_kb + b.private_dirty_kb);
-        case eSmapsViewerColumnId_Swap:
-          return a.swap_kb < b.swap_kb;
-        case eSmapsViewerColumnId_Mapping:
-          return strcmp(segment_label(a), segment_label(b)) < 0;
-        default:
-          return false;
-        }
-      });
+  sort_bidirectional(win.segments.data, win.segments.size, win.sorted_order,
+                     [&](const SmapsSegment &a, const SmapsSegment &b) {
+                       switch (win.sorted_by) {
+                       case eSmapsViewerColumnId_Address:
+                         return a.start_addr < b.start_addr;
+                       case eSmapsViewerColumnId_Perms:
+                         return strncmp(a.perms, b.perms, sizeof(a.perms)) < 0;
+                       case eSmapsViewerColumnId_Size:
+                         return a.size_kb < b.size_kb;
+                       case eSmapsViewerColumnId_Rss:
+                         return a.rss_kb < b.rss_kb;
+                       case eSmapsViewerColumnId_Pss:
+                         return a.pss_kb < b.pss_kb;
+                       case eSmapsViewerColumnId_Private:
+                         return (a.private_clean_kb + a.private_dirty_kb) <
+                                (b.private_clean_kb + b.private_dirty_kb);
+                       case eSmapsViewerColumnId_Swap:
+                         return a.swap_kb < b.swap_kb;
+                       case eSmapsViewerColumnId_Mapping:
+                         return strcmp(segment_label(a), segment_label(b)) < 0;
+                       default:
+                         return false;
+                       }
+                     });
 }
 
 static void send_smaps_request(Sync &sync, const Pid pid) {
@@ -167,9 +166,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     SmapsViewerWindow &win = my_state.windows.data()[last];
     char title[128];
     if (win.status == eSmapsViewerStatus_Error) {
-      snprintf(title, sizeof(title),
-               "Memory Maps: %s (%d) - Error###MemMaps%d", win.process_name,
-               win.pid, win.pid);
+      snprintf(title, sizeof(title), "Memory Maps: %s (%d) - Error###MemMaps%d",
+               win.process_name, win.pid, win.pid);
     } else if (win.status == eSmapsViewerStatus_Loading) {
       snprintf(title, sizeof(title),
                "Memory Maps: %s (%d) - Loading...###MemMaps%d",
@@ -214,8 +212,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         uint32_t visible_count = 0;
         for (const SmapsSegment &seg : win.segments) {
           char filter_str[384];
-          snprintf(filter_str, sizeof(filter_str), "%s %s",
-                   segment_label(seg), seg.perms);
+          snprintf(filter_str, sizeof(filter_str), "%s %s", segment_label(seg),
+                   seg.perms);
           if (!filter.PassFilter(filter_str)) continue;
           total_size += seg.size_kb;
           total_rss += seg.rss_kb;
@@ -274,7 +272,10 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             const char *name = segment_label(seg);
             SmapsGroup *found = nullptr;
             for (SmapsGroup &g : groups) {
-              if (strcmp(g.name, name) == 0) { found = &g; break; }
+              if (strcmp(g.name, name) == 0) {
+                found = &g;
+                break;
+              }
             }
             if (!found) {
               found = groups.emplace_back(ctx.frame_arena);
@@ -292,14 +293,22 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           // Sort groups
           const auto group_lt = [&](const SmapsGroup &a, const SmapsGroup &b) {
             switch (win.sorted_by) {
-            case eSmapsViewerColumnId_SegmentCount: return a.count < b.count;
-            case eSmapsViewerColumnId_Size: return a.size_kb < b.size_kb;
-            case eSmapsViewerColumnId_Rss: return a.rss_kb < b.rss_kb;
-            case eSmapsViewerColumnId_Pss: return a.pss_kb < b.pss_kb;
-            case eSmapsViewerColumnId_Private: return a.private_kb < b.private_kb;
-            case eSmapsViewerColumnId_Swap: return a.swap_kb < b.swap_kb;
-            case eSmapsViewerColumnId_Mapping: return strcmp(a.name, b.name) < 0;
-            default: return a.pss_kb < b.pss_kb;
+            case eSmapsViewerColumnId_SegmentCount:
+              return a.count < b.count;
+            case eSmapsViewerColumnId_Size:
+              return a.size_kb < b.size_kb;
+            case eSmapsViewerColumnId_Rss:
+              return a.rss_kb < b.rss_kb;
+            case eSmapsViewerColumnId_Pss:
+              return a.pss_kb < b.pss_kb;
+            case eSmapsViewerColumnId_Private:
+              return a.private_kb < b.private_kb;
+            case eSmapsViewerColumnId_Swap:
+              return a.swap_kb < b.swap_kb;
+            case eSmapsViewerColumnId_Mapping:
+              return strcmp(a.name, b.name) < 0;
+            default:
+              return a.pss_kb < b.pss_kb;
             }
           };
           if (win.sorted_order == ImGuiSortDirection_Ascending) {
@@ -347,17 +356,17 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (win.sorted_order == ImGuiSortDirection_Ascending) {
                 std::stable_sort(groups.begin(), groups.end(), group_lt);
               } else {
-                std::stable_sort(
-                    groups.begin(), groups.end(),
-                    [&](const SmapsGroup &a, const SmapsGroup &b) {
-                      return group_lt(b, a);
-                    });
+                std::stable_sort(groups.begin(), groups.end(),
+                                 [&](const SmapsGroup &a, const SmapsGroup &b) {
+                                   return group_lt(b, a);
+                                 });
               }
             });
 
             for (uint32_t j = 0; j < groups.size(); ++j) {
               const SmapsGroup &g = groups.data()[j];
-              const bool is_selected = (win.selected_index == static_cast<int>(j));
+              const bool is_selected =
+                  (win.selected_index == static_cast<int>(j));
               ImGui::PushID(static_cast<int>(j));
               ImGui::TableNextRow();
 
@@ -445,7 +454,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                        segment_label(seg), seg.perms);
               if (!filter.PassFilter(filter_str)) continue;
 
-              const bool is_selected = (win.selected_index == static_cast<int>(j));
+              const bool is_selected =
+                  (win.selected_index == static_cast<int>(j));
               ImGui::PushID(static_cast<int>(j));
               ImGui::TableNextRow();
 

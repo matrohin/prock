@@ -17,7 +17,8 @@ struct TopProcess {
 inline const char *cmdline_display_name(const char *cmdline, BumpArena &arena) {
   if (!cmdline || !cmdline[0]) return nullptr;
   const char *end = cmdline;
-  while (*end && *end != ' ') ++end;
+  while (*end && *end != ' ')
+    ++end;
   const char *base = cmdline;
   for (const char *p = cmdline; p < end; ++p)
     if (*p == '/') base = p + 1;
@@ -35,8 +36,8 @@ TopProcess find_top_process(const StateSnapshot &snapshot, BumpArena &arena,
     if (val > top.value) {
       top.pid = snapshot.stats.data[i].pid;
       top.value = val;
-      const char *display = cmdline_display_name(
-          snapshot.stats.data[i].cmdline, arena);
+      const char *display =
+          cmdline_display_name(snapshot.stats.data[i].cmdline, arena);
       top.name = display ? display
                          : arena.alloc_string_copy(snapshot.stats.data[i].comm);
     }

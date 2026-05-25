@@ -41,7 +41,8 @@ struct ThreadsViewerWindow {
   char error_message[128];
   int error_code;
 
-  // Display data (owned by ThreadsViewerState::cur_arena, rebuilt on each snapshot)
+  // Display data (owned by ThreadsViewerState::cur_arena, rebuilt on each
+  // snapshot)
   Array<ThreadLine> lines;
 
   // Previous snapshot for delta computation (owned by cur_arena)

@@ -98,16 +98,14 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
   common_views_sort_added(state.windows);
 }
 
-void threads_viewer_update(ThreadsViewerState &state,
-                           const State &state_data) {
+void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
   ZoneScoped;
 
   const long page_size = state_data.system.mem_page_size;
   const double ticks_in_second = state_data.system.ticks_in_second;
 
   // Process thread snapshots from the current update
-  const Array<ThreadSnapshot> &snapshots =
-      state_data.snapshot.thread_snapshots;
+  const Array<ThreadSnapshot> &snapshots = state_data.snapshot.thread_snapshots;
 
   for (uint32_t w = 0; w < state.windows.size(); ++w) {
     ThreadsViewerWindow &win = state.windows.data()[w];
@@ -165,8 +163,7 @@ void threads_viewer_update(ThreadsViewerState &state,
           prev_threads.data[prev_idx].pid == thread.pid && ticks_passed > 0) {
         const ProcessStat &prev = prev_threads.data[prev_idx];
         if (thread.utime >= prev.utime) {
-          line.cpu_user_perc =
-              (thread.utime - prev.utime) / ticks_passed * 100;
+          line.cpu_user_perc = (thread.utime - prev.utime) / ticks_passed * 100;
         }
         if (thread.stime >= prev.stime) {
           line.cpu_kernel_perc =
@@ -308,9 +305,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             table_item_draw_state(line.state);
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuTotal);
-            table_item_draw_float(scale_cpu_perc(
-                line.cpu_user_perc + line.cpu_kernel_perc, num_cpus,
-                cpu_per_core));
+            table_item_draw_float(
+                scale_cpu_perc(line.cpu_user_perc + line.cpu_kernel_perc,
+                               num_cpus, cpu_per_core));
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuKernel);
             table_item_draw_float(

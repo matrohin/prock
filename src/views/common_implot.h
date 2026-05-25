@@ -34,7 +34,8 @@ void show_top_process_tooltip(const GrowingArray<double> &times,
     char top_buf[32];
     format_value(top.value, top_buf, sizeof(top_buf),
                  const_cast<bool *>(&is_process));
-    ImGui::Text("Top: %s (PID %d) %s", top.name ? top.name : "?", top.pid, top_buf);
+    ImGui::Text("Top: %s (PID %d) %s", top.name ? top.name : "?", top.pid,
+                top_buf);
   }
   ImGui::EndTooltip();
 }

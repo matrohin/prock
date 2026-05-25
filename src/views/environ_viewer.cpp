@@ -34,8 +34,8 @@ static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
   copy_all_to_clipboard(arena, win.entries.data, win.entries.size, 4400,
                         ENVIRON_COPY_HEADER,
                         [](char *ptr, size_t rem, const EnvironEntry &entry) {
-                          return snprintf(ptr, rem, "%s\t%s\n",
-                                         entry.name.data, entry.value.data);
+                          return snprintf(ptr, rem, "%s\t%s\n", entry.name.data,
+                                          entry.value.data);
                         });
 }
 
@@ -54,18 +54,17 @@ static bool is_expandable_value(const String &value) {
 }
 
 static void sort_environ(EnvironViewerWindow &win) {
-  sort_bidirectional(
-      win.entries.data, win.entries.size, win.sorted_order,
-      [&](const EnvironEntry &a, const EnvironEntry &b) {
-        switch (win.sorted_by) {
-        case eEnvironViewerColumnId_Name:
-          return strcmp(a.name.data, b.name.data) < 0;
-        case eEnvironViewerColumnId_Value:
-          return strcmp(a.value.data, b.value.data) < 0;
-        default:
-          return false;
-        }
-      });
+  sort_bidirectional(win.entries.data, win.entries.size, win.sorted_order,
+                     [&](const EnvironEntry &a, const EnvironEntry &b) {
+                       switch (win.sorted_by) {
+                       case eEnvironViewerColumnId_Name:
+                         return strcmp(a.name.data, b.name.data) < 0;
+                       case eEnvironViewerColumnId_Value:
+                         return strcmp(a.value.data, b.value.data) < 0;
+                       default:
+                         return false;
+                       }
+                     });
 }
 
 static void send_environ_request(Sync &sync, const Pid pid) {

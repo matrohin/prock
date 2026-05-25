@@ -169,8 +169,9 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
       }
 
       // Show tooltip with top process on hover
-      // Per-core view: system * num_cores (to match stacked scale), process as-is
-      // Total view: system as-is, process / num_cores (to normalize to 0-100%)
+      // Per-core view: system * num_cores (to match stacked scale), process
+      // as-is Total view: system as-is, process / num_cores (to normalize to
+      // 0-100%)
       const int num_cores = my_state.num_cores;
       show_top_process_tooltip(
           my_state.times, my_state.top_processes, "Total", my_state.total_usage,

@@ -153,37 +153,38 @@ static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
         char local_addr[64], remote_addr[64];
         format_address(local_addr, sizeof(local_addr), sock, true);
         format_address(remote_addr, sizeof(remote_addr), sock, false);
-        return snprintf(
-            ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n", protocol_name(sock.protocol),
-            local_addr, remote_addr,
-            is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
-            sock.rx_queue, sock.tx_queue);
+        return snprintf(ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n",
+                        protocol_name(sock.protocol), local_addr, remote_addr,
+                        is_tcp(sock.protocol) ? tcp_state_name(sock.state)
+                                              : "-",
+                        sock.rx_queue, sock.tx_queue);
       });
 }
 
 static void sort_sockets(SocketViewerWindow &win) {
-  sort_bidirectional(
-      win.sockets.data, win.sockets.size, win.sorted_order,
-      [&](const SocketEntry &a, const SocketEntry &b) {
-        switch (win.sorted_by) {
-        case eSocketViewerColumnId_Protocol:
-          return a.protocol < b.protocol;
-        case eSocketViewerColumnId_LocalAddress:
-          if (a.local_ip != b.local_ip) return a.local_ip < b.local_ip;
-          return a.local_port < b.local_port;
-        case eSocketViewerColumnId_RemoteAddress:
-          if (a.remote_ip != b.remote_ip) return a.remote_ip < b.remote_ip;
-          return a.remote_port < b.remote_port;
-        case eSocketViewerColumnId_State:
-          return a.state < b.state;
-        case eSocketViewerColumnId_RecvQ:
-          return a.rx_queue < b.rx_queue;
-        case eSocketViewerColumnId_SendQ:
-          return a.tx_queue < b.tx_queue;
-        default:
-          return false;
-        }
-      });
+  sort_bidirectional(win.sockets.data, win.sockets.size, win.sorted_order,
+                     [&](const SocketEntry &a, const SocketEntry &b) {
+                       switch (win.sorted_by) {
+                       case eSocketViewerColumnId_Protocol:
+                         return a.protocol < b.protocol;
+                       case eSocketViewerColumnId_LocalAddress:
+                         if (a.local_ip != b.local_ip)
+                           return a.local_ip < b.local_ip;
+                         return a.local_port < b.local_port;
+                       case eSocketViewerColumnId_RemoteAddress:
+                         if (a.remote_ip != b.remote_ip)
+                           return a.remote_ip < b.remote_ip;
+                         return a.remote_port < b.remote_port;
+                       case eSocketViewerColumnId_State:
+                         return a.state < b.state;
+                       case eSocketViewerColumnId_RecvQ:
+                         return a.rx_queue < b.rx_queue;
+                       case eSocketViewerColumnId_SendQ:
+                         return a.tx_queue < b.tx_queue;
+                       default:
+                         return false;
+                       }
+                     });
 }
 
 static void send_socket_request(Sync &sync, const Pid pid) {

@@ -10,7 +10,7 @@
 
 struct ThreadSnapshot {
   Pid pid;
-  Array<ProcessStat> threads;  // Reuse ProcessStat - same format for threads
+  Array<ProcessStat> threads; // Reuse ProcessStat - same format for threads
 };
 
 struct UpdateSnapshot {
@@ -20,7 +20,7 @@ struct UpdateSnapshot {
   MemInfo mem_info;
   DiskIoStat disk_io_stats;
   NetIoStat net_io_stats;
-  Array<ThreadSnapshot> thread_snapshots;  // Per-watched-pid thread data
+  Array<ThreadSnapshot> thread_snapshots; // Per-watched-pid thread data
   SteadyTimePoint at;
   SystemTimePoint system_time;
 };
@@ -28,7 +28,7 @@ struct UpdateSnapshot {
 struct Sync {
   std::atomic<bool> quit;
   std::atomic<bool> data_ready;
-  std::atomic<float> update_period{0.5f};  // seconds, 0 = paused
+  std::atomic<float> update_period{0.5f}; // seconds, 0 = paused
   std::mutex quit_mutex;
   std::condition_variable quit_cv;
   Channel<UpdateSnapshot, 256> update_queue;

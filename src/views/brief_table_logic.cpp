@@ -118,7 +118,8 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
     uint32_t parent_node = 0; // sentinel = root
     if (ppid != 0 && lines.data[i].pid != ppid) {
       const uint32_t parent_idx = bin_search_exact(
-          n, [&lines](const uint32_t mid) { return lines.data[mid].pid; }, ppid);
+          n, [&lines](const uint32_t mid) { return lines.data[mid].pid; },
+          ppid);
       if (parent_idx != UINT32_MAX) {
         parent_node = parent_idx + 1;
       }
@@ -141,10 +142,7 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
   my_state.lines.inplace_copy_from(sorted, sorted_idx);
 }
 
-void sort_brief_table_lines(BriefTableState &my_state) {
-  sort_flat(my_state);
-}
-
+void sort_brief_table_lines(BriefTableState &my_state) { sort_flat(my_state); }
 
 static void brief_table_line_init(BriefTableLine &new_line,
                                   const ProcessStat &stat,
@@ -207,9 +205,10 @@ void brief_table_update(BriefTableState &my_state, State &state) {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       new_line = old_line;
       new_line.name = state.snapshot_arena.alloc_string_copy(old_line.name);
-      new_line.cmdline = old_line.cmdline
-                             ? state.snapshot_arena.alloc_string_copy(old_line.cmdline)
-                             : "";
+      new_line.cmdline =
+          old_line.cmdline
+              ? state.snapshot_arena.alloc_string_copy(old_line.cmdline)
+              : "";
       if (old_line.death_time_ns == 0) {
         // Process just died
         new_line.death_time_ns = now_ns;
