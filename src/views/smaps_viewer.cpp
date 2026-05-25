@@ -407,7 +407,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ImGui::TableSetupColumn("Address",
                                     ImGuiTableColumnFlags_WidthFixed |
                                         ImGuiTableColumnFlags_NoHide,
-                                    140.0f, eSmapsViewerColumnId_Address);
+                                    0.0f, eSmapsViewerColumnId_Address);
             ImGui::TableSetupColumn("Perms", ImGuiTableColumnFlags_WidthFixed,
                                     46.0f, eSmapsViewerColumnId_Perms);
             ImGui::TableSetupColumn("Size",

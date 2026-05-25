@@ -144,8 +144,8 @@ TEST_CASE("brief_table_update") {
     builder.add(30, 0, "proc_c");
     state.snapshot = builder.build();
 
-    // Empty old lines
     BriefTableState my_state = {};
+    my_state.tree_mode = false;
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
 
@@ -171,8 +171,8 @@ TEST_CASE("brief_table_update") {
     builder.add(40, 0, "proc_d");
     state.snapshot = builder.build();
 
-    // Old lines had 30, 10 (in that order) - note different order than PID
     BriefTableState my_state = {};
+    my_state.tree_mode = false;
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
     my_state.lines = Array<BriefTableLine>::create(arena, 2);
@@ -202,6 +202,7 @@ TEST_CASE("brief_table_update") {
     state.snapshot = builder.build();
 
     BriefTableState my_state = {};
+    my_state.tree_mode = false;
     my_state.sorted_by = eBriefTableColumnId_Name;
     my_state.sorted_order = ImGuiSortDirection_Descending;
 

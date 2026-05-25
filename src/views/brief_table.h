@@ -55,7 +55,7 @@ struct BriefTableState {
   int process_error_code;         // errno value for pkexec option
   bool show_affinity_popup;
   bool show_priority_popup;
-  bool tree_mode; // Toggle: false = flat, true = tree
+  bool tree_mode = true;
   char process_error[128];        // Error buffer for affinity/priority ops
   char type_search[32];           // Current search string
 };

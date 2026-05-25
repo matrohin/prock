@@ -638,39 +638,46 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f,
                             eBriefTableColumnId_Name);
-    ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_None, 0.0f,
+    ImGui::TableSetupColumn("State",
+                            ImGuiTableColumnFlags_WidthFixed, 50.0f,
                             eBriefTableColumnId_State);
     ImGui::TableSetupColumn("Threads",
                             ImGuiTableColumnFlags_PreferSortDescending |
-                                ImGuiTableColumnFlags_DefaultHide,
-                            0.0f, eBriefTableColumnId_Threads);
+                                ImGuiTableColumnFlags_DefaultHide |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            60.0f, eBriefTableColumnId_Threads);
     ImGui::TableSetupColumn("CPU Total (%)",
-                            ImGuiTableColumnFlags_PreferSortDescending, 0.0f,
-                            eBriefTableColumnId_CpuTotalPerc);
+                            ImGuiTableColumnFlags_PreferSortDescending |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            85.0f, eBriefTableColumnId_CpuTotalPerc);
     ImGui::TableSetupColumn("CPU User (%)",
                             ImGuiTableColumnFlags_PreferSortDescending |
-                                ImGuiTableColumnFlags_DefaultHide,
-                            0.0f, eBriefTableColumnId_CpuUserPerc);
+                                ImGuiTableColumnFlags_DefaultHide |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            85.0f, eBriefTableColumnId_CpuUserPerc);
     ImGui::TableSetupColumn("CPU Kernel (%)",
-                            ImGuiTableColumnFlags_PreferSortDescending, 0.0f,
-                            eBriefTableColumnId_CpuKernelPerc);
+                            ImGuiTableColumnFlags_PreferSortDescending |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            90.0f, eBriefTableColumnId_CpuKernelPerc);
     ImGui::TableSetupColumn("RSS (Bytes)",
-                            ImGuiTableColumnFlags_PreferSortDescending, 0.0f,
-                            eBriefTableColumnId_MemRssBytes);
+                            ImGuiTableColumnFlags_PreferSortDescending |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            90.0f, eBriefTableColumnId_MemRssBytes);
     ImGui::TableSetupColumn("Virtual Size (Bytes)",
                             ImGuiTableColumnFlags_PreferSortDescending |
-                                ImGuiTableColumnFlags_DefaultHide,
-                            0.0f, eBriefTableColumnId_MemVirtBytes);
+                                ImGuiTableColumnFlags_WidthFixed,
+                            90.0f, eBriefTableColumnId_MemVirtBytes);
     ImGui::TableSetupColumn("I/O Read (KB/s)",
                             ImGuiTableColumnFlags_PreferSortDescending |
-                                ImGuiTableColumnFlags_DefaultHide,
-                            0.0f, eBriefTableColumnId_IoReadKbPerSec);
+                                ImGuiTableColumnFlags_DefaultHide |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            85.0f, eBriefTableColumnId_IoReadKbPerSec);
     ImGui::TableSetupColumn("I/O Write (KB/s)",
                             ImGuiTableColumnFlags_PreferSortDescending |
-                                ImGuiTableColumnFlags_DefaultHide,
-                            0.0f, eBriefTableColumnId_IoWriteKbPerSec);
-    ImGui::TableSetupColumn("Command Line",
-                            ImGuiTableColumnFlags_DefaultHide, 0.0f,
+                                ImGuiTableColumnFlags_DefaultHide |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            85.0f, eBriefTableColumnId_IoWriteKbPerSec);
+    ImGui::TableSetupColumn("Command Line", ImGuiTableColumnFlags_None, 0.0f,
                             eBriefTableColumnId_CmdLine);
     if (reset_sort_to_pid) {
       ImGui::TableSetColumnSortDirection(eBriefTableColumnId_Pid,
