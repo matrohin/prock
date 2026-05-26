@@ -33,6 +33,7 @@ void views_update(ViewState &view_state, State &state) {
 
 void views_on_demand_update(ViewState &view_state) {
   ZoneScoped;
+  menu_bar_update(view_state);
   library_viewer_update(view_state.library_viewer_state, *view_state.sync);
   environ_viewer_update(view_state.environ_viewer_state, *view_state.sync);
   socket_viewer_update(view_state.socket_viewer_state, *view_state.sync);

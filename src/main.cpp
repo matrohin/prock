@@ -29,6 +29,7 @@ void notify_data_ready(Sync &sync) {
 // UNITY BUILD:
 #include "base/base.cpp"
 #include "sources/environ_reader.cpp"
+#include "sources/font_list_reader.cpp"
 #include "sources/library_reader.cpp"
 #include "sources/on_demand_reader.cpp"
 #include "sources/proc_parsers.cpp"

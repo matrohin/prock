@@ -2,6 +2,7 @@
 
 #include "../base/ring_buffer.h"
 #include "sources/environ_reader.h"
+#include "sources/font_list_reader.h"
 #include "sources/library_reader.h"
 #include "sources/smaps_reader.h"
 #include "sources/socket_reader.h"
@@ -17,6 +18,8 @@ struct OnDemandReaderSync {
   Channel<SocketResponse, 16> socket_response_queue;
   Channel<SmapsRequest, 16> smaps_request_queue;
   Channel<SmapsResponse, 16> smaps_response_queue;
+  Channel<FontListRequest, 2> font_list_request_queue;
+  Channel<FontListResponse, 2> font_list_response_queue;
   std::condition_variable library_cv;
 };
 
