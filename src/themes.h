@@ -287,4 +287,12 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     ImGui::StyleColorsLight(dst);
     break;
   }
+
+  style->WindowRounding    = 2.0f;
+  style->ChildRounding     = 2.0f;
+  style->FrameRounding     = 2.0f;
+  style->GrabRounding      = 2.0f;
+  style->PopupRounding     = 2.0f;
+  style->ScrollbarRounding = 2.0f;
+  style->TabRounding       = 2.0f;
 }
