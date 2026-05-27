@@ -76,7 +76,7 @@ inline bool try_initial_y_fit(int y_axis_fitted, uint32_t data_size) {
 
 inline void setup_chart(const GrowingArray<double> &times,
                         const ImPlotFormatter y_formatter) {
-  ImPlot::SetupAxes("Time", nullptr, COMMON_X_FLAGS, COMMON_Y_FLAGS);
+  ImPlot::SetupAxes(nullptr, nullptr, COMMON_X_FLAGS, COMMON_Y_FLAGS);
 
   ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
 
