@@ -422,6 +422,7 @@ int main(int, char **) {
   g_applied_theme = view_state.preferences_state.theme;
 
   ImPlot::GetStyle().UseLocalTime = true;
+  ImPlot::GetStyle().UseISO8601 = true;
 
   // Load fonts (before OpenGL backend init)
   load_fonts(io, view_state.preferences_state.font_path, main_scale);
