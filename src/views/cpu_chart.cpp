@@ -104,14 +104,13 @@ void cpu_chart_draw(ViewState &view_state) {
         CpuChartScaledData kernel_data = {chart.times.data(),
                                           chart.cpu_kernel_perc.data(), scale};
 
-        push_fill_alpha();
+        const ImPlotSpec fill = fill_alpha_spec();
         ImPlot::PlotShadedG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
                             cpu_chart_baseline_getter, &total_data,
-                            chart.cpu_total_perc.size());
+                            chart.cpu_total_perc.size(), fill);
         ImPlot::PlotShadedG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
                             cpu_chart_baseline_getter, &kernel_data,
-                            chart.cpu_kernel_perc.size());
-        pop_fill_alpha();
+                            chart.cpu_kernel_perc.size(), fill);
 
         ImPlot::PlotLineG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
                           chart.cpu_kernel_perc.size());

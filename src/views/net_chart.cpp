@@ -74,14 +74,13 @@ void net_chart_draw(ViewState &view_state) {
 
         setup_chart(chart.times, format_io_rate_kb);
 
-        push_fill_alpha();
+        const ImPlotSpec fill = fill_alpha_spec();
         ImPlot::PlotShaded(TITLE_RECV, chart.times.data(),
                            chart.recv_kb_per_sec.data(),
-                           chart.recv_kb_per_sec.size());
+                           chart.recv_kb_per_sec.size(), 0, fill);
         ImPlot::PlotShaded(TITLE_SEND, chart.times.data(),
                            chart.send_kb_per_sec.data(),
-                           chart.send_kb_per_sec.size());
-        pop_fill_alpha();
+                           chart.send_kb_per_sec.size(), 0, fill);
 
         ImPlot::PlotLine(TITLE_RECV, chart.times.data(),
                          chart.recv_kb_per_sec.data(),

@@ -32,18 +32,22 @@ static void scan_dir(const char *dir_path, BumpArena &temp_arena,
     if (ent->d_name[0] == '.') continue;
 
     char sub_path[PATH_MAX];
-    const int path_written = snprintf(sub_path, sizeof(sub_path), "%s/%s",
-                                      dir_path, ent->d_name);
-    if (path_written < 0 || static_cast<size_t>(path_written) >= sizeof(sub_path))
+    const int path_written =
+        snprintf(sub_path, sizeof(sub_path), "%s/%s", dir_path, ent->d_name);
+    if (path_written < 0 ||
+        static_cast<size_t>(path_written) >= sizeof(sub_path))
       continue;
 
     unsigned char d_type = ent->d_type;
     if (d_type == DT_LNK || d_type == DT_UNKNOWN) {
       struct stat st;
       if (stat(sub_path, &st) != 0) continue;
-      if (S_ISDIR(st.st_mode)) d_type = DT_DIR;
-      else if (S_ISREG(st.st_mode)) d_type = DT_REG;
-      else continue;
+      if (S_ISDIR(st.st_mode))
+        d_type = DT_DIR;
+      else if (S_ISREG(st.st_mode))
+        d_type = DT_REG;
+      else
+        continue;
     }
 
     if (d_type == DT_DIR) {
@@ -54,8 +58,8 @@ static void scan_dir(const char *dir_path, BumpArena &temp_arena,
       if (strcasecmp(ent->d_name + name_len - 4, ".ttf") != 0) continue;
 
       FontEntry *entry = entries.emplace_back(temp_arena);
-      const int written = snprintf(entry->path, sizeof(entry->path), "%s",
-                                   sub_path);
+      const int written =
+          snprintf(entry->path, sizeof(entry->path), "%s", sub_path);
       if (written < 0 || static_cast<size_t>(written) >= sizeof(entry->path)) {
         entries.shrink_to(entries.size() - 1);
         continue;

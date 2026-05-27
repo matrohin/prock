@@ -71,11 +71,10 @@ void mem_chart_draw(ViewState &view_state) {
 
         setup_chart(chart.times, format_memory_kb);
 
-        push_fill_alpha();
+        const ImPlotSpec fill = fill_alpha_spec();
         ImPlot::PlotShaded(TITLE_USED, chart.times.data(),
                            chart.mem_resident_kb.data(),
-                           chart.mem_resident_kb.size());
-        pop_fill_alpha();
+                           chart.mem_resident_kb.size(), 0, fill);
 
         ImPlot::PlotLine(TITLE_USED, chart.times.data(),
                          chart.mem_resident_kb.data(),

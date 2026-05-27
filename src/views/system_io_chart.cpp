@@ -55,14 +55,13 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       }
       setup_chart(my_state.times, format_io_rate_mb);
 
-      push_fill_alpha();
+      const ImPlotSpec fill = fill_alpha_spec();
       ImPlot::PlotShaded(TITLE_READ, my_state.times.data(),
                          my_state.read_mb_per_sec.data(),
-                         my_state.read_mb_per_sec.size());
+                         my_state.read_mb_per_sec.size(), 0, fill);
       ImPlot::PlotShaded(TITLE_WRITE, my_state.times.data(),
                          my_state.write_mb_per_sec.data(),
-                         my_state.write_mb_per_sec.size());
-      pop_fill_alpha();
+                         my_state.write_mb_per_sec.size(), 0, fill);
       ImPlot::PlotLine(TITLE_READ, my_state.times.data(),
                        my_state.read_mb_per_sec.data(),
                        my_state.read_mb_per_sec.size());

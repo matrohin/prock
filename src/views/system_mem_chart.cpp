@@ -74,12 +74,12 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       }
       setup_chart(my_state.times, format_memory_kb);
 
-      push_fill_alpha();
+      const ImPlotSpec fill = fill_alpha_spec();
       ImPlot::PlotShaded(TITLE_USED, my_state.times.data(),
-                         my_state.used.data(), my_state.used.size());
+                         my_state.used.data(), my_state.used.size(), 0, fill);
       ImPlot::PlotShaded(TITLE_AVAILABLE, my_state.times.data(),
-                         my_state.available.data(), my_state.available.size());
-      pop_fill_alpha();
+                         my_state.available.data(), my_state.available.size(),
+                         0, fill);
 
       ImPlot::PlotLine(TITLE_USED, my_state.times.data(), my_state.used.data(),
                        my_state.used.size());

@@ -176,8 +176,10 @@ void menu_bar_update(ViewState &view_state) {
   PreferencesState &prefs = view_state.preferences_state;
   Sync &sync = *view_state.sync;
 
-  const bool opening = prefs.show_preferences_modal && !prefs.prev_show_preferences;
-  const bool closing = !prefs.show_preferences_modal && prefs.prev_show_preferences;
+  const bool opening =
+      prefs.show_preferences_modal && !prefs.prev_show_preferences;
+  const bool closing =
+      !prefs.show_preferences_modal && prefs.prev_show_preferences;
   prefs.prev_show_preferences = prefs.show_preferences_modal;
 
   if (opening) {
@@ -202,8 +204,8 @@ void menu_bar_update(ViewState &view_state) {
     if (prefs.font_list_requested) {
       prefs.font_list_arena.destroy();
       prefs.font_list_arena = BumpArena::create();
-      prefs.font_list = Array<FontEntry>::copy_from(prefs.font_list_arena,
-                                                    response.fonts);
+      prefs.font_list =
+          Array<FontEntry>::copy_from(prefs.font_list_arena, response.fonts);
       prefs.font_list_received = true;
       prefs.font_scroll_to_selected = true;
     }

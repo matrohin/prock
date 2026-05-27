@@ -52,10 +52,11 @@ inline void push_fit_with_padding() {
 
 inline void pop_fit_with_padding() { ImPlot::PopStyleVar(); }
 
-inline void push_fill_alpha(const float val = 0.25f) {
-  ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, val);
+inline ImPlotSpec fill_alpha_spec(float alpha = 0.25f) {
+  ImPlotSpec spec;
+  spec.FillAlpha = alpha;
+  return spec;
 }
-inline void pop_fill_alpha() { ImPlot::PopStyleVar(); }
 
 constexpr ImPlotAxisFlags COMMON_X_FLAGS =
     ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;

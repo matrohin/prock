@@ -94,17 +94,16 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
 
       const bool per_core = view_state.preferences_state.cpu_per_core;
       if (!per_core) {
-        push_fill_alpha();
+        const ImPlotSpec fill = fill_alpha_spec();
         ImPlot::PlotShaded(TITLE_TOTAL, my_state.times.data(),
                            my_state.total_usage.data(),
-                           my_state.total_usage.size());
+                           my_state.total_usage.size(), 0, fill);
         ImPlot::PlotShaded(TITLE_KERNEL, my_state.times.data(),
                            my_state.kernel_usage.data(),
-                           my_state.kernel_usage.size());
+                           my_state.kernel_usage.size(), 0, fill);
         ImPlot::PlotShaded(TITLE_INTERRUPTS, my_state.times.data(),
                            my_state.interrupts_usage.data(),
-                           my_state.interrupts_usage.size());
-        pop_fill_alpha();
+                           my_state.interrupts_usage.size(), 0, fill);
 
         ImPlot::PlotLine(TITLE_INTERRUPTS, my_state.times.data(),
                          my_state.interrupts_usage.data(),
@@ -128,8 +127,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
           Array<double> curr = Array<double>::create(ctx.frame_arena, n);
           memset(prev.data, 0, n * sizeof(double));
 
-          push_fill_alpha(0.7f);
-
+          const ImPlotSpec fill = fill_alpha_spec(0.7f);
           // Call SetupLock manually to get correct GetItem id
           // for the first line if it was hidden by the user:
           ImPlot::SetupLock();
@@ -151,11 +149,10 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
             }
 
             ImPlot::PlotShaded(label, my_state.times.data(), prev.data,
-                               curr.data, n);
+                               curr.data, n, fill);
 
             std::swap(prev.data, curr.data);
           }
-          pop_fill_alpha();
         }
       } else {
         // Separate lines per-core view
