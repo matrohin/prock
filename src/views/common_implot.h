@@ -58,8 +58,9 @@ inline ImPlotSpec fill_alpha_spec(float alpha = 0.25f) {
   return spec;
 }
 
-constexpr ImPlotAxisFlags COMMON_X_FLAGS =
+constexpr ImPlotAxisFlags COMMON_X_FLAGS_FOLLOW =
     ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
+constexpr ImPlotAxisFlags COMMON_X_FLAGS_STATIC = ImPlotAxisFlags_RangeFit;
 constexpr ImPlotAxisFlags COMMON_Y_FLAGS = ImPlotAxisFlags_RangeFit;
 
 // Handles delayed Y axis fit: first frame lets X establish its range,
@@ -76,8 +77,11 @@ inline bool try_initial_y_fit(int y_axis_fitted, uint32_t data_size) {
 }
 
 inline void setup_chart(const GrowingArray<double> &times,
-                        const ImPlotFormatter y_formatter) {
-  ImPlot::SetupAxes(nullptr, nullptr, COMMON_X_FLAGS, COMMON_Y_FLAGS);
+                        const ImPlotFormatter y_formatter,
+                        const bool auto_follow = true) {
+  const ImPlotAxisFlags x_flags =
+      auto_follow ? COMMON_X_FLAGS_FOLLOW : COMMON_X_FLAGS_STATIC;
+  ImPlot::SetupAxes(nullptr, nullptr, x_flags, COMMON_Y_FLAGS);
 
   ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
 

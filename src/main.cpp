@@ -478,6 +478,12 @@ int main(int, char **) {
       view_state.preferences_state.show_debug_fps =
           !view_state.preferences_state.show_debug_fps;
     }
+    // Space toggles Auto-Follow on all charts
+    if (ImGui::IsKeyPressed(ImGuiKey_Space, false) &&
+        !ImGui::GetIO().WantTextInput) {
+      view_state.preferences_state.auto_follow =
+          !view_state.preferences_state.auto_follow;
+    }
 
     auto frame_start = SteadyClock::now();
     FrameMarkStart(MAIN_FRAME);

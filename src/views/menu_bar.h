@@ -14,6 +14,7 @@ struct PreferencesState {
   bool show_debug_fps = false;    // Toggle with F3
   bool cpu_per_core =
       false; // CPU % as per-core (can exceed 100%) vs normalized
+  bool auto_follow = true;
   bool font_list_requested = false;
   bool font_list_received = false;
   bool font_scroll_to_selected = false;

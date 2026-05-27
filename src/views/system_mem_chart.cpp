@@ -72,7 +72,8 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       if (should_fit_y) {
         my_state.y_axis_fitted++;
       }
-      setup_chart(my_state.times, format_memory_kb);
+      setup_chart(my_state.times, format_memory_kb,
+                  view_state.preferences_state.auto_follow);
 
       const ImPlotSpec fill = fill_alpha_spec();
       ImPlot::PlotShaded(TITLE_USED, my_state.times.data(),

@@ -90,7 +90,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
         my_state.y_axis_fitted++;
       }
 
-      setup_chart(my_state.times, format_percent);
+      setup_chart(my_state.times, format_percent,
+                  view_state.preferences_state.auto_follow);
 
       const bool per_core = view_state.preferences_state.cpu_per_core;
       if (!per_core) {

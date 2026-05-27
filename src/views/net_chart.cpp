@@ -72,7 +72,8 @@ void net_chart_draw(ViewState &view_state) {
           chart.y_axis_fitted++;
         }
 
-        setup_chart(chart.times, format_io_rate_kb);
+        setup_chart(chart.times, format_io_rate_kb,
+                    view_state.preferences_state.auto_follow);
 
         const ImPlotSpec fill = fill_alpha_spec();
         ImPlot::PlotShaded(TITLE_RECV, chart.times.data(),

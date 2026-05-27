@@ -53,7 +53,8 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       if (should_fit_y) {
         my_state.y_axis_fitted++;
       }
-      setup_chart(my_state.times, format_io_rate_mb);
+      setup_chart(my_state.times, format_io_rate_mb,
+                  view_state.preferences_state.auto_follow);
 
       const ImPlotSpec fill = fill_alpha_spec();
       ImPlot::PlotShaded(TITLE_READ, my_state.times.data(),
