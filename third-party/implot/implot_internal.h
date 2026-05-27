@@ -664,6 +664,7 @@ struct ImPlotAxis
     ImPlotAxis*          OrthoAxis;
     ImPlotRange          ConstraintRange;
     ImPlotRange          ConstraintZoom;
+    ImPlotRange          ConstraintFit;
 
     ImPlotTicker         Ticker;
     ImPlotFormatter      Formatter;
@@ -711,6 +712,7 @@ struct ImPlotAxis
         OrthoAxis        = nullptr;
         ConstraintRange  = ImPlotRange(-INFINITY,INFINITY);
         ConstraintZoom   = ImPlotRange(DBL_MIN,INFINITY);
+        ConstraintFit    = ImPlotRange(-INFINITY,INFINITY);
         LinkedMin        = LinkedMax = nullptr;
         PickerLevel      = 0;
         Datum1           = Datum2 = 0;
@@ -742,6 +744,7 @@ struct ImPlotAxis
         OrthoAxis        = nullptr;
         ConstraintRange  = ImPlotRange(-INFINITY,INFINITY);
         ConstraintZoom   = ImPlotRange(DBL_MIN,INFINITY);
+        ConstraintFit    = ImPlotRange(-INFINITY,INFINITY);
         Ticker.Reset();
     }
 
@@ -812,6 +815,12 @@ struct ImPlotAxis
     inline float PixelSize() const { return ImAbs(PixelMax - PixelMin); }
 
     inline double GetAspect() const { return Range.Size() / PixelSize(); }
+
+    inline void ConstrainAfterFit() {
+        if (Range.Min < ConstraintFit.Min) Range.Min = ConstraintFit.Min;
+        if (Range.Max > ConstraintFit.Max) Range.Max = ConstraintFit.Max;
+        if (Range.Max <= Range.Min) Range.Max = Range.Min + DBL_EPSILON;
+    }
 
     inline void Constrain() {
         Range.Min = ImConstrainNan(ImConstrainInf(Range.Min));
@@ -896,6 +905,7 @@ struct ImPlotAxis
             Range.Min -= 0.5;
         }
         Constrain();
+        ConstrainAfterFit();
         UpdateTransformCache();
     }
 
