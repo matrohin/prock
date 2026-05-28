@@ -1228,14 +1228,14 @@ static const ImPlotDateTimeSpec TimeFormatLevel1[ImPlotTimeUnit_COUNT] = {
 };
 
 static const ImPlotDateTimeSpec TimeFormatLevel1First[ImPlotTimeUnit_COUNT] = {
-    ImPlotDateTimeSpec(ImPlotDateFmt_DayMoYr, ImPlotTimeFmt_HrMinS),
-    ImPlotDateTimeSpec(ImPlotDateFmt_DayMoYr, ImPlotTimeFmt_HrMinS),
-    ImPlotDateTimeSpec(ImPlotDateFmt_DayMoYr, ImPlotTimeFmt_HrMin),
-    ImPlotDateTimeSpec(ImPlotDateFmt_DayMoYr, ImPlotTimeFmt_HrMin),
-    ImPlotDateTimeSpec(ImPlotDateFmt_DayMoYr, ImPlotTimeFmt_None),
-    ImPlotDateTimeSpec(ImPlotDateFmt_DayMoYr, ImPlotTimeFmt_None),
-    ImPlotDateTimeSpec(ImPlotDateFmt_Yr,      ImPlotTimeFmt_None),
-    ImPlotDateTimeSpec(ImPlotDateFmt_Yr,      ImPlotTimeFmt_None)
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_HrMinS),
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_HrMinS),
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_HrMin),
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_HrMin),
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_Hr),
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_Hr),
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_None),
+    ImPlotDateTimeSpec(ImPlotDateFmt_None, ImPlotTimeFmt_None)
 };
 
 static const ImPlotDateTimeSpec TimeFormatMouseCursor[ImPlotTimeUnit_COUNT] = {
