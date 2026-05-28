@@ -101,6 +101,9 @@ FontListResponse read_font_list(BumpArena &temp_arena) {
   snprintf(dirs_buf, sizeof(dirs_buf), "%s", dirs_str);
   char *token = strtok(dirs_buf, ":");
   while (token) {
+    size_t tlen = strlen(token);
+    while (tlen > 1 && token[tlen - 1] == '/')
+      token[--tlen] = '\0';
     scan_xdg_base(token, temp_arena, entries);
     token = strtok(nullptr, ":");
   }
