@@ -39,7 +39,7 @@ SmapsResponse read_process_smaps(BumpArena & /*temp_arena*/,
       cur = segments.emplace_back(response.owner_arena);
       cur->start_addr = start_addr;
       cur->end_addr = end_addr;
-      strncpy(cur->perms, perms, sizeof(cur->perms) - 1);
+      memcpy(cur->perms, perms, sizeof(cur->perms));
 
       const char *p = line + chars_read;
       while (*p == ' ')

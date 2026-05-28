@@ -73,8 +73,9 @@ static void scan_dir(const char *dir_path, BumpArena &temp_arena,
 static void scan_xdg_base(const char *base_dir, BumpArena &temp_arena,
                           GrowingArray<FontEntry> &entries) {
   char path[PATH_MAX];
-  snprintf(path, sizeof(path), "%s/fonts", base_dir);
-  scan_dir(path, temp_arena, entries);
+  const int written = snprintf(path, sizeof(path), "%s/fonts", base_dir);
+  if (written > 0 && static_cast<size_t>(written) < sizeof(path))
+    scan_dir(path, temp_arena, entries);
 }
 
 FontListResponse read_font_list(BumpArena &temp_arena) {

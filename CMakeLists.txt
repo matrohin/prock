@@ -30,6 +30,7 @@ target_include_directories(imgui_all PRIVATE
   third-party/imgui
   third-party/implot
 )
+target_compile_definitions(imgui_all PRIVATE "IMPLOT_CUSTOM_NUMERIC_TYPES=(double)")
 target_link_libraries(imgui_all PRIVATE glfw OpenGL::GLES2)
 
 # Main executable:
