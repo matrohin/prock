@@ -4,6 +4,10 @@ Process Explorer for Linux.
 
 The tool is still in development. I need it myself to improve my Linux desktop experience.
 
+![Screenshot](./images/screenshot.png)
+
+*My configuration: FiraSansCondensed font, Nord theme.*
+
 ## Features
 
 ### Process Monitoring
@@ -69,11 +73,3 @@ cmake --preset debug
 ./scripts/build.sh
 ./build/Debug/prock
 ```
-
-## Screenshots
-
-My configuration:
-* JetBrainsMonoNerdFontMono-Regular font.
-* Nord Theme.
-
-![Screenshot](./images/screenshot.png)
