@@ -64,11 +64,46 @@ static int g_needs_updates = 1;
 static float g_applied_zoom_scale = 1.0f;
 static Theme g_applied_theme = Theme::Light;
 static float g_monitor_scale = 1.0f;
+static float g_applied_opacity = 1.0f;
 static ImGuiStyle g_base_style;
 
-void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
-                               int /*action*/, int /*mods*/) {
+static void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
+                                      int /*action*/, int /*mods*/) {
   g_needs_updates = 2;
+}
+
+// Scale the alpha of background style colors so the desktop shows through
+// translucent panels while text, borders, and accents stay fully opaque.
+// Applied on top of a theme's base (opaque) colors; opacity 1.0 is a no-op.
+static void apply_window_opacity(ImGuiStyle &style, float opacity) {
+  if (opacity >= 1.0f) {
+    return;
+  }
+  static constexpr ImGuiCol bg_colors[] = {
+      ImGuiCol_WindowBg,
+      ImGuiCol_ChildBg,
+      ImGuiCol_MenuBarBg,
+  };
+  for (const ImGuiCol col : bg_colors) {
+    style.Colors[col].w *= opacity;
+  }
+}
+
+// ImPlot draws an opaque frame (ImPlotCol_FrameBg, auto = ImGuiCol_FrameBg)
+// across the whole plot rect, boxing every chart. Always clear it so the plot
+// margin matches the surrounding panel. The inner plot background scales with
+// opacity (auto = ImGuiCol_WindowBg); at opacity 1.0 the scaled value equals
+// the automatic one, so there is no jump and we let ImPlot manage it.
+static void apply_plot_opacity(float opacity) {
+  ImPlotStyle &plot_style = ImPlot::GetStyle();
+  plot_style.Colors[ImPlotCol_FrameBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+  if (opacity >= 1.0f) {
+    plot_style.Colors[ImPlotCol_PlotBg] = IMPLOT_AUTO_COL;
+    return;
+  }
+  ImVec4 plot = g_base_style.Colors[ImGuiCol_WindowBg];
+  plot.w *= opacity;
+  plot_style.Colors[ImPlotCol_PlotBg] = plot;
 }
 
 static void *view_settings_read_open(ImGuiContext *,
@@ -105,6 +140,9 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
   } else if (sscanf(line, "ZoomScale=%f", &fval) == 1) {
     view_state->preferences_state.zoom_scale =
         fval < 0.75f ? 0.75f : (fval > 2.0f ? 2.0f : fval);
+  } else if (sscanf(line, "WindowOpacity=%f", &fval) == 1) {
+    view_state->preferences_state.window_opacity =
+        fval < 0.3f ? 0.3f : (fval > 1.0f ? 1.0f : fval);
   } else if (strncmp(line, "FontPath=", 9) == 0) {
     const char *path = line + 9;
     const uint32_t len = static_cast<uint32_t>(strlen(path));
@@ -134,6 +172,8 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
                view_state->preferences_state.update_period);
   buf->appendf("TargetFPS=%d\n", view_state->preferences_state.target_fps);
   buf->appendf("ZoomScale=%.2f\n", view_state->preferences_state.zoom_scale);
+  buf->appendf("WindowOpacity=%.2f\n",
+               view_state->preferences_state.window_opacity);
   if (view_state->preferences_state.font_path[0] != '\0') {
     buf->appendf("FontPath=%s\n", view_state->preferences_state.font_path);
   }
@@ -250,7 +290,11 @@ static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
   int display_h = 0;
   glfwGetFramebufferSize(window, &display_w, &display_h);
   glViewport(0, 0, display_w, display_h);
-  glClearColor(0.0, 0.0, 0.0, 1.0);
+  // Clear to a transparent framebuffer when transparency is enabled so gaps
+  // show the desktop; opaque windows then write alpha 1.0 over it.
+  const float clear_alpha =
+      view_state.preferences_state.window_opacity < 1.0f ? 0.0f : 1.0f;
+  glClearColor(0.0f, 0.0f, 0.0f, clear_alpha);
   glClear(GL_COLOR_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -328,6 +372,10 @@ int main(int, char **) {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 
   glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+
+  // Request an alpha-capable framebuffer so the window background can be made
+  // translucent (Option B transparency) while text stays opaque.
+  glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
   // Create window with graphics context
   float main_scale =
@@ -421,6 +469,12 @@ int main(int, char **) {
   g_applied_zoom_scale = zoom;
   g_applied_theme = view_state.preferences_state.theme;
 
+  // Apply background transparency on top (no-op when fully opaque)
+  float opacity = view_state.preferences_state.window_opacity;
+  apply_window_opacity(style, opacity);
+  apply_plot_opacity(opacity);
+  g_applied_opacity = opacity;
+
   ImPlot::GetStyle().UseLocalTime = true;
   ImPlot::GetStyle().UseISO8601 = true;
 
@@ -498,22 +552,26 @@ int main(int, char **) {
       sync.quit_cv.notify_one();
     }
 
-    // Update base style colors if theme changed
+    // Rebuild the live style from the base whenever theme, zoom, or window
+    // opacity changes. Theme/zoom set opaque base colors; opacity is applied
+    // last so backgrounds become translucent while text stays opaque.
     const Theme new_theme = view_state.preferences_state.theme;
-    if (g_applied_theme != new_theme) {
-      apply_theme(new_theme, &g_base_style);
-      g_applied_theme = new_theme;
-    }
-
-    // Apply zoom scale if changed
     const float new_zoom = view_state.preferences_state.zoom_scale;
-    if (g_applied_zoom_scale != new_zoom) {
-      // Restore base style (has monitor scale, no zoom)
+    const float new_opacity = view_state.preferences_state.window_opacity;
+    if (g_applied_theme != new_theme || g_applied_zoom_scale != new_zoom ||
+        g_applied_opacity != new_opacity) {
+      if (g_applied_theme != new_theme) {
+        apply_theme(new_theme, &g_base_style);
+      }
+      // Restore base style (has monitor scale, no zoom) and re-apply zoom
       style = g_base_style;
-      // Apply zoom on top
       style.ScaleAllSizes(new_zoom);
       io.FontGlobalScale = new_zoom;
+      apply_window_opacity(style, new_opacity);
+      apply_plot_opacity(new_opacity);
+      g_applied_theme = new_theme;
       g_applied_zoom_scale = new_zoom;
+      g_applied_opacity = new_opacity;
     }
 
     // Reload font if requested

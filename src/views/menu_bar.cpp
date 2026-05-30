@@ -44,7 +44,6 @@ static void draw_preferences_modal(PreferencesState &prefs) {
         const bool is_selected = prefs.theme == t;
         if (ImGui::Selectable(theme_name(t), is_selected)) {
           prefs.theme = t;
-          apply_theme(prefs.theme);
         }
         if (is_selected) {
           ImGui::SetItemDefaultFocus();
@@ -64,6 +63,12 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::SetNextItemWidth(120);
     if (ImGui::Combo("Zoom", &zoom_idx, ZOOM_LABELS, ZOOM_COUNT)) {
       prefs.zoom_scale = ZOOM_SCALES[zoom_idx];
+    }
+
+    ImGui::SetNextItemWidth(120);
+    int opacity_pct = static_cast<int>(prefs.window_opacity * 100.0f + 0.5f);
+    if (ImGui::SliderInt("Opacity", &opacity_pct, 0, 100, "%d%%")) {
+      prefs.window_opacity = static_cast<float>(opacity_pct) / 100.0f;
     }
 
     ImGui::Spacing();
