@@ -19,7 +19,7 @@ void on_demand_reader_loop(Sync &sync) {
     FontListRequest font_list_request;
     {
       std::unique_lock<std::mutex> lock(sync.quit_mutex);
-      my_sync.library_cv.wait(lock, [&] {
+      my_sync.request_read_cv.wait(lock, [&] {
         return sync.quit.load() ||
                my_sync.library_request_queue.peek(lib_request) ||
                my_sync.environ_request_queue.peek(env_request) ||

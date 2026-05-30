@@ -70,7 +70,7 @@ static void sort_environ(EnvironViewerWindow &win) {
 static void send_environ_request(Sync &sync, const Pid pid) {
   const EnvironRequest req = {pid};
   sync.on_demand_reader.environ_request_queue.push(req);
-  sync.on_demand_reader.library_cv.notify_one();
+  sync.on_demand_reader.request_read_cv.notify_one();
 }
 
 void environ_viewer_request(EnvironViewerState &state, Sync &sync,

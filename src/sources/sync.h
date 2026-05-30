@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/base.h"
-#include "base/ring_buffer.h"
+#include "base/channel.h"
 #include "on_demand_reader.h"
 #include "process_stat.h"
 

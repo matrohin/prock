@@ -2,7 +2,7 @@
 #include "doctest.h"
 
 #include "base/base.h"
-#include "base/ring_buffer.h"
+#include "base/channel.h"
 
 // ============================================================================
 // BumpArena Tests

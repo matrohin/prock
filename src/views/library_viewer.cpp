@@ -53,7 +53,7 @@ static void sort_libraries(LibraryViewerWindow &win) {
 static void send_library_request(Sync &sync, const Pid pid) {
   const LibraryRequest req = {pid};
   sync.on_demand_reader.library_request_queue.push(req);
-  sync.on_demand_reader.library_cv.notify_one();
+  sync.on_demand_reader.request_read_cv.notify_one();
 }
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync,

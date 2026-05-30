@@ -76,7 +76,7 @@ static void sort_segments(SmapsViewerWindow &win) {
 static void send_smaps_request(Sync &sync, const Pid pid) {
   const SmapsRequest req = {pid};
   sync.on_demand_reader.smaps_request_queue.push(req);
-  sync.on_demand_reader.library_cv.notify_one();
+  sync.on_demand_reader.request_read_cv.notify_one();
 }
 
 void smaps_viewer_request(SmapsViewerState &state, Sync &sync, const Pid pid,

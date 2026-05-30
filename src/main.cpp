@@ -1,5 +1,5 @@
 #include "base/base.h"
-#include "base/ring_buffer.h"
+#include "base/channel.h"
 #include "sources/process_stat.h"
 #include "sources/sync.h"
 #include "state.h"
@@ -596,7 +596,7 @@ int main(int, char **) {
   // Cleanup
   sync.quit.store(true);
   sync.quit_cv.notify_one();
-  sync.on_demand_reader.library_cv.notify_one();
+  sync.on_demand_reader.request_read_cv.notify_one();
   gathering_thread.join();
   proc_reader_thread.join();
 
