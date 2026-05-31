@@ -88,14 +88,8 @@ inline void push_fit_with_padding() {
 
 inline void pop_fit_with_padding() { ImPlot::PopStyleVar(); }
 
-inline ImPlotSpec fill_alpha_spec(float alpha = 0.25f) {
-  ImPlotSpec spec;
-  spec.FillAlpha = alpha;
-  return spec;
-}
-
 constexpr float FILL_ALPHA_LOW = 0.25f;
-constexpr float FILL_ALPHA_HIGH = 0.75f;
+constexpr float FILL_ALPHA_HIGH = 0.7f;
 constexpr float FILL_ALPHA_FULL = 1.00f;
 
 constexpr ImPlotAxisFlags COMMON_X_FLAGS_FOLLOW =

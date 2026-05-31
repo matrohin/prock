@@ -12,7 +12,7 @@
 #include "implot_internal.h"
 #include "tracy/Tracy.hpp"
 
-void system_cpu_chart_update(SystemCpuChartState &my_state,
+void system_cpu_chart_update(SystemCpuChartState &my_state, BumpArena &arena,
                              InternTable &interner, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   if (snapshot.cpu_perc.total.size == 0) {
@@ -23,53 +23,37 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
                                state.update_system_time.time_since_epoch())
                                .count();
 
-  *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-      update_at;
-  *my_state.total_usage.emplace_back(my_state.cur_arena,
-                                     my_state.wasted_bytes) =
-      snapshot.cpu_perc.total.data[0];
-  *my_state.kernel_usage.emplace_back(my_state.cur_arena,
-                                      my_state.wasted_bytes) =
-      snapshot.cpu_perc.kernel.data[0];
-  *my_state.interrupts_usage.emplace_back(my_state.cur_arena,
-                                          my_state.wasted_bytes) =
-      snapshot.cpu_perc.interrupts.data[0];
+  // Per-core data (skip index 0 which is aggregate). total.size >= 1 here
+  // (checked above), so num_cores >= 0.
+  const int num_cores = static_cast<int>(snapshot.cpu_perc.total.size) - 1;
 
-  // Per-core data (skip index 0 which is aggregate)
-  int num_cores = static_cast<int>(snapshot.cpu_perc.total.size) - 1;
-  if (num_cores > MAX_CORES) num_cores = MAX_CORES;
-  my_state.num_cores = num_cores;
+  // (Re)allocate the per-core ring buffers only when the core count changes
+  // (first sample, or CPU hot(un)plug), sizing for the actual core count.
+  // Backed by the app-lifetime view_state.arena; arena memory is zero-filled,
+  // so a buffer grown for a newly-appeared core reads 0 for past samples. On a
+  // core-count change the previous buffer is left in the arena (rare event).
+  if (num_cores != my_state.num_cores) {
+    my_state.core_usage =
+        num_cores > 0 ? arena.alloc_array_of<ChartData<double>>(num_cores)
+                      : nullptr;
+    my_state.num_cores = num_cores;
+  }
+
+  const uint32_t idx = my_state.track.emplace_back();
+  my_state.times[idx] = update_at;
+  my_state.total_usage[idx] = snapshot.cpu_perc.total.data[0];
+  my_state.kernel_usage[idx] = snapshot.cpu_perc.kernel.data[0];
+  my_state.interrupts_usage[idx] = snapshot.cpu_perc.interrupts.data[0];
 
   for (int i = 0; i < num_cores; ++i) {
-    *my_state.core_usage[i].emplace_back(my_state.cur_arena,
-                                         my_state.wasted_bytes) =
-        snapshot.cpu_perc.total.data[i + 1];
+    my_state.core_usage[i][idx] = snapshot.cpu_perc.total.data[i + 1];
   }
 
   // Find top CPU process
-  *my_state.top_processes.emplace_back(my_state.cur_arena,
-                                       my_state.wasted_bytes) =
+  my_state.top_processes[idx] =
       find_top_process(snapshot, interner, [](const ProcessDerivedStat &d) {
         return d.cpu_user_perc + d.cpu_kernel_perc;
       });
-
-  if (my_state.wasted_bytes > SLAB_SIZE) {
-    BumpArena old_arena = my_state.cur_arena;
-    BumpArena new_arena = BumpArena::create();
-
-    my_state.times.realloc(new_arena);
-    my_state.total_usage.realloc(new_arena);
-    my_state.kernel_usage.realloc(new_arena);
-    my_state.interrupts_usage.realloc(new_arena);
-    for (int i = 0; i < my_state.num_cores; ++i) {
-      my_state.core_usage[i].realloc(new_arena);
-    }
-    my_state.top_processes.realloc(new_arena);
-
-    my_state.cur_arena = new_arena;
-    my_state.wasted_bytes = 0;
-    old_arena.destroy();
-  }
 }
 
 void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
@@ -78,52 +62,54 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
   if (ImGui::Begin("System CPU Usage", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();
     const bool should_fit_y =
-        try_initial_y_fit(my_state.y_axis_fitted, my_state.total_usage.size());
+        try_initial_y_fit(my_state.y_axis_fitted, my_state.track.size);
     if (ImPlot::BeginPlot("##SystemCPU", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       if (should_fit_y) {
         my_state.y_axis_fitted++;
       }
 
-      setup_chart(my_state.times, format_percent,
+      setup_chart(my_state.times[my_state.track.last_idx()], format_percent,
                   view_state.preferences_state.auto_follow);
 
       const bool per_core = view_state.preferences_state.cpu_per_core;
       if (!per_core) {
-        const ImPlotSpec fill = fill_alpha_spec();
-        ImPlot::PlotShaded(TITLE_TOTAL, my_state.times.data(),
-                           my_state.total_usage.data(),
-                           my_state.total_usage.size(), 0, fill);
-        ImPlot::PlotShaded(TITLE_KERNEL, my_state.times.data(),
-                           my_state.kernel_usage.data(),
-                           my_state.kernel_usage.size(), 0, fill);
-        ImPlot::PlotShaded(TITLE_INTERRUPTS, my_state.times.data(),
-                           my_state.interrupts_usage.data(),
-                           my_state.interrupts_usage.size(), 0, fill);
+        ImPlotSpec spec = {};
+        spec.FillAlpha = FILL_ALPHA_LOW;
+        spec.Offset = my_state.track.head;
+        ImPlot::PlotShaded(TITLE_TOTAL, my_state.times, my_state.total_usage,
+                           my_state.track.size, 0, spec);
+        ImPlot::PlotShaded(TITLE_KERNEL, my_state.times, my_state.kernel_usage,
+                           my_state.track.size, 0, spec);
+        ImPlot::PlotShaded(TITLE_INTERRUPTS, my_state.times,
+                           my_state.interrupts_usage, my_state.track.size, 0,
+                           spec);
 
-        ImPlot::PlotLine(TITLE_INTERRUPTS, my_state.times.data(),
-                         my_state.interrupts_usage.data(),
-                         my_state.interrupts_usage.size());
-        ImPlot::PlotLine(TITLE_KERNEL, my_state.times.data(),
-                         my_state.kernel_usage.data(),
-                         my_state.kernel_usage.size());
-        ImPlot::PlotLine(TITLE_TOTAL, my_state.times.data(),
-                         my_state.total_usage.data(),
-                         my_state.total_usage.size());
+        spec.FillAlpha = FILL_ALPHA_FULL;
+        ImPlot::PlotLine(TITLE_INTERRUPTS, my_state.times,
+                         my_state.interrupts_usage, my_state.track.size, spec);
+        ImPlot::PlotLine(TITLE_KERNEL, my_state.times, my_state.kernel_usage,
+                         my_state.track.size, spec);
+        ImPlot::PlotLine(TITLE_TOTAL, my_state.times, my_state.total_usage,
+                         my_state.track.size, spec);
 
         chart_add_tooltip(TITLE_TOTAL,
                           "user + system + irq + softirq from /proc/stat");
         chart_add_tooltip(TITLE_KERNEL, "system from /proc/stat");
         chart_add_tooltip(TITLE_INTERRUPTS, "irq + softirq from /proc/stat");
       } else if (my_state.stacked) {
-        // Stacked per-core view
-        const uint32_t n = my_state.core_usage[0].size();
+        // Stacked per-core view. prev/curr are indexed by physical ring slot
+        // (same as the Offset trick), so they pair with `times` under the same
+        // spec.Offset = track.head.
+        const uint32_t n = my_state.track.size;
         if (n > 0 && my_state.num_cores > 0) {
           Array<double> prev = Array<double>::create(ctx.frame_arena, n);
           Array<double> curr = Array<double>::create(ctx.frame_arena, n);
           memset(prev.data, 0, n * sizeof(double));
 
-          const ImPlotSpec fill = fill_alpha_spec(0.7f);
+          ImPlotSpec fill = {};
+          fill.FillAlpha = FILL_ALPHA_HIGH;
+          fill.Offset = my_state.track.head;
           // Call SetupLock manually to get correct GetItem id
           // for the first line if it was hidden by the user:
           ImPlot::SetupLock();
@@ -138,26 +124,27 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
             if (is_hidden) {
               std::swap(prev.data, curr.data);
             } else {
-              const double *core_data = my_state.core_usage[i].data();
+              const double *core_data = my_state.core_usage[i];
               for (uint32_t j = 0; j < n; ++j) {
                 curr.data[j] = prev.data[j] + core_data[j];
               }
             }
 
-            ImPlot::PlotShaded(label, my_state.times.data(), prev.data,
-                               curr.data, n, fill);
+            ImPlot::PlotShaded(label, my_state.times, prev.data, curr.data, n,
+                               fill);
 
             std::swap(prev.data, curr.data);
           }
         }
       } else {
         // Separate lines per-core view
+        ImPlotSpec spec = {};
+        spec.Offset = my_state.track.head;
         for (int i = 0; i < my_state.num_cores; ++i) {
           char label[16];
           snprintf(label, sizeof(label), "Core %d", i);
-          ImPlot::PlotLine(label, my_state.times.data(),
-                           my_state.core_usage[i].data(),
-                           my_state.core_usage[i].size());
+          ImPlot::PlotLine(label, my_state.times, my_state.core_usage[i],
+                           my_state.track.size, spec);
         }
       }
 
@@ -167,7 +154,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
       // 0-100%)
       const int num_cores = my_state.num_cores;
       show_top_process_tooltip(
-          my_state.times, my_state.top_processes, "Total", my_state.total_usage,
+          my_state.track, my_state.times, my_state.total_usage,
+          my_state.top_processes, "Total",
           [num_cores, per_core](const double val, char *buf, const int size,
                                 void *user_data) {
             const bool is_system = user_data && *static_cast<bool *>(user_data);

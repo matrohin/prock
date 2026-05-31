@@ -25,7 +25,7 @@ void views_update(ViewState &view_state, State &state) {
   cpu_chart_update(view_state.cpu_chart_state, state);
   mem_chart_update(view_state.mem_chart_state, state);
   io_chart_update(view_state.io_chart_state, state);
-  system_cpu_chart_update(view_state.system_cpu_chart_state,
+  system_cpu_chart_update(view_state.system_cpu_chart_state, view_state.arena,
                           view_state.string_interner, state);
   system_mem_chart_update(view_state.system_mem_chart_state,
                           view_state.string_interner, state);

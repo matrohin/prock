@@ -22,13 +22,15 @@ struct CpuChartScaledData {
 
 static ImPlotPoint cpu_chart_scaled_getter(const int idx, void *user_data) {
   const auto *data = static_cast<CpuChartScaledData *>(user_data);
-  const uint32_t i = (data->head + static_cast<uint32_t>(idx)) & ChartTrack::MASK;
+  const uint32_t i =
+      (data->head + static_cast<uint32_t>(idx)) & ChartTrack::MASK;
   return ImPlotPoint(data->times[i], data->values[i] * data->scale);
 }
 
 static ImPlotPoint cpu_chart_baseline_getter(const int idx, void *user_data) {
   const auto *data = static_cast<CpuChartScaledData *>(user_data);
-  const uint32_t i = (data->head + static_cast<uint32_t>(idx)) & ChartTrack::MASK;
+  const uint32_t i =
+      (data->head + static_cast<uint32_t>(idx)) & ChartTrack::MASK;
   return ImPlotPoint(data->times[i], 0.0);
 }
 
@@ -37,16 +39,15 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
                                state.update_system_time.time_since_epoch())
                                .count();
 
-  common_charts_update(
-      my_state.charts, state,
-      [&](CpuChartData &chart, const ProcessStat & /*stat*/,
-          const ProcessDerivedStat &derived) {
-        const uint32_t idx = chart.track.emplace_back();
-        chart.times[idx] = update_at;
-        chart.cpu_kernel_perc[idx] = derived.cpu_kernel_perc;
-        chart.cpu_total_perc[idx] =
-            derived.cpu_kernel_perc + derived.cpu_user_perc;
-      });
+  common_charts_update(my_state.charts, state,
+                       [&](CpuChartData &chart, const ProcessStat & /*stat*/,
+                           const ProcessDerivedStat &derived) {
+                         const uint32_t idx = chart.track.emplace_back();
+                         chart.times[idx] = update_at;
+                         chart.cpu_kernel_perc[idx] = derived.cpu_kernel_perc;
+                         chart.cpu_total_perc[idx] =
+                             derived.cpu_kernel_perc + derived.cpu_user_perc;
+                       });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -100,7 +101,8 @@ void cpu_chart_draw(ViewState &view_state) {
         CpuChartScaledData kernel_data = {chart.times, chart.cpu_kernel_perc,
                                           scale, chart.track.head};
 
-        const ImPlotSpec fill = fill_alpha_spec();
+        ImPlotSpec fill = {};
+        fill.FillAlpha = FILL_ALPHA_LOW;
         ImPlot::PlotShadedG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
                             cpu_chart_baseline_getter, &total_data,
                             chart.track.size, fill);

@@ -15,15 +15,16 @@ void io_chart_update(IoChartState &my_state, const State &state) {
                                state.update_system_time.time_since_epoch())
                                .count();
 
-  common_charts_update(
-      my_state.charts, state,
-      [&](IoChartData &chart, const ProcessStat & /*stat*/,
-          const ProcessDerivedStat &derived) {
-        const uint32_t idx = chart.track.emplace_back();
-        chart.times[idx] = update_at;
-        chart.read_kb_per_sec[idx] = derived.io_read_kb_per_sec;
-        chart.write_kb_per_sec[idx] = derived.io_write_kb_per_sec;
-      });
+  common_charts_update(my_state.charts, state,
+                       [&](IoChartData &chart, const ProcessStat & /*stat*/,
+                           const ProcessDerivedStat &derived) {
+                         const uint32_t idx = chart.track.emplace_back();
+                         chart.times[idx] = update_at;
+                         chart.read_kb_per_sec[idx] =
+                             derived.io_read_kb_per_sec;
+                         chart.write_kb_per_sec[idx] =
+                             derived.io_write_kb_per_sec;
+                       });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
