@@ -228,8 +228,6 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
         } else {
           win.status = eSocketViewerStatus_Error;
           win.error_code = response.error_code;
-          snprintf(win.error_message, sizeof(win.error_message), "Error: %s",
-                   strerror(response.error_code));
         }
         response.owner_arena.destroy();
         break;
@@ -286,7 +284,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       process_window_check_close(win.flags, should_be_opened);
 
       if (win.status == eSocketViewerStatus_Error) {
-        ImGui::TextWrapped("%s", win.error_message);
+        draw_error_with_pkexec(win.error_code);
       } else if (win.sockets.size > 0 ||
                  win.status == eSocketViewerStatus_Ready) {
         ImGuiTextFilter filter = draw_filter_input(
