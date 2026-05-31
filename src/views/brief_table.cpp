@@ -114,7 +114,7 @@ static void copy_process_row(const BriefTableLine &line) {
   char buf[4096];
   snprintf(buf, sizeof(buf),
            "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
-           PROCESS_COPY_HEADER, line.pid, line.name, line.state,
+           PROCESS_COPY_HEADER, line.pid, line.name.data, line.state,
            line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
            derived.cpu_user_perc, derived.cpu_kernel_perc,
            derived.mem_resident_bytes / 1024.0,
@@ -186,7 +186,7 @@ static void copy_all_processes(BumpArena &arena,
     ptr += snprintf(
         ptr, buf_size - (ptr - buf),
         "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
-        line.pid, line.name, line.state, line.num_threads,
+        line.pid, line.name.data, line.state, line.num_threads,
         derived.cpu_user_perc + derived.cpu_kernel_perc, derived.cpu_user_perc,
         derived.cpu_kernel_perc, derived.mem_resident_bytes / 1024.0,
         derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
@@ -215,18 +215,18 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
         my_state.filter_text[len++] = ',';
       }
       snprintf(my_state.filter_text + len, sizeof(my_state.filter_text) - len,
-               "+%s", line.name);
+               "+%s", line.name.data);
     }
     ImGui::Separator();
     if (ImGui::BeginMenu("Charts")) {
       if (ImGui::MenuItem("CPU Chart")) {
-        cpu_chart_add(view_state.cpu_chart_state, pid, line.name);
+        cpu_chart_add(view_state.cpu_chart_state, pid, line.name.data);
       }
       if (ImGui::MenuItem("Memory Chart")) {
-        mem_chart_add(view_state.mem_chart_state, pid, line.name);
+        mem_chart_add(view_state.mem_chart_state, pid, line.name.data);
       }
       if (ImGui::MenuItem("I/O Chart")) {
-        io_chart_add(view_state.io_chart_state, pid, line.name);
+        io_chart_add(view_state.io_chart_state, pid, line.name.data);
       }
       ImGui::EndMenu();
     }
@@ -234,23 +234,23 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     if (ImGui::BeginMenu("Inspect")) {
       if (ImGui::MenuItem("Loaded Libraries")) {
         library_viewer_request(view_state.library_viewer_state,
-                               *view_state.sync, pid, line.name);
+                               *view_state.sync, pid, line.name.data);
       }
       if (ImGui::MenuItem("Environment")) {
         environ_viewer_request(view_state.environ_viewer_state,
-                               *view_state.sync, pid, line.name);
+                               *view_state.sync, pid, line.name.data);
       }
       if (ImGui::MenuItem("Threads")) {
         threads_viewer_open(view_state.threads_viewer_state, *view_state.sync,
-                            pid, line.name);
+                            pid, line.name.data);
       }
       if (ImGui::MenuItem("Sockets")) {
         socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
-                              pid, line.name);
+                              pid, line.name.data);
       }
       if (ImGui::MenuItem("Memory Maps")) {
         smaps_viewer_request(view_state.smaps_viewer_state, *view_state.sync,
-                             pid, line.name);
+                             pid, line.name.data);
       }
       ImGui::EndMenu();
     }
@@ -331,7 +331,8 @@ static void compute_filter_visibility(const BriefTableState &my_state,
     char pid_str[32];
     snprintf(pid_str, sizeof(pid_str), "%d", line.pid);
 
-    FilterResult name_result = imgui_filter_pass_filter_ext(filter, line.name);
+    FilterResult name_result =
+        imgui_filter_pass_filter_ext(filter, line.name.data);
     FilterResult pid_result = imgui_filter_pass_filter_ext(filter, pid_str);
 
     // Take the "better" result (SubtreeMatch > Match > NoMatch)
@@ -391,7 +392,7 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
                               const bool cpu_per_core) {
   const ProcessDerivedStat &derived_stat = line.derived_stat;
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Name)) {
-    ImGui::TextUnformatted(line.name);
+    ImGui::TextUnformatted(line.name.data);
     if (line.cmdline[0] != '\0' && ImGui::IsItemHovered())
       ImGui::SetItemTooltip("%s", line.cmdline);
   }
@@ -744,7 +745,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
               const uint32_t j = (current_idx + offset) % total;
               const BriefTableLine &l = my_state.lines.data[j];
               if (filter_active && l.filter_state == 0) continue;
-              if (strncasecmp(l.name, my_state.type_search, len + 1) == 0) {
+              if (strncasecmp(l.name.data, my_state.type_search, len + 1) ==
+                  0) {
                 focus_scroll_to_idx = static_cast<int>(j);
                 my_state.selected_pid = l.pid;
                 break;
@@ -842,7 +844,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           }
           if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) &&
               !ImGui::IsItemToggledOpen()) {
-            open_all_windows(line.pid, line.name, view_state);
+            open_all_windows(line.pid, line.name.data, view_state);
           }
           if (is_grayed) ImGui::PopStyleColor();
           table_context_menu_draw(ctx, view_state, my_state, line, label,
@@ -859,7 +861,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           }
 
           if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-            open_all_windows(line.pid, line.name, view_state);
+            open_all_windows(line.pid, line.name.data, view_state);
           }
 
           if (is_grayed) ImGui::PopStyleColor();

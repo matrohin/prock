@@ -435,6 +435,7 @@ int main(int, char **) {
 
   ViewState *view_state_ptr = create_with_arena<ViewState>();
   ViewState &view_state = *view_state_ptr;
+  view_state.string_interner = InternTable::create(&view_state.arena);
 
   // Register custom settings handler for view options
   ImGuiSettingsHandler handler = {};

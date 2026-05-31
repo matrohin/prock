@@ -13,7 +13,7 @@
 #include "tracy/Tracy.hpp"
 
 void system_cpu_chart_update(SystemCpuChartState &my_state,
-                             const State &state) {
+                             InternTable &interner, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   if (snapshot.cpu_perc.total.size == 0) {
     return;
@@ -49,10 +49,9 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
   // Find top CPU process
   *my_state.top_processes.emplace_back(my_state.cur_arena,
                                        my_state.wasted_bytes) =
-      find_top_process(snapshot, my_state.cur_arena,
-                       [](const ProcessDerivedStat &d) {
-                         return d.cpu_user_perc + d.cpu_kernel_perc;
-                       });
+      find_top_process(snapshot, interner, [](const ProcessDerivedStat &d) {
+        return d.cpu_user_perc + d.cpu_kernel_perc;
+      });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
     BumpArena old_arena = my_state.cur_arena;
@@ -66,10 +65,6 @@ void system_cpu_chart_update(SystemCpuChartState &my_state,
       my_state.core_usage[i].realloc(new_arena);
     }
     my_state.top_processes.realloc(new_arena);
-    for (uint32_t i = 0; i < my_state.top_processes.size(); ++i) {
-      TopProcess &tp = my_state.top_processes.data()[i];
-      if (tp.name) tp.name = new_arena.alloc_string_copy(tp.name);
-    }
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;

@@ -12,7 +12,7 @@
 #include "tracy/Tracy.hpp"
 
 void system_mem_chart_update(SystemMemChartState &my_state,
-                             BumpArena &persistent_arena, const State &state) {
+                             InternTable &interner, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   const MemInfo &mem = snapshot.mem_info;
   if (mem.mem_total == 0) {
@@ -31,9 +31,8 @@ void system_mem_chart_update(SystemMemChartState &my_state,
   my_state.available[new_idx] = mem.mem_available;
 
   // Find top memory process (store in KB to match system values)
-  // TODO: use string interning here instead of just persisting all values
-  my_state.top_processes[new_idx] = find_top_process(
-      snapshot, persistent_arena, [](const ProcessDerivedStat &d) {
+  my_state.top_processes[new_idx] =
+      find_top_process(snapshot, interner, [](const ProcessDerivedStat &d) {
         return d.mem_resident_bytes / 1024.0;
       });
 }

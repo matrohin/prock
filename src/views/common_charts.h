@@ -10,38 +10,38 @@ template <class T> using ChartData = T[CHART_HISTORY_SIZE];
 
 struct TopProcess {
   Pid pid;
-  const char *name;
+  ConstString name;
   double value;
 };
 
-// Returns the basename of the first word in cmdline, allocated from arena.
 // Returns nullptr if cmdline is empty or has no useful basename.
-inline const char *cmdline_display_name(const char *cmdline, BumpArena &arena) {
-  if (!cmdline || !cmdline[0]) return nullptr;
+inline ConstString cmdline_display_name(const char *cmdline,
+                                        InternTable &interner) {
+  if (!cmdline || !cmdline[0]) return ConstString{nullptr};
   const char *end = cmdline;
   while (*end && *end != ' ')
     ++end;
   const char *base = cmdline;
   for (const char *p = cmdline; p < end; ++p)
     if (*p == '/') base = p + 1;
-  if (base < end) return arena.alloc_string_copy(base, end - base);
-  return nullptr;
+  if (base < end) return interner.intern(base, end - base);
+  return ConstString{nullptr};
 }
 
-// Find top process by a given metric extractor. Name is allocated from arena.
+// Find top process by a given metric extractor. Name is placed in the interner.
 template <class F>
-TopProcess find_top_process(const StateSnapshot &snapshot, BumpArena &arena,
-                            F get_value) {
+TopProcess find_top_process(const StateSnapshot &snapshot,
+                            InternTable &interner, F get_value) {
   TopProcess top = {0, nullptr, 0.0};
   for (uint32_t i = 0; i < snapshot.stats.size; ++i) {
     const double val = get_value(snapshot.derived_stats.data[i]);
     if (val > top.value) {
       top.pid = snapshot.stats.data[i].pid;
       top.value = val;
-      const char *display =
-          cmdline_display_name(snapshot.stats.data[i].cmdline, arena);
-      top.name = display ? display
-                         : arena.alloc_string_copy(snapshot.stats.data[i].comm);
+      ConstString display =
+          cmdline_display_name(snapshot.stats.data[i].cmdline, interner);
+      top.name =
+          display.data ? display : interner.intern(snapshot.stats.data[i].comm);
     }
   }
   return top;

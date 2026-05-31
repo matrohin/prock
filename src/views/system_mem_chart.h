@@ -12,5 +12,6 @@ struct SystemMemChartState {
   int y_axis_fitted;
 };
 
-void system_mem_chart_update(SystemMemChartState &my_state, BumpArena &persistent_arena, const State &state);
+void system_mem_chart_update(SystemMemChartState &my_state,
+                             InternTable &interner, const State &state);
 void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state);

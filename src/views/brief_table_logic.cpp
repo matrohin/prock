@@ -22,7 +22,7 @@ static bool table_line_is_less(const BriefTableColumnId sorted_by,
   case eBriefTableColumnId_Pid:
     return left.pid < right.pid;
   case eBriefTableColumnId_Name:
-    return strcmp(left.name, right.name) < 0;
+    return strcmp(left.name.data, right.name.data) < 0;
   case eBriefTableColumnId_State:
     return left.state < right.state;
   case eBriefTableColumnId_Threads:
@@ -147,14 +147,12 @@ void sort_brief_table_lines(BriefTableState &my_state) { sort_flat(my_state); }
 static void brief_table_line_init(BriefTableLine &new_line,
                                   const ProcessStat &stat,
                                   const ProcessDerivedStat &derived_stat,
-                                  BumpArena &arena) {
+                                  InternTable &interner) {
   new_line.pid = stat.pid;
   new_line.ppid = stat.ppid;
   new_line.cmdline = stat.cmdline ? stat.cmdline : "";
-  const char *display = new_line.cmdline[0] != '\0'
-                            ? cmdline_display_name(new_line.cmdline, arena)
-                            : nullptr;
-  new_line.name = display ? display : stat.comm;
+  ConstString display = cmdline_display_name(new_line.cmdline, interner);
+  new_line.name = display.data ? display : interner.intern(stat.comm);
   new_line.state = stat.state;
   new_line.num_threads = stat.num_threads;
 
@@ -164,7 +162,8 @@ static void brief_table_line_init(BriefTableLine &new_line,
 
 // Rebuilds lines in previous display order (with new processes appended)
 // for stable sorting.
-void brief_table_update(BriefTableState &my_state, State &state) {
+void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
+                        State &state) {
 
   const StateSnapshot &new_snapshot = state.snapshot;
   const Array<BriefTableLine> &old_lines = my_state.lines;
@@ -195,7 +194,7 @@ void brief_table_update(BriefTableState &my_state, State &state) {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[state_index],
                             new_snapshot.derived_stats.data[state_index],
-                            state.snapshot_arena);
+                            string_interner);
 
       new_line.first_seen_ns = old_line.first_seen_ns;
       new_line.death_time_ns = 0;
@@ -204,7 +203,6 @@ void brief_table_update(BriefTableState &my_state, State &state) {
     } else {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       new_line = old_line;
-      new_line.name = state.snapshot_arena.alloc_string_copy(old_line.name);
       new_line.cmdline =
           old_line.cmdline
               ? state.snapshot_arena.alloc_string_copy(old_line.cmdline)
@@ -224,7 +222,7 @@ void brief_table_update(BriefTableState &my_state, State &state) {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[i],
                             new_snapshot.derived_stats.data[i],
-                            state.snapshot_arena);
+                            string_interner);
       new_line.first_seen_ns = new_process_first_seen;
     }
   }

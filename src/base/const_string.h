@@ -7,7 +7,6 @@
 // content always shares one canonical pointer - equality is a pointer compare.
 struct ConstString {
   const char *data;
-  uint32_t len;
 
   bool operator==(const ConstString &o) const { return data == o.data; }
   bool operator!=(const ConstString &o) const { return data != o.data; }
@@ -63,7 +62,7 @@ struct InternTable {
       const Slot &slot = slots[idx];
       if (slot.hash == hash && slot.len == len &&
           memcmp(slot.data, str, len) == 0) {
-        return ConstString{slot.data, slot.len};
+        return ConstString{slot.data};
       }
       idx = (idx + 1) & mask;
     }
@@ -71,7 +70,7 @@ struct InternTable {
     const char *stored = arena->alloc_string_copy(str, len);
     slots[idx] = {stored, len, hash};
     ++count;
-    return ConstString{stored, len};
+    return ConstString{stored};
   }
 
   ConstString intern(const char *str) {
@@ -89,7 +88,8 @@ struct InternTable {
     for (uint32_t i = 0; i < old_cap; ++i) {
       if (!old_slots[i].data) continue;
       uint32_t idx = old_slots[i].hash & mask;
-      while (slots[idx].data) idx = (idx + 1) & mask;
+      while (slots[idx].data)
+        idx = (idx + 1) & mask;
       slots[idx] = old_slots[i];
     }
 

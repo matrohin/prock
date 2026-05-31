@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/const_string.h"
 #include "views/brief_table.h"
 #include "views/common_charts.h"
 #include "views/cpu_chart.h"
@@ -77,6 +78,7 @@ enum FocusedView {
 
 struct ViewState {
   BumpArena arena;
+  InternTable string_interner;
 
   Sync *sync;
   CascadeLayout cascade;

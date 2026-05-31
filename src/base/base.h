@@ -139,7 +139,7 @@ struct BumpArena {
   }
 };
 
-template<class T> T *create_with_arena() {
+template <class T> T *create_with_arena() {
   BumpArena arena = {};
   void *memory = arena.alloc<T>();
   // TODO: ViewState is not zero-initializable, so we need this now:

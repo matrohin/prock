@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/base.h"
+#include "base/const_string.h"
 #include "sources/process_stat.h"
 
 #include "imgui.h"
@@ -27,7 +28,7 @@ enum BriefTableColumnId {
 };
 
 struct BriefTableLine {
-  const char *name;
+  ConstString name;
   long num_threads;
   const char *cmdline;
   ProcessDerivedStat derived_stat;
@@ -61,7 +62,8 @@ struct BriefTableState {
   char type_search[32];    // Current search string
 };
 
-void brief_table_update(BriefTableState &my_state, State &state);
+void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
+                        State &state);
 
 void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state);

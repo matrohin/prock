@@ -35,8 +35,8 @@ void show_top_process_tooltip(const ChartTrack &track,
   if (top.pid > 0) {
     char top_buf[32];
     format_value(top.value, top_buf, sizeof(top_buf), &is_process);
-    ImGui::Text("Top: %s (PID %d) %s", top.name ? top.name : "?", top.pid,
-                top_buf);
+    ImGui::Text("Top: %s (PID %d) %s", top.name.data ? top.name.data : "?",
+                top.pid, top_buf);
   }
   ImGui::EndTooltip();
 }
@@ -70,8 +70,8 @@ void show_top_process_tooltip(const GrowingArray<double> &times,
     char top_buf[32];
     format_value(top.value, top_buf, sizeof(top_buf),
                  const_cast<bool *>(&is_process));
-    ImGui::Text("Top: %s (PID %d) %s", top.name ? top.name : "?", top.pid,
-                top_buf);
+    ImGui::Text("Top: %s (PID %d) %s", top.name.data ? top.name.data : "?",
+                top.pid, top_buf);
   }
   ImGui::EndTooltip();
 }
@@ -116,7 +116,8 @@ inline bool try_initial_y_fit(int y_axis_fitted, uint32_t data_size) {
   return true;
 }
 
-inline void setup_chart(const double last_time, const ImPlotFormatter y_formatter,
+inline void setup_chart(const double last_time,
+                        const ImPlotFormatter y_formatter,
                         const bool auto_follow = true) {
   const ImPlotAxisFlags x_flags =
       auto_follow ? COMMON_X_FLAGS_FOLLOW : COMMON_X_FLAGS_STATIC;
