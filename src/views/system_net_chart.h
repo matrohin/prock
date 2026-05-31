@@ -1,11 +1,13 @@
 #pragma once
 
+#include "base/ring_track.h"
+#include "views/common_charts.h"
+
 struct SystemNetChartState {
-  BumpArena cur_arena;
-  GrowingArray<double> times;
-  GrowingArray<double> recv_mb_per_sec;
-  GrowingArray<double> send_mb_per_sec;
-  uint32_t wasted_bytes;
+  ChartTrack track;
+  ChartData<double> times;
+  ChartData<double> recv_mb_per_sec;
+  ChartData<double> send_mb_per_sec;
   int y_axis_fitted;
 };
 

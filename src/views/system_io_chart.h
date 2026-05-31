@@ -1,11 +1,13 @@
 #pragma once
 
+#include "base/ring_track.h"
+#include "views/common_charts.h"
+
 struct SystemIoChartState {
-  BumpArena cur_arena;
-  GrowingArray<double> times;
-  GrowingArray<double> read_mb_per_sec;  // Read throughput in MB/s
-  GrowingArray<double> write_mb_per_sec; // Write throughput in MB/s
-  uint32_t wasted_bytes;
+  ChartTrack track;
+  ChartData<double> times;
+  ChartData<double> read_mb_per_sec;  // Read throughput in MB/s
+  ChartData<double> write_mb_per_sec; // Write throughput in MB/s
   int y_axis_fitted;
 };
 

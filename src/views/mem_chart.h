@@ -1,11 +1,14 @@
 #pragma once
 
+#include "views/common_charts.h"
+
 struct MemChartData {
   Pid pid;
   ImGuiID dock_id;
   char label[128];
-  GrowingArray<double> times;
-  GrowingArray<double> mem_resident_kb;
+  ChartTrack track;
+  ChartData<double> times;
+  ChartData<double> mem_resident_kb;
   ProcessWindowFlags flags;
   int y_axis_fitted;
 };
@@ -13,7 +16,7 @@ struct MemChartData {
 struct MemChartState {
   BumpArena cur_arena;
   GrowingArray<MemChartData> charts;
-  uint32_t wasted_bytes;
+  uint32_t wasted_bytes; // tracks window-list GrowingArray waste
 };
 
 void mem_chart_update(MemChartState &my_state, const State &state);

@@ -19,24 +19,10 @@ void system_net_chart_update(SystemNetChartState &my_state,
                                state.update_system_time.time_since_epoch())
                                .count();
 
-  *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-      update_at;
-  *my_state.recv_mb_per_sec.emplace_back(
-      my_state.cur_arena, my_state.wasted_bytes) = rate.recv_mb_per_sec;
-  *my_state.send_mb_per_sec.emplace_back(
-      my_state.cur_arena, my_state.wasted_bytes) = rate.send_mb_per_sec;
-  if (my_state.wasted_bytes > SLAB_SIZE) {
-    BumpArena old_arena = my_state.cur_arena;
-    BumpArena new_arena = BumpArena::create();
-
-    my_state.times.realloc(new_arena);
-    my_state.recv_mb_per_sec.realloc(new_arena);
-    my_state.send_mb_per_sec.realloc(new_arena);
-
-    my_state.cur_arena = new_arena;
-    my_state.wasted_bytes = 0;
-    old_arena.destroy();
-  }
+  const uint32_t idx = my_state.track.emplace_back();
+  my_state.times[idx] = update_at;
+  my_state.recv_mb_per_sec[idx] = rate.recv_mb_per_sec;
+  my_state.send_mb_per_sec[idx] = rate.send_mb_per_sec;
 }
 
 void system_net_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
@@ -45,30 +31,29 @@ void system_net_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
   if (ImGui::Begin("System Network", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();
-    const bool should_fit_y = try_initial_y_fit(
-        my_state.y_axis_fitted, my_state.recv_mb_per_sec.size());
+    const bool should_fit_y =
+        try_initial_y_fit(my_state.y_axis_fitted, my_state.track.size);
     if (ImPlot::BeginPlot("##SystemNet", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       if (should_fit_y) {
         my_state.y_axis_fitted++;
       }
-      setup_chart(my_state.times, format_io_rate_mb,
+      setup_chart(my_state.times[my_state.track.last_idx()], format_io_rate_mb,
                   view_state.preferences_state.auto_follow);
 
-      const ImPlotSpec fill = fill_alpha_spec();
-      ImPlot::PlotShaded(TITLE_RECV, my_state.times.data(),
-                         my_state.recv_mb_per_sec.data(),
-                         my_state.recv_mb_per_sec.size(), 0, fill);
-      ImPlot::PlotShaded(TITLE_SEND, my_state.times.data(),
-                         my_state.send_mb_per_sec.data(),
-                         my_state.send_mb_per_sec.size(), 0, fill);
+      ImPlotSpec spec = {};
+      spec.FillAlpha = FILL_ALPHA_LOW;
+      spec.Offset = my_state.track.head;
+      ImPlot::PlotShaded(TITLE_RECV, my_state.times, my_state.recv_mb_per_sec,
+                         my_state.track.size, 0, spec);
+      ImPlot::PlotShaded(TITLE_SEND, my_state.times, my_state.send_mb_per_sec,
+                         my_state.track.size, 0, spec);
 
-      ImPlot::PlotLine(TITLE_RECV, my_state.times.data(),
-                       my_state.recv_mb_per_sec.data(),
-                       my_state.recv_mb_per_sec.size());
-      ImPlot::PlotLine(TITLE_SEND, my_state.times.data(),
-                       my_state.send_mb_per_sec.data(),
-                       my_state.send_mb_per_sec.size());
+      spec.FillAlpha = FILL_ALPHA_FULL;
+      ImPlot::PlotLine(TITLE_RECV, my_state.times, my_state.recv_mb_per_sec,
+                       my_state.track.size, spec);
+      ImPlot::PlotLine(TITLE_SEND, my_state.times, my_state.send_mb_per_sec,
+                       my_state.track.size, spec);
 
       chart_add_tooltip(TITLE_RECV, "receive bytes from /proc/net/dev");
       chart_add_tooltip(TITLE_SEND, "transmit bytes from /proc/net/dev");

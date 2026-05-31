@@ -1,12 +1,15 @@
 #pragma once
 
+#include "views/common_charts.h"
+
 struct IoChartData {
   Pid pid;
   ImGuiID dock_id;
   char label[128];
-  GrowingArray<double> times;
-  GrowingArray<double> read_kb_per_sec;
-  GrowingArray<double> write_kb_per_sec;
+  ChartTrack track;
+  ChartData<double> times;
+  ChartData<double> read_kb_per_sec;
+  ChartData<double> write_kb_per_sec;
   ProcessWindowFlags flags;
   int y_axis_fitted;
 };
@@ -14,7 +17,7 @@ struct IoChartData {
 struct IoChartState {
   BumpArena cur_arena;
   GrowingArray<IoChartData> charts;
-  uint32_t wasted_bytes;
+  uint32_t wasted_bytes; // tracks window-list GrowingArray waste
 };
 
 void io_chart_update(IoChartState &my_state, const State &state);

@@ -18,11 +18,9 @@ void mem_chart_update(MemChartState &my_state, const State &state) {
   common_charts_update(my_state.charts, state,
                        [&](MemChartData &chart, const ProcessStat & /*stat*/,
                            const ProcessDerivedStat &derived) {
-                         *chart.times.emplace_back(my_state.cur_arena,
-                                                   my_state.wasted_bytes) =
-                             update_at;
-                         *chart.mem_resident_kb.emplace_back(
-                             my_state.cur_arena, my_state.wasted_bytes) =
+                         const uint32_t idx = chart.track.emplace_back();
+                         chart.times[idx] = update_at;
+                         chart.mem_resident_kb[idx] =
                              derived.mem_resident_bytes / 1024;
                        });
 
@@ -31,10 +29,6 @@ void mem_chart_update(MemChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (MemChartData &chart : my_state.charts) {
-      chart.times.realloc(new_arena);
-      chart.mem_resident_kb.realloc(new_arena);
-    }
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -62,24 +56,25 @@ void mem_chart_draw(ViewState &view_state) {
 
       push_fit_with_padding();
       const bool should_fit_y =
-          try_initial_y_fit(chart.y_axis_fitted, chart.mem_resident_kb.size());
+          try_initial_y_fit(chart.y_axis_fitted, chart.track.size);
       if (ImPlot::BeginPlot("Memory Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
         if (should_fit_y) {
           chart.y_axis_fitted++;
         }
 
-        setup_chart(chart.times, format_memory_kb,
+        setup_chart(chart.times[chart.track.last_idx()], format_memory_kb,
                     view_state.preferences_state.auto_follow);
 
-        const ImPlotSpec fill = fill_alpha_spec();
-        ImPlot::PlotShaded(TITLE_USED, chart.times.data(),
-                           chart.mem_resident_kb.data(),
-                           chart.mem_resident_kb.size(), 0, fill);
+        ImPlotSpec spec = {};
+        spec.FillAlpha = FILL_ALPHA_LOW;
+        spec.Offset = chart.track.head;
+        ImPlot::PlotShaded(TITLE_USED, chart.times, chart.mem_resident_kb,
+                           chart.track.size, 0, spec);
 
-        ImPlot::PlotLine(TITLE_USED, chart.times.data(),
-                         chart.mem_resident_kb.data(),
-                         chart.mem_resident_kb.size());
+        spec.FillAlpha = FILL_ALPHA_FULL;
+        ImPlot::PlotLine(TITLE_USED, chart.times, chart.mem_resident_kb,
+                         chart.track.size, spec);
 
         chart_add_tooltip(TITLE_USED, "resident from /proc/[pid]/statm");
 
@@ -91,12 +86,8 @@ void mem_chart_draw(ViewState &view_state) {
     process_window_handle_focus(chart.flags);
     ImGui::End();
 
-    // TODO: consider continuing supporting it with a member "opened"
     if (should_be_opened) {
       ++last;
-    } else {
-      my_state.wasted_bytes += chart.times.total_byte_size();
-      my_state.wasted_bytes += chart.mem_resident_kb.total_byte_size();
     }
   }
   my_state.charts.shrink_to(last);

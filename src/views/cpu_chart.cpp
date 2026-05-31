@@ -17,16 +17,19 @@ struct CpuChartScaledData {
   const double *times;
   const double *values;
   double scale;
+  uint32_t head; // ring offset, see ChartTrack
 };
 
 static ImPlotPoint cpu_chart_scaled_getter(const int idx, void *user_data) {
   const auto *data = static_cast<CpuChartScaledData *>(user_data);
-  return ImPlotPoint(data->times[idx], data->values[idx] * data->scale);
+  const uint32_t i = (data->head + static_cast<uint32_t>(idx)) & ChartTrack::MASK;
+  return ImPlotPoint(data->times[i], data->values[i] * data->scale);
 }
 
 static ImPlotPoint cpu_chart_baseline_getter(const int idx, void *user_data) {
   const auto *data = static_cast<CpuChartScaledData *>(user_data);
-  return ImPlotPoint(data->times[idx], 0.0);
+  const uint32_t i = (data->head + static_cast<uint32_t>(idx)) & ChartTrack::MASK;
+  return ImPlotPoint(data->times[i], 0.0);
 }
 
 void cpu_chart_update(CpuChartState &my_state, const State &state) {
@@ -38,13 +41,10 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
       my_state.charts, state,
       [&](CpuChartData &chart, const ProcessStat & /*stat*/,
           const ProcessDerivedStat &derived) {
-        *chart.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-            update_at;
-        *chart.cpu_kernel_perc.emplace_back(my_state.cur_arena,
-                                            my_state.wasted_bytes) =
-            derived.cpu_kernel_perc;
-        *chart.cpu_total_perc.emplace_back(my_state.cur_arena,
-                                           my_state.wasted_bytes) =
+        const uint32_t idx = chart.track.emplace_back();
+        chart.times[idx] = update_at;
+        chart.cpu_kernel_perc[idx] = derived.cpu_kernel_perc;
+        chart.cpu_total_perc[idx] =
             derived.cpu_kernel_perc + derived.cpu_user_perc;
       });
 
@@ -53,11 +53,6 @@ void cpu_chart_update(CpuChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (CpuChartData &chart : my_state.charts) {
-      chart.times.realloc(new_arena);
-      chart.cpu_total_perc.realloc(new_arena);
-      chart.cpu_kernel_perc.realloc(new_arena);
-    }
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -90,33 +85,33 @@ void cpu_chart_draw(ViewState &view_state) {
 
       push_fit_with_padding();
       const bool should_fit_y =
-          try_initial_y_fit(chart.y_axis_fitted, chart.cpu_total_perc.size());
+          try_initial_y_fit(chart.y_axis_fitted, chart.track.size);
       if (ImPlot::BeginPlot("CPU Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
         if (should_fit_y) {
           chart.y_axis_fitted++;
         }
 
-        setup_chart(chart.times, format_percent,
+        setup_chart(chart.times[chart.track.last_idx()], format_percent,
                     view_state.preferences_state.auto_follow);
 
-        CpuChartScaledData total_data = {chart.times.data(),
-                                         chart.cpu_total_perc.data(), scale};
-        CpuChartScaledData kernel_data = {chart.times.data(),
-                                          chart.cpu_kernel_perc.data(), scale};
+        CpuChartScaledData total_data = {chart.times, chart.cpu_total_perc,
+                                         scale, chart.track.head};
+        CpuChartScaledData kernel_data = {chart.times, chart.cpu_kernel_perc,
+                                          scale, chart.track.head};
 
         const ImPlotSpec fill = fill_alpha_spec();
         ImPlot::PlotShadedG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
                             cpu_chart_baseline_getter, &total_data,
-                            chart.cpu_total_perc.size(), fill);
+                            chart.track.size, fill);
         ImPlot::PlotShadedG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
                             cpu_chart_baseline_getter, &kernel_data,
-                            chart.cpu_kernel_perc.size(), fill);
+                            chart.track.size, fill);
 
         ImPlot::PlotLineG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
-                          chart.cpu_kernel_perc.size());
+                          chart.track.size);
         ImPlot::PlotLineG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
-                          chart.cpu_total_perc.size());
+                          chart.track.size);
 
         chart_add_tooltip(TITLE_TOTAL, "utime + stime from /proc/[pid]/stat");
         chart_add_tooltip(TITLE_KERNEL, "stime from /proc/[pid]/stat");
@@ -131,10 +126,6 @@ void cpu_chart_draw(ViewState &view_state) {
 
     if (should_be_opened) {
       ++last;
-    } else {
-      my_state.wasted_bytes += chart.times.total_byte_size();
-      my_state.wasted_bytes += chart.cpu_total_perc.total_byte_size();
-      my_state.wasted_bytes += chart.cpu_kernel_perc.total_byte_size();
     }
   }
   my_state.charts.shrink_to(last);

@@ -1,22 +1,24 @@
 #pragma once
 
 #include "process_window_flags.h"
+#include "views/common_charts.h"
 
 struct CpuChartData {
   Pid pid;
   ImGuiID dock_id;
   ProcessWindowFlags flags;
   char label[128];
-  GrowingArray<double> times;
-  GrowingArray<double> cpu_kernel_perc;
-  GrowingArray<double> cpu_total_perc;
+  ChartTrack track;
+  ChartData<double> times;
+  ChartData<double> cpu_kernel_perc;
+  ChartData<double> cpu_total_perc;
   int y_axis_fitted;
 };
 
 struct CpuChartState {
   BumpArena cur_arena;
   GrowingArray<CpuChartData> charts;
-  uint32_t wasted_bytes;
+  uint32_t wasted_bytes; // tracks window-list GrowingArray waste
 };
 
 void cpu_chart_update(CpuChartState &my_state, const State &state);

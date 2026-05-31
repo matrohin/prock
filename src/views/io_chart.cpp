@@ -19,14 +19,10 @@ void io_chart_update(IoChartState &my_state, const State &state) {
       my_state.charts, state,
       [&](IoChartData &chart, const ProcessStat & /*stat*/,
           const ProcessDerivedStat &derived) {
-        *chart.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-            update_at;
-        *chart.read_kb_per_sec.emplace_back(my_state.cur_arena,
-                                            my_state.wasted_bytes) =
-            derived.io_read_kb_per_sec;
-        *chart.write_kb_per_sec.emplace_back(my_state.cur_arena,
-                                             my_state.wasted_bytes) =
-            derived.io_write_kb_per_sec;
+        const uint32_t idx = chart.track.emplace_back();
+        chart.times[idx] = update_at;
+        chart.read_kb_per_sec[idx] = derived.io_read_kb_per_sec;
+        chart.write_kb_per_sec[idx] = derived.io_write_kb_per_sec;
       });
 
   if (my_state.wasted_bytes > SLAB_SIZE) {
@@ -34,11 +30,6 @@ void io_chart_update(IoChartState &my_state, const State &state) {
     BumpArena new_arena = BumpArena::create();
 
     my_state.charts.realloc(new_arena);
-    for (IoChartData &chart : my_state.charts) {
-      chart.times.realloc(new_arena);
-      chart.read_kb_per_sec.realloc(new_arena);
-      chart.write_kb_per_sec.realloc(new_arena);
-    }
 
     my_state.cur_arena = new_arena;
     my_state.wasted_bytes = 0;
@@ -66,30 +57,29 @@ void io_chart_draw(ViewState &view_state) {
 
       push_fit_with_padding();
       const bool should_fit_y =
-          try_initial_y_fit(chart.y_axis_fitted, chart.read_kb_per_sec.size());
+          try_initial_y_fit(chart.y_axis_fitted, chart.track.size);
       if (ImPlot::BeginPlot("I/O Usage", ImVec2(-1, -1),
                             ImPlotFlags_Crosshairs)) {
         if (should_fit_y) {
           chart.y_axis_fitted++;
         }
 
-        setup_chart(chart.times, format_io_rate_kb,
+        setup_chart(chart.times[chart.track.last_idx()], format_io_rate_kb,
                     view_state.preferences_state.auto_follow);
 
-        const ImPlotSpec fill = fill_alpha_spec();
-        ImPlot::PlotShaded(TITLE_READ, chart.times.data(),
-                           chart.read_kb_per_sec.data(),
-                           chart.read_kb_per_sec.size(), 0, fill);
-        ImPlot::PlotShaded(TITLE_WRITE, chart.times.data(),
-                           chart.write_kb_per_sec.data(),
-                           chart.write_kb_per_sec.size(), 0, fill);
+        ImPlotSpec spec = {};
+        spec.FillAlpha = FILL_ALPHA_LOW;
+        spec.Offset = chart.track.head;
+        ImPlot::PlotShaded(TITLE_READ, chart.times, chart.read_kb_per_sec,
+                           chart.track.size, 0, spec);
+        ImPlot::PlotShaded(TITLE_WRITE, chart.times, chart.write_kb_per_sec,
+                           chart.track.size, 0, spec);
 
-        ImPlot::PlotLine(TITLE_READ, chart.times.data(),
-                         chart.read_kb_per_sec.data(),
-                         chart.read_kb_per_sec.size());
-        ImPlot::PlotLine(TITLE_WRITE, chart.times.data(),
-                         chart.write_kb_per_sec.data(),
-                         chart.write_kb_per_sec.size());
+        spec.FillAlpha = FILL_ALPHA_FULL;
+        ImPlot::PlotLine(TITLE_READ, chart.times, chart.read_kb_per_sec,
+                         chart.track.size, spec);
+        ImPlot::PlotLine(TITLE_WRITE, chart.times, chart.write_kb_per_sec,
+                         chart.track.size, spec);
 
         chart_add_tooltip(TITLE_READ, "read_bytes from /proc/[pid]/io");
         chart_add_tooltip(TITLE_WRITE, "write_bytes from /proc/[pid]/io");
@@ -104,10 +94,6 @@ void io_chart_draw(ViewState &view_state) {
 
     if (should_be_opened) {
       ++last;
-    } else {
-      my_state.wasted_bytes += chart.times.total_byte_size();
-      my_state.wasted_bytes += chart.read_kb_per_sec.total_byte_size();
-      my_state.wasted_bytes += chart.write_kb_per_sec.total_byte_size();
     }
   }
   my_state.charts.shrink_to(last);
