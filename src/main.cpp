@@ -433,7 +433,8 @@ int main(int, char **) {
     }
   }
 
-  ViewState view_state = {};
+  ViewState *view_state_ptr = create_with_arena<ViewState>();
+  ViewState &view_state = *view_state_ptr;
 
   // Register custom settings handler for view options
   ImGuiSettingsHandler handler = {};
@@ -442,7 +443,7 @@ int main(int, char **) {
   handler.ReadOpenFn = view_settings_read_open;
   handler.ReadLineFn = view_settings_read_line;
   handler.WriteAllFn = view_settings_write_all;
-  handler.UserData = &view_state;
+  handler.UserData = view_state_ptr;
   ImGui::GetCurrentContext()->SettingsHandlers.push_back(handler);
 
   if (access(io.IniFilename, F_OK) != 0) {

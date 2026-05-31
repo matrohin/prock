@@ -1,10 +1,12 @@
 #pragma once
 
 #include "base/base.h"
+#include "base/ring_track.h"
 #include "state.h"
 
-#include <algorithm>
-#include <cstring>
+constexpr uint32_t CHART_HISTORY_SIZE = 4096;
+using ChartTrack = RingTrack<CHART_HISTORY_SIZE>;
+template <class T> using ChartData = T[CHART_HISTORY_SIZE];
 
 struct TopProcess {
   Pid pid;

@@ -141,6 +141,15 @@ struct BumpArena {
   }
 };
 
+template<class T> T *create_with_arena() {
+  BumpArena arena = {};
+  void *memory = arena.alloc<T>();
+  // TODO: ViewState is not zero-initializable, so we need this now:
+  T *res = new (memory) T{};
+  res->arena = arena;
+  return res;
+}
+
 template <class T> struct LinkedNode {
   T value;
   LinkedNode *next = nullptr;

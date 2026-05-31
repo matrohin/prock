@@ -12,7 +12,7 @@
 #include "tracy/Tracy.hpp"
 
 void system_mem_chart_update(SystemMemChartState &my_state,
-                             const State &state) {
+                             BumpArena &persistent_arena, const State &state) {
   const StateSnapshot &snapshot = state.snapshot;
   const MemInfo &mem = snapshot.mem_info;
   if (mem.mem_total == 0) {
@@ -25,38 +25,17 @@ void system_mem_chart_update(SystemMemChartState &my_state,
 
   const ulong used_kb = mem.mem_total - mem.mem_available;
 
-  *my_state.times.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-      update_at;
-  *my_state.used.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-      used_kb;
-  *my_state.available.emplace_back(my_state.cur_arena, my_state.wasted_bytes) =
-      mem.mem_available;
+  const uint32_t new_idx = my_state.track.emplace_back();
+  my_state.times[new_idx] = update_at;
+  my_state.used[new_idx] = used_kb;
+  my_state.available[new_idx] = mem.mem_available;
 
   // Find top memory process (store in KB to match system values)
-  *my_state.top_processes.emplace_back(my_state.cur_arena,
-                                       my_state.wasted_bytes) =
-      find_top_process(snapshot, my_state.cur_arena,
-                       [](const ProcessDerivedStat &d) {
-                         return d.mem_resident_bytes / 1024.0;
-                       });
-
-  if (my_state.wasted_bytes > SLAB_SIZE) {
-    BumpArena old_arena = my_state.cur_arena;
-    BumpArena new_arena = BumpArena::create();
-
-    my_state.times.realloc(new_arena);
-    my_state.used.realloc(new_arena);
-    my_state.available.realloc(new_arena);
-    my_state.top_processes.realloc(new_arena);
-    for (uint32_t i = 0; i < my_state.top_processes.size(); ++i) {
-      TopProcess &tp = my_state.top_processes.data()[i];
-      if (tp.name) tp.name = new_arena.alloc_string_copy(tp.name);
-    }
-
-    my_state.cur_arena = new_arena;
-    my_state.wasted_bytes = 0;
-    old_arena.destroy();
-  }
+  // TODO: use string interning here instead of just persisting all values
+  my_state.top_processes[new_idx] = find_top_process(
+      snapshot, persistent_arena, [](const ProcessDerivedStat &d) {
+        return d.mem_resident_bytes / 1024.0;
+      });
 }
 
 void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
@@ -66,33 +45,36 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
   if (ImGui::Begin("System Memory Usage", nullptr, COMMON_VIEW_FLAGS)) {
     push_fit_with_padding();
     const bool should_fit_y =
-        try_initial_y_fit(my_state.y_axis_fitted, my_state.used.size());
+        try_initial_y_fit(my_state.y_axis_fitted, my_state.track.size);
     if (ImPlot::BeginPlot("##SystemMem", ImVec2(-1, -1),
                           ImPlotFlags_Crosshairs)) {
       if (should_fit_y) {
         my_state.y_axis_fitted++;
       }
-      setup_chart(my_state.times, format_memory_kb,
+      setup_chart(my_state.times[my_state.track.last_idx()], format_memory_kb,
                   view_state.preferences_state.auto_follow);
 
-      const ImPlotSpec fill = fill_alpha_spec();
-      ImPlot::PlotShaded(TITLE_USED, my_state.times.data(),
-                         my_state.used.data(), my_state.used.size(), 0, fill);
-      ImPlot::PlotShaded(TITLE_AVAILABLE, my_state.times.data(),
-                         my_state.available.data(), my_state.available.size(),
-                         0, fill);
+      ImPlotSpec spec = {};
+      spec.FillAlpha = FILL_ALPHA_LOW;
+      spec.Offset = my_state.track.head;
+      ImPlot::PlotShaded(TITLE_USED, my_state.times, my_state.used,
+                         my_state.track.size, 0, spec);
+      ImPlot::PlotShaded(TITLE_AVAILABLE, my_state.times, my_state.available,
+                         my_state.track.size, 0, spec);
 
-      ImPlot::PlotLine(TITLE_USED, my_state.times.data(), my_state.used.data(),
-                       my_state.used.size());
-      ImPlot::PlotLine(TITLE_AVAILABLE, my_state.times.data(),
-                       my_state.available.data(), my_state.available.size());
+      spec.FillAlpha = FILL_ALPHA_FULL;
+      ImPlot::PlotLine(TITLE_USED, my_state.times, my_state.used,
+                       my_state.track.size, spec);
+      ImPlot::PlotLine(TITLE_AVAILABLE, my_state.times, my_state.available,
+                       my_state.track.size, spec);
 
       chart_add_tooltip(TITLE_USED,
                         "MemTotal - MemAvailable from /proc/meminfo");
       chart_add_tooltip(TITLE_AVAILABLE, "MemAvailable from /proc/meminfo");
 
-      show_top_process_tooltip(my_state.times, my_state.top_processes, "Used",
-                               my_state.used, format_memory_kb);
+      show_top_process_tooltip(my_state.track, my_state.times, my_state.used,
+                               my_state.top_processes, "Used",
+                               format_memory_kb);
 
       ImPlot::EndPlot();
     }

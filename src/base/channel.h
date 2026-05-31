@@ -1,10 +1,9 @@
 #pragma once
 
-#include "base.h"
-
 #include <atomic>
+#include <cstdint>
 
-template <class T, size_t N> struct Channel {
+template <class T, uint32_t N> struct Channel {
   static constexpr uint32_t MASK = N - 1;
   std::atomic<uint32_t> head;
   std::atomic<uint32_t> tail;

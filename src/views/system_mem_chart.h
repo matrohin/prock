@@ -1,14 +1,16 @@
 #pragma once
 
+#include "base/ring_track.h"
+#include "views/common_charts.h"
+
 struct SystemMemChartState {
-  BumpArena cur_arena;
-  GrowingArray<double> times;
-  GrowingArray<double> used;      // Used memory in KB (Total - Available)
-  GrowingArray<double> available; // Available memory in KB
-  GrowingArray<TopProcess> top_processes;
-  uint32_t wasted_bytes;
+  ChartTrack track;
+  ChartData<double> times;
+  ChartData<double> used;
+  ChartData<double> available;
+  ChartData<TopProcess> top_processes;
   int y_axis_fitted;
 };
 
-void system_mem_chart_update(SystemMemChartState &my_state, const State &state);
+void system_mem_chart_update(SystemMemChartState &my_state, BumpArena &persistent_arena, const State &state);
 void system_mem_chart_draw(FrameContext &ctx, ViewState &view_state);

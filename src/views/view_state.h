@@ -76,6 +76,8 @@ enum FocusedView {
 };
 
 struct ViewState {
+  BumpArena arena;
+
   Sync *sync;
   CascadeLayout cascade;
 
