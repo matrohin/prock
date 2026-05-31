@@ -132,6 +132,7 @@ TEST_CASE("common_charts_sort_added") {
 
 TEST_CASE("brief_table_update") {
   BumpArena arena = BumpArena::create();
+  InternTable interner = InternTable::create(&arena);
 
   SUBCASE("empty old lines - all processes become new lines") {
     // Set up state with new snapshot
@@ -149,7 +150,7 @@ TEST_CASE("brief_table_update") {
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
 
-    brief_table_update(my_state, state);
+    brief_table_update(my_state, interner, state);
 
     // All 3 processes should be in lines, sorted by PID
     REQUIRE(my_state.lines.size == 3);
@@ -179,7 +180,7 @@ TEST_CASE("brief_table_update") {
     my_state.lines.data[0] = {.pid=30, .ppid=0}; // was at index 0, will be at 2
     my_state.lines.data[1] = {.pid=10, .ppid=1}; // was at index 1, will be at 0
 
-    brief_table_update(my_state, state);
+    brief_table_update(my_state, interner, state);
 
     // After update and sort: all 4 processes, sorted by PID ascending
     REQUIRE(my_state.lines.size == 4);
@@ -206,7 +207,7 @@ TEST_CASE("brief_table_update") {
     my_state.sorted_by = eBriefTableColumnId_Name;
     my_state.sorted_order = ImGuiSortDirection_Descending;
 
-    brief_table_update(my_state, state);
+    brief_table_update(my_state, interner, state);
 
     // Sorted by name descending: zzz (20), mmm (30), aaa (10)
     REQUIRE(my_state.lines.size == 3);
@@ -543,6 +544,7 @@ TEST_CASE("sort_brief_table_tree") {
 
 TEST_CASE("brief_table_update dead process handling") {
   BumpArena arena = BumpArena::create();
+  InternTable interner = InternTable::create(&arena);
 
   SUBCASE("dead process retained within 2s window") {
     State state = {};
@@ -562,7 +564,7 @@ TEST_CASE("brief_table_update dead process handling") {
     my_state.lines.data[0] = {.name = "proc_a", .pid = 10, .ppid = 0};
     my_state.lines.data[1] = {.name = "proc_b", .pid = 20, .ppid = 0};
 
-    brief_table_update(my_state, state);
+    brief_table_update(my_state, interner, state);
 
     // Both should still be present (PID 10 just died)
     REQUIRE(my_state.lines.size == 2);
@@ -601,7 +603,7 @@ TEST_CASE("brief_table_update dead process handling") {
             .count();
     my_state.lines.data[1] = {.name = "proc_b", .pid = 20, .ppid = 0};
 
-    brief_table_update(my_state, state);
+    brief_table_update(my_state, interner, state);
 
     // Only PID 20 should remain
     REQUIRE(my_state.lines.size == 1);
@@ -624,7 +626,7 @@ TEST_CASE("brief_table_update dead process handling") {
     my_state.sorted_by = eBriefTableColumnId_Pid;
     my_state.sorted_order = ImGuiSortDirection_Ascending;
 
-    brief_table_update(my_state, state);
+    brief_table_update(my_state, interner, state);
 
     REQUIRE(my_state.lines.size == 1);
     // On first update, first_seen_ns should be 0 (avoids "new" highlight)
@@ -651,7 +653,7 @@ TEST_CASE("brief_table_update dead process handling") {
     my_state.lines.data[0] = {.name = "proc_a", .pid = 10, .ppid = 0};
     my_state.lines.data[0].first_seen_ns = 1000000000; // was seen at 1s
 
-    brief_table_update(my_state, state);
+    brief_table_update(my_state, interner, state);
 
     REQUIRE(my_state.lines.size == 2);
     // PID 10 should keep old first_seen_ns
@@ -939,6 +941,7 @@ TEST_CASE("CpuCoreStat methods") {
 
 TEST_CASE("find_top_process") {
   BumpArena arena = BumpArena::create();
+  InternTable interner = InternTable::create(&arena);
 
   SUBCASE("finds process with highest CPU") {
     SnapshotBuilder builder(arena);
@@ -948,13 +951,13 @@ TEST_CASE("find_top_process") {
     StateSnapshot snapshot = builder.build();
 
     TopProcess top = find_top_process(
-        snapshot, arena, [](const ProcessDerivedStat &d) {
+        snapshot, interner, [](const ProcessDerivedStat &d) {
           return d.cpu_user_perc + d.cpu_kernel_perc;
         });
 
     CHECK(top.pid == 20);
     CHECK(top.value == doctest::Approx(100.0));
-    CHECK(strcmp(top.name, "high_cpu") == 0);
+    CHECK(strcmp(top.name.data,"high_cpu") == 0);
   }
 
   SUBCASE("finds process with highest memory") {
@@ -965,7 +968,7 @@ TEST_CASE("find_top_process") {
     StateSnapshot snapshot = builder.build();
 
     TopProcess top = find_top_process(
-        snapshot, arena,
+        snapshot, interner,
         [](const ProcessDerivedStat &d) { return d.mem_resident_bytes; });
 
     CHECK(top.pid == 20);
@@ -978,7 +981,7 @@ TEST_CASE("find_top_process") {
     snapshot.derived_stats.size = 0;
 
     TopProcess top = find_top_process(
-        snapshot, arena, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
+        snapshot, interner, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
 
     CHECK(top.pid == 0);
     CHECK(top.value == doctest::Approx(0.0));
@@ -990,11 +993,11 @@ TEST_CASE("find_top_process") {
     StateSnapshot snapshot = builder.build();
 
     TopProcess top = find_top_process(
-        snapshot, arena, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
+        snapshot, interner, [](const ProcessDerivedStat &d) { return d.cpu_user_perc; });
 
     CHECK(top.pid == 42);
     CHECK(top.value == doctest::Approx(50.0));
-    CHECK(strcmp(top.name, "only_one") == 0);
+    CHECK(strcmp(top.name.data,"only_one") == 0);
   }
 
   arena.destroy();

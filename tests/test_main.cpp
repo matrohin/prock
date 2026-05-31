@@ -536,14 +536,14 @@ TEST_CASE("InternTable interning") {
 
   SUBCASE("stored value is correct and null-terminated") {
     ConstString a = t.intern("monitor");
-    CHECK(a.len == 7);
+    CHECK(strlen(a.data) == 7);
     CHECK(strcmp(a.data, "monitor") == 0);
-    CHECK(a.data[a.len] == '\0');
+    CHECK(a.data[7] == '\0');
   }
 
   SUBCASE("length-aware: interns a substring") {
     ConstString a = t.intern("hello world", 5);
-    CHECK(a.len == 5);
+    CHECK(strlen(a.data) == 5);
     CHECK(strcmp(a.data, "hello") == 0);
     // The strlen overload of the same prefix dedups to the substring.
     ConstString b = t.intern("hello");
@@ -553,7 +553,7 @@ TEST_CASE("InternTable interning") {
   SUBCASE("empty string round-trips") {
     ConstString a = t.intern("");
     ConstString b = t.intern("");
-    CHECK(a.len == 0);
+    CHECK(strlen(a.data) == 0);
     CHECK(a.data[0] == '\0');
     CHECK(a.data == b.data);
   }
