@@ -3,6 +3,7 @@
 
 #include "base/base.h"
 #include "base/channel.h"
+#include "base/const_string.h"
 
 // ============================================================================
 // BumpArena Tests
@@ -494,4 +495,102 @@ TEST_CASE("Channel with struct type") {
   CHECK(rb.pop(out));
   CHECK(out.x == 3);
   CHECK(out.y == 4);
+}
+
+// ============================================================================
+// InternTable Tests
+// ============================================================================
+
+TEST_CASE("InternTable interning") {
+  BumpArena arena = BumpArena::create();
+  InternTable t = InternTable::create(&arena);
+
+  SUBCASE("same content returns identical pointer") {
+    ConstString a = t.intern("hello");
+    ConstString b = t.intern("hello");
+    CHECK(a.data == b.data);
+    CHECK(a == b);
+  }
+
+  SUBCASE("content-addressed, not pointer-addressed") {
+    char buf1[] = "process";
+    char buf2[] = "process";
+    REQUIRE(buf1 != buf2); // distinct source buffers
+    ConstString a = t.intern(buf1);
+    ConstString b = t.intern(buf2);
+    CHECK(a.data == b.data);
+  }
+
+  SUBCASE("distinct content returns distinct pointers") {
+    ConstString a = t.intern("foo");
+    ConstString b = t.intern("bar");
+    CHECK(a.data != b.data);
+    CHECK(a != b);
+  }
+
+  SUBCASE("same length, different bytes are distinct") {
+    ConstString a = t.intern("abc");
+    ConstString b = t.intern("abd");
+    CHECK(a.data != b.data);
+  }
+
+  SUBCASE("stored value is correct and null-terminated") {
+    ConstString a = t.intern("monitor");
+    CHECK(a.len == 7);
+    CHECK(strcmp(a.data, "monitor") == 0);
+    CHECK(a.data[a.len] == '\0');
+  }
+
+  SUBCASE("length-aware: interns a substring") {
+    ConstString a = t.intern("hello world", 5);
+    CHECK(a.len == 5);
+    CHECK(strcmp(a.data, "hello") == 0);
+    // The strlen overload of the same prefix dedups to the substring.
+    ConstString b = t.intern("hello");
+    CHECK(a.data == b.data);
+  }
+
+  SUBCASE("empty string round-trips") {
+    ConstString a = t.intern("");
+    ConstString b = t.intern("");
+    CHECK(a.len == 0);
+    CHECK(a.data[0] == '\0');
+    CHECK(a.data == b.data);
+  }
+
+  t.destroy();
+  arena.destroy();
+}
+
+TEST_CASE("InternTable growth preserves identity") {
+  BumpArena arena = BumpArena::create();
+  InternTable t = InternTable::create(&arena);
+
+  constexpr int N = 1000; // forces several grows past the 256 initial cap
+  const char *pointers[N];
+
+  // First pass: intern N unique strings, remember their canonical pointers.
+  for (int i = 0; i < N; ++i) {
+    char buf[32];
+    int len = snprintf(buf, sizeof(buf), "str_%d", i);
+    pointers[i] = t.intern(buf, static_cast<uint32_t>(len)).data;
+  }
+
+  CHECK(t.count == N);
+
+  // Second pass: re-interning each must return the exact same pointer, proving
+  // rehash during growth preserved every entry.
+  for (int i = 0; i < N; ++i) {
+    char buf[32];
+    int len = snprintf(buf, sizeof(buf), "str_%d", i);
+    ConstString again = t.intern(buf, static_cast<uint32_t>(len));
+    CHECK(again.data == pointers[i]);
+    CHECK(strcmp(again.data, buf) == 0);
+  }
+
+  // No new entries were added on the second pass.
+  CHECK(t.count == N);
+
+  t.destroy();
+  arena.destroy();
 }
