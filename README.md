@@ -1,18 +1,17 @@
-# Prock
+# Prock - Process Explorer for Linux
 
-Process Explorer for Linux.
-
-The tool is still in development. I need it myself to improve my Linux desktop experience.
+The tool is still in development. I'm improving my Linux desktop experience.
 
 ![Screenshot](./images/screenshot.png)
 
-*My configuration: FiraSansCondensed font, Nord theme.*
+*My configuration: FiraSansCondensed font, Nord theme, 74% Opacity.*
 
 ## Features
 
 ### Process Monitoring
 - Tree view (default) or flat list showing parent-child relationships
 - Filter by name (Ctrl+F) or type to jump to a process
+- Press 'Space' to toggle "Auto-Follow" on all charts
 - Sortable and reorderable columns
 - Copy process info or entire table to clipboard
 - Kill (SIGTERM), force kill (SIGKILL), or kill entire process tree
