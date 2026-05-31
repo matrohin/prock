@@ -544,7 +544,7 @@ int main(int, char **) {
     auto frame_start = SteadyClock::now();
     FrameMarkStart(MAIN_FRAME);
     if (update(state, view_state, sync)) {
-      g_needs_updates = 1;
+      g_needs_updates = 2;
     }
 
     // Sync update period to gathering thread
