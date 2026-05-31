@@ -2000,6 +2000,9 @@ void PlotLineG(const char* label_id, ImPlotGetter getter_func, void* data, int c
     PlotLineEx(label_id, getter, spec);
 }
 
+// prock: unused plotters compiled out to cut build time (see src/imgui_all.cpp).
+#ifndef PROCK_IMPLOT_MINIMAL
+
 //-----------------------------------------------------------------------------
 // [SECTION] PlotScatter
 //-----------------------------------------------------------------------------
@@ -2252,6 +2255,8 @@ void PlotStairsG(const char* label_id, ImPlotGetter getter_func, void* data, int
     return PlotStairsEx(label_id, getter, spec);
 }
 
+#endif // !PROCK_IMPLOT_MINIMAL
+
 //-----------------------------------------------------------------------------
 // [SECTION] PlotShaded
 //-----------------------------------------------------------------------------
@@ -2321,6 +2326,8 @@ void PlotShadedG(const char* label_id, ImPlotGetter getter_func1, void* data1, I
     GetterFuncPtr getter2(getter_func2, data2, count);
     PlotShadedEx(label_id, getter1, getter2, spec);
 }
+
+#ifndef PROCK_IMPLOT_MINIMAL
 
 //-----------------------------------------------------------------------------
 // [SECTION] PlotBars
@@ -3497,6 +3504,8 @@ void PlotDummy(const char* label_id, const ImPlotSpec& spec) {
     if (BeginItem(label_id, spec))
         EndItem();
 }
+
+#endif // !PROCK_IMPLOT_MINIMAL
 
 } // namespace ImPlot
 
