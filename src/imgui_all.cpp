@@ -7,9 +7,10 @@
 
 #include "implot.cpp"
 
-// We only use PlotLine/PlotShaded (+ the getter "G" variants). Compiling out the
-// other plotters (Scatter/Bars/PieChart/Heatmap/Histogram/etc.) roughly halves
-// implot_items.cpp build time. See the PROCK_IMPLOT_MINIMAL guards in that file.
+// We only use PlotLine/PlotShaded (+ the getter "G" variants). Compiling out
+// the other plotters (Scatter/Bars/PieChart/Heatmap/Histogram/etc.) roughly
+// halves implot_items.cpp build time. See the PROCK_IMPLOT_MINIMAL guards in
+// that file.
 #define PROCK_IMPLOT_MINIMAL
 #include "implot_items.cpp"
 

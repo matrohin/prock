@@ -193,9 +193,6 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
   char statm_filename[PATH_BUF_SIZE];
   snprintf(statm_filename, PATH_BUF_SIZE, "/proc/%d/statm", pid);
 
-  char comm_filename[PATH_BUF_SIZE];
-  snprintf(comm_filename, PATH_BUF_SIZE, "/proc/%d/comm", pid);
-
   char io_filename[PATH_BUF_SIZE];
   snprintf(io_filename, PATH_BUF_SIZE, "/proc/%d/io", pid);
 
@@ -208,11 +205,9 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
 
   FILE *stat_file = fopen(stat_filename, "r");
   FILE *statm_file = fopen(statm_filename, "r");
-  FILE *comm_file = fopen(comm_filename, "r");
-  if (!stat_file || !statm_file || !comm_file) {
+  if (!stat_file || !statm_file) {
     if (stat_file) fclose(stat_file);
     if (statm_file) fclose(statm_file);
-    if (comm_file) fclose(comm_file);
     return false;
   }
 
@@ -221,30 +216,23 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
   char statm_buf[128];
 
   if (!fgets(stat_buf, sizeof(stat_buf), stat_file)) {
-    fclose(comm_file);
     fclose(statm_file);
     fclose(stat_file);
     return false;
   }
   if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) {
-    fclose(comm_file);
     fclose(statm_file);
     fclose(stat_file);
     return false;
   }
-  char comm_buf[64];
-  if (fgets(comm_buf, sizeof(comm_buf), comm_file)) {
-    // Strip trailing newline
-    size_t len = strlen(comm_buf);
-    if (len > 0 && comm_buf[len - 1] == '\n') {
-      --len;
-    }
-    stat.comm = arena.alloc_string_copy(comm_buf, len);
-  }
-
-  fclose(comm_file);
   fclose(statm_file);
   fclose(stat_file);
+
+  char comm_buf[64];
+  read_proc_comm(pid, comm_buf, sizeof(comm_buf));
+  if (comm_buf[0] != '\0') {
+    stat.comm = arena.alloc_string_copy(comm_buf);
+  }
 
   if (!parse_proc_stat_bufs(stat_buf, statm_buf, &stat)) {
     return false;

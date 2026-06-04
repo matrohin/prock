@@ -169,16 +169,49 @@ inline void restart_with_pkexec() {
   }
 }
 
+// True for errors a pkexec / privilege escalation could resolve.
+inline bool is_permission_error(const int error_code) {
+  return error_code == EACCES || error_code == EPERM;
+}
+
 // Draw error message with optional pkexec restart button for permission errors
 inline void draw_error_with_pkexec(const int error_code) {
   char error_message[128];
   snprintf(error_message, sizeof(error_message), "Error: %s",
            strerror(error_code));
   ImGui::Text("%s", error_message);
-  if (error_code == EACCES) {
+  if (is_permission_error(error_code)) {
     if (ImGui::Button("Restart with pkexec")) {
       restart_with_pkexec();
     }
+  }
+}
+
+// Modal shown while error_buf is non-empty. Offers a pkexec restart on
+// privilege errors. Clears error_buf when dismissed.
+inline void draw_error_modal(const char *title, char *error_buf,
+                             const int error_code) {
+  if (error_buf[0] != '\0') {
+    ImGui::OpenPopup(title);
+  }
+  if (ImGui::BeginPopupModal(title, nullptr,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+      error_buf[0] = '\0';
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::Text("%s", error_buf);
+    if (is_permission_error(error_code)) {
+      if (ImGui::Button("Restart with pkexec")) {
+        restart_with_pkexec();
+      }
+      ImGui::SameLine();
+    }
+    if (ImGui::Button("OK")) {
+      error_buf[0] = '\0';
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
   }
 }
 

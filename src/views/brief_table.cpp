@@ -516,27 +516,8 @@ static void priority_popup_draw(BriefTableState &my_state) {
 }
 
 static void process_error_popup_draw(BriefTableState &my_state) {
-  if (my_state.process_error[0] != '\0') {
-    ImGui::OpenPopup(PROCESS_ERROR_TITLE);
-  }
-  if (ImGui::BeginPopupModal(PROCESS_ERROR_TITLE, nullptr,
-                             ImGuiWindowFlags_AlwaysAutoResize)) {
-    if (popup_close_on_escape()) {
-      my_state.process_error[0] = '\0';
-    }
-    ImGui::Text("%s", my_state.process_error);
-    if (my_state.process_error_code == EACCES) {
-      if (ImGui::Button("Restart with pkexec")) {
-        restart_with_pkexec();
-      }
-      ImGui::SameLine();
-    }
-    if (ImGui::Button("OK")) {
-      my_state.process_error[0] = '\0';
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::EndPopup();
-  }
+  draw_error_modal(PROCESS_ERROR_TITLE, my_state.process_error,
+                   my_state.process_error_code);
 }
 
 static Array<int> compute_visible_indices(const BriefTableState &my_state,
@@ -912,22 +893,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   priority_popup_draw(my_state);
   process_error_popup_draw(my_state);
 
-  // Show error popup if there's an error
-  if (my_state.kill_error[0] != '\0') {
-    ImGui::OpenPopup(KILL_ERROR_TITLE);
-  }
-  if (ImGui::BeginPopupModal(KILL_ERROR_TITLE, nullptr,
-                             ImGuiWindowFlags_AlwaysAutoResize)) {
-    if (popup_close_on_escape()) {
-      my_state.kill_error[0] = '\0';
-    }
-    ImGui::Text("%s", my_state.kill_error);
-    if (ImGui::Button("OK")) {
-      my_state.kill_error[0] = '\0';
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::EndPopup();
-  }
+  draw_error_modal(KILL_ERROR_TITLE, my_state.kill_error, 0);
 
   ImGui::End();
 }

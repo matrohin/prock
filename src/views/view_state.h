@@ -9,6 +9,7 @@
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
 #include "views/menu_bar.h"
+#include "views/ports_viewer.h"
 #include "views/process_host.h"
 #include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
@@ -98,4 +99,5 @@ struct ViewState {
   ThreadsViewerState threads_viewer_state;
   SmapsViewerState smaps_viewer_state;
   SocketViewerState socket_viewer_state;
+  PortsViewerState ports_viewer_state;
 };

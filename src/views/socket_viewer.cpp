@@ -1,6 +1,7 @@
 #include "socket_viewer.h"
 
 #include "views/common.h"
+#include "views/socket_format.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -11,127 +12,8 @@
 
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
 
-static const char *tcp_state_name(const int state) {
-  switch (state) {
-  case eTcpState_ESTABLISHED:
-    return "ESTABLISHED";
-  case eTcpState_SYN_SENT:
-    return "SYN_SENT";
-  case eTcpState_SYN_RECV:
-    return "SYN_RECV";
-  case eTcpState_FIN_WAIT1:
-    return "FIN_WAIT1";
-  case eTcpState_FIN_WAIT2:
-    return "FIN_WAIT2";
-  case eTcpState_TIME_WAIT:
-    return "TIME_WAIT";
-  case eTcpState_CLOSE:
-    return "CLOSE";
-  case eTcpState_CLOSE_WAIT:
-    return "CLOSE_WAIT";
-  case eTcpState_LAST_ACK:
-    return "LAST_ACK";
-  case eTcpState_LISTEN:
-    return "LISTEN";
-  case eTcpState_CLOSING:
-    return "CLOSING";
-  default:
-    return "UNKNOWN";
-  }
-}
-
-static const char *protocol_name(const int protocol) {
-  switch (protocol) {
-  case eSocketProtocol_TCP:
-    return "TCP";
-  case eSocketProtocol_UDP:
-    return "UDP";
-  case eSocketProtocol_TCP6:
-    return "TCP6";
-  case eSocketProtocol_UDP6:
-    return "UDP6";
-  default:
-    return "???";
-  }
-}
-
-// Format IPv4 address from network byte order
-static void format_ipv4(char *buf, const size_t buf_size, const unsigned int ip,
-                        const unsigned short port) {
-  snprintf(buf, buf_size, "%u.%u.%u.%u:%u", (ip >> 0) & 0xFF, (ip >> 8) & 0xFF,
-           (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
-}
-
-// Format IPv6 address
-static void format_ipv6(char *buf, const size_t buf_size,
-                        const unsigned char *ip, const unsigned short port) {
-  // Check for IPv4-mapped IPv6 (::ffff:x.x.x.x)
-  bool is_v4_mapped = true;
-  for (int i = 0; i < 10; ++i) {
-    if (ip[i] != 0) {
-      is_v4_mapped = false;
-      break;
-    }
-  }
-  if (is_v4_mapped && ip[10] == 0xFF && ip[11] == 0xFF) {
-    snprintf(buf, buf_size, "::ffff:%u.%u.%u.%u:%u", ip[12], ip[13], ip[14],
-             ip[15], port);
-    return;
-  }
-
-  // Check for loopback (::1)
-  bool is_loopback = true;
-  for (int i = 0; i < 15; ++i) {
-    if (ip[i] != 0) {
-      is_loopback = false;
-      break;
-    }
-  }
-  if (is_loopback && ip[15] == 1) {
-    snprintf(buf, buf_size, "::1:%u", port);
-    return;
-  }
-
-  // Check for all zeros (::)
-  bool is_any = true;
-  for (int i = 0; i < 16; ++i) {
-    if (ip[i] != 0) {
-      is_any = false;
-      break;
-    }
-  }
-  if (is_any) {
-    snprintf(buf, buf_size, ":::%u", port);
-    return;
-  }
-
-  // Full IPv6 format (simplified)
-  snprintf(buf, buf_size,
-           "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%"
-           "02x%02x:%u",
-           ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7], ip[8], ip[9],
-           ip[10], ip[11], ip[12], ip[13], ip[14], ip[15], port);
-}
-
-static void format_address(char *buf, const size_t buf_size,
-                           const SocketEntry &sock, const bool local) {
-  const bool is_ipv6 = (sock.protocol == eSocketProtocol_TCP6 ||
-                        sock.protocol == eSocketProtocol_UDP6);
-  if (is_ipv6) {
-    format_ipv6(buf, buf_size, local ? sock.local_ip6 : sock.remote_ip6,
-                local ? sock.local_port : sock.remote_port);
-  } else {
-    format_ipv4(buf, buf_size, local ? sock.local_ip : sock.remote_ip,
-                local ? sock.local_port : sock.remote_port);
-  }
-}
-
 const char *SOCKET_COPY_HEADER =
     "Protocol\tLocal Address\tRemote Address\tState\tRecv-Q\tSend-Q\n";
-
-static bool is_tcp(const SocketProtocol protocol) {
-  return protocol == eSocketProtocol_TCP || protocol == eSocketProtocol_TCP6;
-}
 
 static void copy_socket_row(const SocketEntry &sock) {
   char local_addr[64], remote_addr[64];

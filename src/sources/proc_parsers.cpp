@@ -3,6 +3,23 @@
 #include <cstdio>
 #include <cstring>
 
+void read_proc_comm(const Pid pid, char *out, const size_t out_size) {
+  char path[64];
+  snprintf(path, sizeof(path), "/proc/%d/comm", pid);
+  FILE *f = fopen(path, "r");
+  if (!f) {
+    out[0] = '\0';
+    return;
+  }
+  if (fgets(out, static_cast<int>(out_size), f)) {
+    const size_t len = strlen(out);
+    if (len > 0 && out[len - 1] == '\n') out[len - 1] = '\0';
+  } else {
+    out[0] = '\0';
+  }
+  fclose(f);
+}
+
 bool parse_proc_stat_bufs(const char *stat_buf, const char *statm_buf,
                           ProcessStat *out) {
   const char *after_comm = strrchr(stat_buf, ')');

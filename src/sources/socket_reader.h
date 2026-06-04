@@ -14,5 +14,10 @@ struct SocketResponse {
   Array<SocketEntry> sockets;
 };
 
+// Scan /proc/<pid>/fd and collect the inodes of all socket file descriptors.
+// Sets out_errno when the fd directory cannot be opened.
+Array<unsigned long> collect_socket_inodes(BumpArena &arena, Pid pid,
+                                           int &out_errno);
+
 SocketResponse read_process_sockets(BumpArena &temp_arena,
                                     const SocketRequest &request);

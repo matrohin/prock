@@ -32,6 +32,7 @@ void notify_data_ready(Sync &sync) {
 #include "sources/font_list_reader.cpp"
 #include "sources/library_reader.cpp"
 #include "sources/on_demand_reader.cpp"
+#include "sources/port_scan_reader.cpp"
 #include "sources/proc_parsers.cpp"
 #include "sources/process_stat.cpp"
 #include "sources/smaps_reader.cpp"
@@ -47,9 +48,11 @@ void notify_data_ready(Sync &sync) {
 #include "views/library_viewer.cpp"
 #include "views/mem_chart.cpp"
 #include "views/menu_bar.cpp"
+#include "views/ports_viewer.cpp"
 #include "views/process_host.cpp"
 #include "views/process_window_flags.cpp"
 #include "views/smaps_viewer.cpp"
+#include "views/socket_format.cpp"
 #include "views/socket_viewer.cpp"
 #include "views/system_cpu_chart.cpp"
 #include "views/system_io_chart.cpp"
@@ -345,6 +348,12 @@ Pos=0,317
 Size=1280,375
 Collapsed=0
 DockId=0x00000002,0
+
+[Window][Ports]
+Pos=0,317
+Size=1280,375
+Collapsed=0
+DockId=0x00000002,1
 
 [Docking][Data]
 DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,19 Size=1280,673 Split=Y
