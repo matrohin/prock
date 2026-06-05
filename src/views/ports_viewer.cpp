@@ -72,11 +72,7 @@ static void kill_selected(PortsViewerState &state, Notifications &notifications,
     return;
   }
   const int err = errno;
-  const bool can_escalate = is_permission_error(err);
-  notifications_push_action(notifications, eNotificationSeverity_Error,
-                            can_escalate ? "Restart with pkexec" : nullptr,
-                            can_escalate ? restart_with_pkexec : nullptr,
-                            "Failed to kill %d: %s", pid, strerror(err));
+  notify_error(notifications, err, "Failed to kill %d: %s", pid, strerror(err));
 }
 
 static void copy_all_ports(BumpArena &arena, const PortsViewerState &state) {

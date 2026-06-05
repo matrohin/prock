@@ -1,9 +1,12 @@
 #pragma once
 
 #include "cpu_chart.h"
+#include "notifications.h"
+
 #include "imgui_internal.h"
 
 #include <algorithm>
+#include <cstdarg>
 #include <cstdio>
 #include <unistd.h>
 
@@ -187,32 +190,17 @@ inline void draw_error_with_pkexec(const int error_code) {
   }
 }
 
-// Modal shown while error_buf is non-empty. Offers a pkexec restart on
-// privilege errors. Clears error_buf when dismissed.
-inline void draw_error_modal(const char *title, char *error_buf,
-                             const int error_code) {
-  if (error_buf[0] != '\0') {
-    ImGui::OpenPopup(title);
-  }
-  if (ImGui::BeginPopupModal(title, nullptr,
-                             ImGuiWindowFlags_AlwaysAutoResize)) {
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-      error_buf[0] = '\0';
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::Text("%s", error_buf);
-    if (is_permission_error(error_code)) {
-      if (ImGui::Button("Restart with pkexec")) {
-        restart_with_pkexec();
-      }
-      ImGui::SameLine();
-    }
-    if (ImGui::Button("OK")) {
-      error_buf[0] = '\0';
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::EndPopup();
-  }
+// Push an error notification; on permission errors it offers a pkexec restart.
+inline void notify_error(Notifications &notifications, const int error_code,
+                         const char *fmt, ...) {
+  const bool can_escalate = is_permission_error(error_code);
+  va_list args;
+  va_start(args, fmt);
+  notifications_vpush_action(notifications, eNotificationSeverity_Error,
+                             can_escalate ? "Restart with pkexec" : nullptr,
+                             can_escalate ? restart_with_pkexec : nullptr, fmt,
+                             args);
+  va_end(args);
 }
 
 inline bool popup_close_on_escape() {

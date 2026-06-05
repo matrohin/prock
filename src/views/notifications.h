@@ -3,6 +3,10 @@
 #include "base/ring_track.h"
 #include "base/string.h"
 
+#include <cstdarg>
+
+// Non-modal status messages stacked in the bottom-right corner, IntelliJ-style.
+// They auto-expire so the user keeps working instead of dismissing a popup.
 enum NotificationSeverity {
   eNotificationSeverity_Info,
   eNotificationSeverity_Warning,
@@ -29,13 +33,13 @@ struct Notifications {
 
 struct FrameContext;
 
-void notifications_push(Notifications &notifications,
-                        NotificationSeverity severity, const char *fmt, ...);
-
-void notifications_push_action(Notifications &notifications,
-                               NotificationSeverity severity,
-                               const char *action_label, void (*action_fn)(),
-                               const char *fmt, ...);
+// Push a message with an optional action button. A null action_fn degrades to a
+// plain message; otherwise action_label (copied into the arena) invokes
+// action_fn when clicked. See notify_error in common.h for the usual entry.
+void notifications_vpush_action(Notifications &notifications,
+                                NotificationSeverity severity,
+                                const char *action_label, void (*action_fn)(),
+                                const char *fmt, va_list args);
 
 void notifications_update(Notifications &notifications);
 void notifications_draw(FrameContext &ctx, Notifications &notifications);

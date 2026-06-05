@@ -42,42 +42,23 @@ bool is_expired(const Notification &note, const double now) {
   return now - note.created_time > NOTIFY_TTL_SECONDS;
 }
 
-void push_impl(Notifications &notifications,
-               const NotificationSeverity severity, const String action_label,
-               void (*action_fn)(), const char *fmt, va_list args) {
+} // namespace
+
+void notifications_vpush_action(Notifications &notifications,
+                                const NotificationSeverity severity,
+                                const char *action_label, void (*action_fn)(),
+                                const char *fmt, va_list args) {
   const uint32_t idx = notifications.track.emplace_back();
   Notification &note = notifications.items[idx];
   note = {};
   note.severity = severity;
   note.created_time = ImGui::GetTime();
   note.id = ++notifications.next_id;
-  note.action_label = action_label;
   note.action_fn = action_fn;
+  note.action_label = action_fn
+                          ? String::copy_from(notifications.arena, action_label)
+                          : String{};
   note.text = String::vsprintf(notifications.arena, fmt, args);
-}
-
-} // namespace
-
-void notifications_push(Notifications &notifications,
-                        const NotificationSeverity severity, const char *fmt,
-                        ...) {
-  va_list args;
-  va_start(args, fmt);
-  push_impl(notifications, severity, String{}, nullptr, fmt, args);
-  va_end(args);
-}
-
-void notifications_push_action(Notifications &notifications,
-                               const NotificationSeverity severity,
-                               const char *action_label, void (*action_fn)(),
-                               const char *fmt, ...) {
-  const String label =
-      action_fn ? String::copy_from(notifications.arena, action_label)
-                : String{};
-  va_list args;
-  va_start(args, fmt);
-  push_impl(notifications, severity, label, action_fn, fmt, args);
-  va_end(args);
 }
 
 void notifications_update(Notifications &notifications) {
