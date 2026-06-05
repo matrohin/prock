@@ -19,9 +19,7 @@ struct String {
     return String{dst, len};
   }
 
-  static String sprintf(BumpArena &arena, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
+  static String vsprintf(BumpArena &arena, const char *format, va_list args) {
     va_list args_copy;
     va_copy(args_copy, args);
 
@@ -30,8 +28,15 @@ struct String {
     char *res = static_cast<char *>(arena.alloc_raw(full_size, 1));
     vsnprintf(res, full_size, format, args_copy);
     va_end(args_copy);
-    va_end(args);
     return String{res, static_cast<uint32_t>(size)};
+  }
+
+  static String sprintf(BumpArena &arena, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    String result = vsprintf(arena, format, args);
+    va_end(args);
+    return result;
   }
 
   static String copy_from(BumpArena &arena, const char *from) {

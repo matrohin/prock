@@ -33,8 +33,6 @@ struct PortsViewerState {
   char filter_text[256];
   int selected_index = -1;
 
-  char kill_error[256];
-  int kill_error_code;
   int scan_error_code;
 
   PortsViewerColumnId sorted_by;

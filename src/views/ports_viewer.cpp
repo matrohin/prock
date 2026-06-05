@@ -1,6 +1,7 @@
 #include "ports_viewer.h"
 
 #include "views/common.h"
+#include "views/notifications.h"
 #include "views/socket_format.h"
 #include "views/view_state.h"
 
@@ -12,7 +13,6 @@
 #include <cstring>
 
 static const char *PORTS_TITLE = "Ports";
-static const char *PORTS_KILL_ERROR_TITLE = "Kill Error###PortsKillError";
 
 const char *PORTS_COPY_HEADER =
     "Protocol\tLocal Address\tState\tPID\tProcess\n";
@@ -61,17 +61,22 @@ static void sort_ports(PortsViewerState &state) {
                      });
 }
 
-static void kill_selected(PortsViewerState &state, const int sig) {
+static void kill_selected(PortsViewerState &state, Notifications &notifications,
+                          const int sig) {
   if (state.selected_index < 0 ||
       state.selected_index >= static_cast<int>(state.entries.size)) {
     return;
   }
   const Pid pid = state.entries.data[state.selected_index].pid;
-  if (kill(pid, sig) != 0) {
-    state.kill_error_code = errno;
-    snprintf(state.kill_error, sizeof(state.kill_error),
-             "Failed to kill %d: %s", pid, strerror(errno));
+  if (kill(pid, sig) == 0) {
+    return;
   }
+  const int err = errno;
+  const bool can_escalate = is_permission_error(err);
+  notifications_push_action(notifications, eNotificationSeverity_Error,
+                            can_escalate ? "Restart with pkexec" : nullptr,
+                            can_escalate ? restart_with_pkexec : nullptr,
+                            "Failed to kill %d: %s", pid, strerror(err));
 }
 
 static void copy_all_ports(BumpArena &arena, const PortsViewerState &state) {
@@ -200,10 +205,10 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       if (ImGui::BeginPopupContextItem()) {
         state.selected_index = static_cast<int>(i);
         if (ImGui::MenuItem("Kill Process", "Del")) {
-          kill_selected(state, SIGTERM);
+          kill_selected(state, view_state.notifications, SIGTERM);
         }
         if (ImGui::MenuItem("Force Kill")) {
-          kill_selected(state, SIGKILL);
+          kill_selected(state, view_state.notifications, SIGKILL);
         }
         ImGui::Separator();
         if (ImGui::MenuItem("Copy All")) {
@@ -236,11 +241,8 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   // Honor Delete only when the selected row is visible in the current
   // (possibly filtered) list, so a hidden selection can't be killed blindly.
   if (selected_visible && ImGui::Shortcut(ImGuiKey_Delete)) {
-    kill_selected(state, SIGTERM);
+    kill_selected(state, view_state.notifications, SIGTERM);
   }
-
-  draw_error_modal(PORTS_KILL_ERROR_TITLE, state.kill_error,
-                   state.kill_error_code);
 
   ImGui::End();
 }

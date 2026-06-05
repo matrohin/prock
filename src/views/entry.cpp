@@ -43,6 +43,7 @@ void views_on_demand_update(ViewState &view_state) {
   socket_viewer_update(view_state.socket_viewer_state, *view_state.sync);
   smaps_viewer_update(view_state.smaps_viewer_state, *view_state.sync);
   ports_viewer_update(view_state.ports_viewer_state, *view_state.sync);
+  notifications_update(view_state.notifications);
 }
 
 void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
@@ -63,4 +64,5 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   smaps_viewer_draw(ctx, view_state);
   ports_viewer_draw(ctx, view_state);
   brief_table_draw(ctx, view_state, state);
+  notifications_draw(ctx, view_state.notifications);
 }
