@@ -4,12 +4,7 @@
 #include "sources/sync.h"
 
 #include "imgui.h"
-
-enum EnvironViewerStatus {
-  eEnvironViewerStatus_Loading,
-  eEnvironViewerStatus_Ready,
-  eEnvironViewerStatus_Error,
-};
+#include "on_demand_common.h"
 
 enum EnvironViewerColumnId {
   eEnvironViewerColumnId_Name,
@@ -18,7 +13,7 @@ enum EnvironViewerColumnId {
 };
 
 struct EnvironViewerWindow {
-  EnvironViewerStatus status;
+  OnDemandViewerStatus status;
   Pid pid;
   ImGuiID dock_id;
   char process_name[64];

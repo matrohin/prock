@@ -109,18 +109,16 @@ static void open_all_windows(const Pid pid, const char *comm,
                        comm, dock_id, no_focus);
 }
 
-static void copy_process_row(const BriefTableLine &line) {
+static void copy_process_row(BumpArena &arena, const BriefTableLine &line) {
   const ProcessDerivedStat &derived = line.derived_stat;
-  char buf[4096];
-  snprintf(buf, sizeof(buf),
-           "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
-           PROCESS_COPY_HEADER, line.pid, line.name.data, line.state,
-           line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
-           derived.cpu_user_perc, derived.cpu_kernel_perc,
-           derived.mem_resident_bytes / 1024.0,
-           derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
-           derived.io_write_kb_per_sec, line.cmdline);
-  ImGui::SetClipboardText(buf);
+  const String str = String::sprintf(
+      arena, "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
+      PROCESS_COPY_HEADER, line.pid, line.name.data, line.state,
+      line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
+      derived.cpu_user_perc, derived.cpu_kernel_perc,
+      derived.mem_resident_bytes / 1024.0, derived.mem_virtual_bytes / 1024.0,
+      derived.io_read_kb_per_sec, derived.io_write_kb_per_sec, line.cmdline);
+  ImGui::SetClipboardText(str.data);
 }
 
 static bool get_process_affinity(const Pid pid, uint64_t &mask,
@@ -203,7 +201,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
   if (ImGui::BeginPopupContextItem(label)) {
     my_state.selected_pid = pid;
     if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-      copy_process_row(line);
+      copy_process_row(ctx.frame_arena, line);
     }
     if (ImGui::MenuItem("Copy All")) {
       copy_all_processes(ctx.frame_arena, my_state);
@@ -324,16 +322,17 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
   }
 }
 
-static void compute_filter_visibility(const BriefTableState &my_state,
+static void compute_filter_visibility(FrameContext &ctx,
+                                      const BriefTableState &my_state,
                                       const ImGuiTextFilter &filter) {
   // First pass: mark direct matches
   for (BriefTableLine &line : my_state.lines) {
-    char pid_str[32];
-    snprintf(pid_str, sizeof(pid_str), "%d", line.pid);
+    const String pid_str = String::sprintf(ctx.frame_arena, "%d", line.pid);
 
     FilterResult name_result =
         imgui_filter_pass_filter_ext(filter, line.name.data);
-    FilterResult pid_result = imgui_filter_pass_filter_ext(filter, pid_str);
+    FilterResult pid_result =
+        imgui_filter_pass_filter_ext(filter, pid_str.data);
 
     // Take the "better" result (SubtreeMatch > Match > NoMatch)
     const FilterResult result =
@@ -425,7 +424,8 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
   }
 }
 
-static void affinity_popup_draw(BriefTableState &my_state, const int num_cpus) {
+static void affinity_popup_draw(FrameContext &ctx, BriefTableState &my_state,
+                                const int num_cpus) {
   if (my_state.show_affinity_popup) {
     ImGui::OpenPopup(CPU_AFFINITY_TITLE);
     my_state.show_affinity_popup = false;
@@ -451,9 +451,8 @@ static void affinity_popup_draw(BriefTableState &my_state, const int num_cpus) {
     for (int i = 0; i < num_cpus && i < 64; ++i) {
       if (i > 0 && i % cpus_per_row != 0) ImGui::SameLine();
       bool checked = (my_state.affinity_edit_mask & (1ULL << i)) != 0;
-      char label[16];
-      snprintf(label, sizeof(label), "CPU %d", i);
-      if (ImGui::Checkbox(label, &checked)) {
+      const String label = String::sprintf(ctx.frame_arena, "CPU %d", i);
+      if (ImGui::Checkbox(label.data, &checked)) {
         if (checked)
           my_state.affinity_edit_mask |= (1ULL << i);
         else
@@ -520,7 +519,8 @@ static void process_error_popup_draw(BriefTableState &my_state) {
                    my_state.process_error_code);
 }
 
-static Array<int> compute_visible_indices(const BriefTableState &my_state,
+static Array<int> compute_visible_indices(FrameContext &ctx,
+                                          const BriefTableState &my_state,
                                           const bool filter_active,
                                           BumpArena &arena) {
   Array<int> buf = Array<int>::create(arena, my_state.lines.size);
@@ -568,9 +568,8 @@ static Array<int> compute_visible_indices(const BriefTableState &my_state,
 
       if (has_children) {
         // Check ImGui storage for open/close state (DefaultOpen = 1)
-        char pid_str[32];
-        snprintf(pid_str, sizeof(pid_str), "%d", line.pid);
-        const ImGuiID id = ImGui::GetID(pid_str);
+        const String pid_str = String::sprintf(ctx.frame_arena, "%d", line.pid);
+        const ImGuiID id = ImGui::GetID(pid_str.data);
         const bool is_open = storage->GetInt(id, 1) != 0;
         if (!is_open) {
           collapsed_at_depth = line.tree_depth;
@@ -588,10 +587,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   BriefTableState &my_state = view_state.brief_table_state;
   int focus_scroll_to_idx = -1;
 
-  char title[64];
-  snprintf(title, sizeof(title), "Process Table (%u processes)###ProcessTable",
-           my_state.lines.size);
-  ImGui::Begin(title, nullptr, COMMON_VIEW_FLAGS);
+  const String title = String::sprintf(
+      ctx.frame_arena, "Process Table (%u processes)###ProcessTable",
+      my_state.lines.size);
+  ImGui::Begin(title.data, nullptr, COMMON_VIEW_FLAGS);
 
   const ImGuiTextFilter filter = draw_filter_input(
       "##ProcessFilter", my_state.filter_text, sizeof(my_state.filter_text));
@@ -684,11 +683,11 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
     const bool filter_active = filter.IsActive();
     if (filter_active) {
-      compute_filter_visibility(my_state, filter);
+      compute_filter_visibility(ctx, my_state, filter);
     }
 
     const Array<int> visible_indices =
-        compute_visible_indices(my_state, filter_active, ctx.frame_arena);
+        compute_visible_indices(ctx, my_state, filter_active, ctx.frame_arena);
 
     // Type-to-search: handle keyboard input when table is focused
     if (!ImGui::IsAnyItemActive() &&
@@ -765,8 +764,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         const bool is_new =
             !is_dead && now_ns - line.first_seen_ns < NEW_PROCESS_HIGHLIGHT_NS;
 
-        char label[32];
-        snprintf(label, sizeof(label), "%d", line.pid);
+        const String label = String::sprintf(ctx.frame_arena, "%d", line.pid);
 
         // Set indent for tree mode before TableNextRow
         if (my_state.tree_mode) {
@@ -818,7 +816,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf;
           if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
 
-          ImGui::TreeNodeEx(label, flags);
+          ImGui::TreeNodeEx(label.data, flags);
 
           if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
             my_state.selected_pid = line.pid;
@@ -828,14 +826,14 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             open_all_windows(line.pid, line.name.data, view_state);
           }
           if (is_grayed) ImGui::PopStyleColor();
-          table_context_menu_draw(ctx, view_state, my_state, line, label,
+          table_context_menu_draw(ctx, view_state, my_state, line, label.data,
                                   num_cpus);
           if (is_grayed)
             ImGui::PushStyleColor(
                 ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
           data_columns_draw(line, num_cpus, cpu_per_core);
         } else {
-          if (ImGui::Selectable(label, is_selected,
+          if (ImGui::Selectable(label.data, is_selected,
                                 ImGuiSelectableFlags_SpanAllColumns) ||
               ImGui::IsItemFocused()) {
             my_state.selected_pid = line.pid;
@@ -846,7 +844,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
           }
 
           if (is_grayed) ImGui::PopStyleColor();
-          table_context_menu_draw(ctx, view_state, my_state, line, label,
+          table_context_menu_draw(ctx, view_state, my_state, line, label.data,
                                   num_cpus);
           if (is_grayed)
             ImGui::PushStyleColor(
@@ -872,7 +870,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
       for (BriefTableLine &line : my_state.lines) {
         if (line.pid == my_state.selected_pid) {
-          copy_process_row(line);
+          copy_process_row(ctx.frame_arena, line);
           break;
         }
       }
@@ -889,7 +887,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   }
 
   // Draw popups for affinity/priority controls
-  affinity_popup_draw(my_state, num_cpus);
+  affinity_popup_draw(ctx, my_state, num_cpus);
   priority_popup_draw(my_state);
   process_error_popup_draw(my_state);
 

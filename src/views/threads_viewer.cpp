@@ -89,7 +89,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
-  win->status = eThreadsViewerStatus_Loading;
+  win->status = eOnDemandViewerStatus_Loading;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_tid = -1;
   win->sorted_by = eThreadsViewerColumnId_CpuTotal;
@@ -123,7 +123,7 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       continue;
     }
 
-    win.status = eThreadsViewerStatus_Ready;
+    win.status = eOnDemandViewerStatus_Ready;
 
     // Account for wasted memory from old arrays
     state.wasted_bytes += win.lines.size * sizeof(ThreadLine) +
@@ -219,29 +219,18 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
     }
     ThreadsViewerWindow &win = my_state.windows.data()[last];
 
-    char title[128];
-    if (win.status == eThreadsViewerStatus_Error) {
-      snprintf(title, sizeof(title), "Threads: %s (%d) - Error###Threads%d",
-               win.process_name, win.pid, win.pid);
-    } else if (win.status == eThreadsViewerStatus_Loading) {
-      snprintf(title, sizeof(title),
-               "Threads: %s (%d) - Loading...###Threads%d", win.process_name,
-               win.pid, win.pid);
-    } else {
-      snprintf(title, sizeof(title),
-               "Threads: %s (%d) - %u threads [Live]###Threads%d",
-               win.process_name, win.pid, win.lines.size, win.pid);
-    }
-
+    const String title = on_demand_viewer_title(
+        ctx.frame_arena, win.status, "Threads", "threads [Live]",
+        win.lines.size, win.process_name, win.pid);
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title);
+                                          title.data);
 
     bool should_be_opened = true;
     const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title, &should_be_opened, win_flags)) {
+    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 
-      if (win.status == eThreadsViewerStatus_Error) {
+      if (win.status == eOnDemandViewerStatus_Error) {
         ImGui::TextWrapped("%s", win.error_message);
       } else if (win.lines.size > 0) {
         ImGuiTextFilter filter = draw_filter_input(

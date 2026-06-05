@@ -77,11 +77,10 @@ static void kill_selected(PortsViewerState &state, const int sig) {
 static void copy_all_ports(BumpArena &arena, const PortsViewerState &state) {
   copy_all_to_clipboard(
       arena, state.entries.data, state.entries.size, 128, PORTS_COPY_HEADER,
-      [](char *ptr, size_t rem, const PortEntry &e) {
-        char local_addr[64];
-        format_address(local_addr, sizeof(local_addr), e.sock, true);
+      [&arena](char *ptr, size_t rem, const PortEntry &e) {
+        const String local_addr = format_address(arena, e.sock, true);
         return snprintf(ptr, rem, "%s\t%s\t%s\t%d\t%s\n",
-                        protocol_name(e.sock.protocol), local_addr,
+                        protocol_name(e.sock.protocol), local_addr.data,
                         is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state)
                                                 : "-",
                         e.pid, e.comm);
@@ -172,17 +171,16 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     handle_table_sort_specs(state.sorted_by, state.sorted_order,
                             [&] { sort_ports(state); });
 
-    char local_addr[64];
     for (uint32_t i = 0; i < state.entries.size; ++i) {
       const PortEntry &e = state.entries.data[i];
-      format_address(local_addr, sizeof(local_addr), e.sock, true);
+      const String local_addr = format_address(ctx.frame_arena, e.sock, true);
 
       // Only build the filter string when a filter is active; PassFilter on an
       // empty filter trivially matches every row.
       if (filter_active) {
         char filter_str[320];
         snprintf(filter_str, sizeof(filter_str), "%s %s %s %d %s",
-                 protocol_name(e.sock.protocol), local_addr,
+                 protocol_name(e.sock.protocol), local_addr.data,
                  is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state) : "",
                  e.pid, e.comm);
         if (!filter.PassFilter(filter_str)) continue;
@@ -215,7 +213,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       }
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_LocalAddress);
-      ImGui::TextUnformatted(local_addr);
+      ImGui::TextUnformatted(local_addr.data);
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_State);
       if (is_tcp(e.sock.protocol)) {

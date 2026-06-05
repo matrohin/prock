@@ -4,6 +4,8 @@
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "labels.h"
+#include "on_demand_common.h"
 #include "tracy/Tracy.hpp"
 
 #include <cerrno>
@@ -14,20 +16,16 @@ const char *ENVIRON_COPY_HEADER = "Name\tValue\n";
 
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_ENVIRON = 5;
 
-static void copy_environ_row(const EnvironEntry &entry) {
-  char buf[4400];
-  snprintf(buf, sizeof(buf), "%s%s\t%s", ENVIRON_COPY_HEADER, entry.name.data,
-           entry.value.data);
-  ImGui::SetClipboardText(buf);
+static void copy_environ_row(BumpArena &arena, const EnvironEntry &entry) {
+  const String str = String::sprintf(arena, "%s%s\t%s", ENVIRON_COPY_HEADER,
+                                     entry.name.data, entry.value.data);
+  ImGui::SetClipboardText(str.data);
 }
 
-static void copy_path_segment(const char *start, const char *end) {
-  size_t len = end - start;
-  char buf[PATH_MAX];
-  if (len >= sizeof(buf)) len = sizeof(buf) - 1;
-  memcpy(buf, start, len);
-  buf[len] = '\0';
-  ImGui::SetClipboardText(buf);
+static void copy_path_segment(BumpArena &arena, const char *start,
+                              const char *end) {
+  const String str = String::copy_from(arena, start, end - start);
+  ImGui::SetClipboardText(str.data);
 }
 
 static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
@@ -83,7 +81,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
 
   ++state.updates_since_last_cleanup;
   EnvironViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eEnvironViewerStatus_Loading;
+  win->status = eOnDemandViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
@@ -102,7 +100,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
     for (EnvironViewerWindow &win : state.windows) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
-          win.status = eEnvironViewerStatus_Ready;
+          win.status = eOnDemandViewerStatus_Ready;
           win.entries =
               Array<EnvironEntry>::copy_from(state.cur_arena, response.entries);
           for (uint32_t j = 0; j < win.entries.size; ++j) {
@@ -111,7 +109,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
             dst.value = String::copy_from(state.cur_arena, dst.value);
           }
         } else {
-          win.status = eEnvironViewerStatus_Error;
+          win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
         }
         response.owner_arena.destroy();
@@ -155,37 +153,27 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     EnvironViewerWindow &win = my_state.windows.data()[last];
-    char title[128];
-    if (win.status == eEnvironViewerStatus_Error) {
-      snprintf(title, sizeof(title), "Environment: %s (%d) - Error###Environ%d",
-               win.process_name, win.pid, win.pid);
-    } else if (win.status == eEnvironViewerStatus_Loading) {
-      snprintf(title, sizeof(title),
-               "Environment: %s (%d) - Loading...###Environ%d",
-               win.process_name, win.pid, win.pid);
-    } else {
-      snprintf(title, sizeof(title),
-               "Environment: %s (%d) - %u variables###Environ%d",
-               win.process_name, win.pid, win.entries.size, win.pid);
-    }
+    const String title = on_demand_viewer_title(
+        ctx.frame_arena, win.status, "Environment", "env variables",
+        win.entries.size, win.process_name, win.pid);
 
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title);
+                                          title.data);
 
     bool should_be_opened = true;
     const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title, &should_be_opened, win_flags)) {
+    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 
       // Content area - show previous data while loading, or error message
-      if (win.status == eEnvironViewerStatus_Error) {
+      if (win.status == eOnDemandViewerStatus_Error) {
         draw_error_with_pkexec(win.error_code);
       } else if (win.entries.size > 0) {
         ImGuiTextFilter filter = draw_filter_input(
             "##EnvFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
-          win.status = eEnvironViewerStatus_Loading;
+          win.status = eOnDemandViewerStatus_Loading;
           send_environ_request(*view_state.sync, win.pid);
         }
         if (ImGui::BeginTable("Environment", eEnvironViewerColumnId_Count,
@@ -225,7 +213,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                          ImGuiTreeNodeFlags_AllowOverlap;
               if (parent_selected) flags |= ImGuiTreeNodeFlags_Selected;
 
-              bool is_open = ImGui::TreeNodeEx(entry.name.data, flags);
+              const bool is_open = ImGui::TreeNodeEx(entry.name.data, flags);
 
               // Handle selection on click
               if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
@@ -238,7 +226,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 win.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
                 if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-                  copy_environ_row(entry);
+                  copy_environ_row(ctx.frame_arena, entry);
                 }
                 if (ImGui::MenuItem("Copy All")) {
                   copy_all_environ(ctx.frame_arena, win);
@@ -278,9 +266,9 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                     if (child_selected)
                       leaf_flags |= ImGuiTreeNodeFlags_Selected;
 
-                    char seg_label[32];
-                    snprintf(seg_label, sizeof(seg_label), "[%d]", seg_idx);
-                    ImGui::TreeNodeEx(seg_label, leaf_flags);
+                    const String seg_label =
+                        String::sprintf(ctx.frame_arena, "[%d]", seg_idx);
+                    ImGui::TreeNodeEx(seg_label.data, leaf_flags);
 
                     if (ImGui::IsItemClicked()) {
                       win.selected_index = static_cast<int>(j);
@@ -292,7 +280,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                       win.selected_index = static_cast<int>(j);
                       win.selected_child_index = seg_idx;
                       if (ImGui::MenuItem("Copy Path", "Ctrl+C")) {
-                        copy_path_segment(seg_start, seg_end);
+                        copy_path_segment(ctx.frame_arena, seg_start, seg_end);
                       }
                       ImGui::EndPopup();
                     }
@@ -325,7 +313,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 win.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
                 if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-                  copy_environ_row(entry);
+                  copy_environ_row(ctx.frame_arena, entry);
                 }
                 if (ImGui::MenuItem("Copy All")) {
                   copy_all_environ(ctx.frame_arena, win);
@@ -359,7 +347,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             while (*p || seg_start != p) {
               if (*p == ':' || *p == '\0') {
                 if (seg_idx == win.selected_child_index) {
-                  copy_path_segment(seg_start, p);
+                  copy_path_segment(ctx.frame_arena, seg_start, p);
                   break;
                 }
                 if (*p == '\0') break;
@@ -369,7 +357,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ++p;
             }
           } else {
-            copy_environ_row(entry);
+            copy_environ_row(ctx.frame_arena, entry);
           }
         }
       }

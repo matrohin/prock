@@ -1,5 +1,6 @@
 #include "socket_viewer.h"
 
+#include "base/string.h"
 #include "views/common.h"
 #include "views/socket_format.h"
 #include "views/view_state.h"
@@ -15,35 +16,33 @@ static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
 const char *SOCKET_COPY_HEADER =
     "Protocol\tLocal Address\tRemote Address\tState\tRecv-Q\tSend-Q\n";
 
-static void copy_socket_row(const SocketEntry &sock) {
-  char local_addr[64], remote_addr[64];
-  format_address(local_addr, sizeof(local_addr), sock, true);
-  format_address(remote_addr, sizeof(remote_addr), sock, false);
+static void copy_socket_row(BumpArena &frame_arena, const SocketEntry &sock) {
+  const String local_addr = format_address(frame_arena, sock, true);
+  const String remote_addr = format_address(frame_arena, sock, false);
 
-  char buf[512];
-  snprintf(buf, sizeof(buf), "%s%s\t%s\t%s\t%s\t%u\t%u", SOCKET_COPY_HEADER,
-           protocol_name(sock.protocol), local_addr, remote_addr,
-           is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
-           sock.rx_queue, sock.tx_queue);
-  ImGui::SetClipboardText(buf);
+  const String buf = String::sprintf(
+      frame_arena, "%s%s\t%s\t%s\t%s\t%u\t%u", SOCKET_COPY_HEADER,
+      protocol_name(sock.protocol), local_addr.data, remote_addr.data,
+      is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-", sock.rx_queue,
+      sock.tx_queue);
+  ImGui::SetClipboardText(buf.data);
 }
 
 static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
   copy_all_to_clipboard(
       arena, win.sockets.data, win.sockets.size, 256, SOCKET_COPY_HEADER,
-      [](char *ptr, size_t rem, const SocketEntry &sock) {
-        char local_addr[64], remote_addr[64];
-        format_address(local_addr, sizeof(local_addr), sock, true);
-        format_address(remote_addr, sizeof(remote_addr), sock, false);
-        return snprintf(ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n",
-                        protocol_name(sock.protocol), local_addr, remote_addr,
-                        is_tcp(sock.protocol) ? tcp_state_name(sock.state)
-                                              : "-",
-                        sock.rx_queue, sock.tx_queue);
+      [&arena](char *ptr, size_t rem, const SocketEntry &sock) {
+        const String local_addr = format_address(arena, sock, true);
+        const String remote_addr = format_address(arena, sock, false);
+        return snprintf(
+            ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n", protocol_name(sock.protocol),
+            local_addr.data, remote_addr.data,
+            is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
+            sock.rx_queue, sock.tx_queue);
       });
 }
 
-static void sort_sockets(SocketViewerWindow &win) {
+static void sort_sockets(const SocketViewerWindow &win) {
   sort_bidirectional(win.sockets.data, win.sockets.size, win.sorted_order,
                      [&](const SocketEntry &a, const SocketEntry &b) {
                        switch (win.sorted_by) {
@@ -84,7 +83,7 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const Pid pid,
 
   ++state.updates_since_last_cleanup;
   SocketViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eSocketViewerStatus_Loading;
+  win->status = eOnDemandViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
@@ -102,13 +101,13 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
     for (SocketViewerWindow &win : state.windows) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
-          win.status = eSocketViewerStatus_Ready;
+          win.status = eOnDemandViewerStatus_Ready;
           win.sockets = Array<SocketEntry>::create(state.cur_arena,
                                                    response.sockets.size);
           memcpy(win.sockets.data, response.sockets.data,
                  response.sockets.size * sizeof(SocketEntry));
         } else {
-          win.status = eSocketViewerStatus_Error;
+          win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
         }
         response.owner_arena.destroy();
@@ -143,37 +142,26 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     SocketViewerWindow &win = my_state.windows.data()[last];
-    char title[128];
-    if (win.status == eSocketViewerStatus_Error) {
-      snprintf(title, sizeof(title), "Sockets: %s (%d) - Error###Sockets%d",
-               win.process_name, win.pid, win.pid);
-    } else if (win.status == eSocketViewerStatus_Loading) {
-      snprintf(title, sizeof(title),
-               "Sockets: %s (%d) - Loading...###Sockets%d", win.process_name,
-               win.pid, win.pid);
-    } else {
-      snprintf(title, sizeof(title),
-               "Sockets: %s (%d) - %u sockets###Sockets%d", win.process_name,
-               win.pid, win.sockets.size, win.pid);
-    }
-
+    const String title = on_demand_viewer_title(
+        ctx.frame_arena, win.status, "Sockets", "sockets", win.sockets.size,
+        win.process_name, win.pid);
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title);
+                                          title.data);
 
     bool should_be_opened = true;
     const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title, &should_be_opened, win_flags)) {
+    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 
-      if (win.status == eSocketViewerStatus_Error) {
+      if (win.status == eOnDemandViewerStatus_Error) {
         draw_error_with_pkexec(win.error_code);
       } else if (win.sockets.size > 0 ||
-                 win.status == eSocketViewerStatus_Ready) {
+                 win.status == eOnDemandViewerStatus_Ready) {
         ImGuiTextFilter filter = draw_filter_input(
             "##SockFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
-          win.status = eSocketViewerStatus_Loading;
+          win.status = eOnDemandViewerStatus_Loading;
           send_socket_request(*view_state.sync, win.pid);
         }
 
@@ -203,19 +191,19 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
                                   [&] { sort_sockets(win); });
 
-          char local_addr[64], remote_addr[64];
           for (uint32_t j = 0; j < win.sockets.size; ++j) {
             const SocketEntry &sock = win.sockets.data[j];
 
             // Build filter string
-            format_address(local_addr, sizeof(local_addr), sock, true);
-            format_address(remote_addr, sizeof(remote_addr), sock, false);
+            const String local_addr =
+                format_address(ctx.frame_arena, sock, true);
+            const String remote_addr =
+                format_address(ctx.frame_arena, sock, false);
 
-            char filter_str[256];
-            snprintf(filter_str, sizeof(filter_str), "%s %s %s %s",
-                     protocol_name(sock.protocol), local_addr, remote_addr,
-                     tcp_state_name(sock.state));
-            if (!filter.PassFilter(filter_str)) continue;
+            const String filter_str = String::sprintf(
+                ctx.frame_arena, "%s %s %s %s", protocol_name(sock.protocol),
+                local_addr.data, remote_addr.data, tcp_state_name(sock.state));
+            if (!filter.PassFilter(filter_str.data)) continue;
 
             const bool is_selected =
                 (win.selected_index == static_cast<int>(j));
@@ -232,7 +220,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (ImGui::BeginPopupContextItem()) {
               win.selected_index = static_cast<int>(j);
               if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-                copy_socket_row(sock);
+                copy_socket_row(ctx.frame_arena, sock);
               }
               if (ImGui::MenuItem("Copy All")) {
                 copy_all_sockets(ctx.frame_arena, win);
@@ -242,11 +230,11 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             // Local Address
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_LocalAddress);
-            ImGui::TextUnformatted(local_addr);
+            ImGui::TextUnformatted(local_addr.data);
 
             // Remote Address
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_RemoteAddress);
-            ImGui::TextUnformatted(remote_addr);
+            ImGui::TextUnformatted(remote_addr.data);
 
             // State
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_State);
@@ -279,7 +267,8 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           // Ctrl+C to copy selected row
           if (win.selected_index >= 0 &&
               ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-            copy_socket_row(win.sockets.data[win.selected_index]);
+            copy_socket_row(ctx.frame_arena,
+                            win.sockets.data[win.selected_index]);
           }
         }
       }

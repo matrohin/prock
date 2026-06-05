@@ -24,12 +24,6 @@ enum ThreadsViewerColumnId {
   eThreadsViewerColumnId_Count,
 };
 
-enum ThreadsViewerStatus {
-  eThreadsViewerStatus_Loading,
-  eThreadsViewerStatus_Ready,
-  eThreadsViewerStatus_Error,
-};
-
 struct ThreadsViewerWindow {
   Pid pid;
   char process_name[64];
@@ -37,7 +31,7 @@ struct ThreadsViewerWindow {
   ProcessWindowFlags flags;
 
   // Status tracking
-  ThreadsViewerStatus status;
+  OnDemandViewerStatus status;
   char error_message[128];
   int error_code;
 

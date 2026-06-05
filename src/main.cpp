@@ -48,6 +48,7 @@ void notify_data_ready(Sync &sync) {
 #include "views/library_viewer.cpp"
 #include "views/mem_chart.cpp"
 #include "views/menu_bar.cpp"
+#include "views/on_demand_common.cpp"
 #include "views/ports_viewer.cpp"
 #include "views/process_host.cpp"
 #include "views/process_window_flags.cpp"

@@ -5,12 +5,6 @@
 
 #include "imgui.h"
 
-enum SocketViewerStatus {
-  eSocketViewerStatus_Loading,
-  eSocketViewerStatus_Ready,
-  eSocketViewerStatus_Error,
-};
-
 enum SocketViewerColumnId {
   eSocketViewerColumnId_Protocol,
   eSocketViewerColumnId_LocalAddress,
@@ -22,7 +16,7 @@ enum SocketViewerColumnId {
 };
 
 struct SocketViewerWindow {
-  SocketViewerStatus status;
+  OnDemandViewerStatus status;
   Pid pid;
   ImGuiID dock_id;
   char process_name[64];

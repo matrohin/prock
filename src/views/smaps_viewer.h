@@ -5,12 +5,6 @@
 
 #include "imgui.h"
 
-enum SmapsViewerStatus {
-  eSmapsViewerStatus_Loading,
-  eSmapsViewerStatus_Ready,
-  eSmapsViewerStatus_Error,
-};
-
 enum SmapsViewerColumnId {
   eSmapsViewerColumnId_Address,
   eSmapsViewerColumnId_Perms,
@@ -25,7 +19,7 @@ enum SmapsViewerColumnId {
 };
 
 struct SmapsViewerWindow {
-  SmapsViewerStatus status;
+  OnDemandViewerStatus status;
   Pid pid;
   ImGuiID dock_id;
   char process_name[64];

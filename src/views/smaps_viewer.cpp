@@ -24,14 +24,13 @@ static void format_kb(char *buf, const int size, const ulong kb) {
 const char *SMAPS_COPY_HEADER = "Address\tPerms\tSize(kB)\tRSS(kB)\tPSS(kB)"
                                 "\tPrivate(kB)\tSwap(kB)\tMapping\n";
 
-static void copy_smaps_row(const SmapsSegment &seg) {
-  char buf[512];
-  snprintf(buf, sizeof(buf), "%s%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s",
-           SMAPS_COPY_HEADER, seg.start_addr, seg.end_addr, seg.perms,
-           seg.size_kb, seg.rss_kb, seg.pss_kb,
-           seg.private_clean_kb + seg.private_dirty_kb, seg.swap_kb,
-           segment_label(seg));
-  ImGui::SetClipboardText(buf);
+static void copy_smaps_row(BumpArena &frame_arena, const SmapsSegment &seg) {
+  const String buf = String::sprintf(
+      frame_arena, "%s%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s",
+      SMAPS_COPY_HEADER, seg.start_addr, seg.end_addr, seg.perms, seg.size_kb,
+      seg.rss_kb, seg.pss_kb, seg.private_clean_kb + seg.private_dirty_kb,
+      seg.swap_kb, segment_label(seg));
+  ImGui::SetClipboardText(buf.data);
 }
 
 static void copy_all_smaps(BumpArena &arena, const SmapsViewerWindow &win) {
@@ -88,7 +87,7 @@ void smaps_viewer_request(SmapsViewerState &state, Sync &sync, const Pid pid,
 
   ++state.updates_since_last_cleanup;
   SmapsViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eSmapsViewerStatus_Loading;
+  win->status = eOnDemandViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
@@ -111,7 +110,7 @@ void smaps_viewer_update(SmapsViewerState &state, Sync &sync) {
         }
         win.refresh_pending = false;
         if (response.error_code == 0) {
-          win.status = eSmapsViewerStatus_Ready;
+          win.status = eOnDemandViewerStatus_Ready;
           win.segments = Array<SmapsSegment>::create(state.cur_arena,
                                                      response.segments.size);
           memcpy(win.segments.data, response.segments.data,
@@ -124,7 +123,7 @@ void smaps_viewer_update(SmapsViewerState &state, Sync &sync) {
           }
           sort_segments(win);
         } else {
-          win.status = eSmapsViewerStatus_Error;
+          win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
         }
         response.owner_arena.destroy();
@@ -154,6 +153,11 @@ void smaps_viewer_update(SmapsViewerState &state, Sync &sync) {
   }
 }
 
+static String smaps_filter_str(FrameContext &ctx, const SmapsSegment &seg) {
+  return String::sprintf(ctx.frame_arena, "%s %s", segment_label(seg),
+                         seg.perms);
+}
+
 void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   ZoneScoped;
   SmapsViewerState &my_state = view_state.smaps_viewer_state;
@@ -164,31 +168,21 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     SmapsViewerWindow &win = my_state.windows.data()[last];
-    char title[128];
-    if (win.status == eSmapsViewerStatus_Error) {
-      snprintf(title, sizeof(title), "Memory Maps: %s (%d) - Error###MemMaps%d",
-               win.process_name, win.pid, win.pid);
-    } else if (win.status == eSmapsViewerStatus_Loading) {
-      snprintf(title, sizeof(title),
-               "Memory Maps: %s (%d) - Loading...###MemMaps%d",
-               win.process_name, win.pid, win.pid);
-    } else {
-      snprintf(title, sizeof(title),
-               "Memory Maps: %s (%d) - %u mappings###MemMaps%d",
-               win.process_name, win.pid, win.segments.size, win.pid);
-    }
+    const String title = on_demand_viewer_title(
+        ctx.frame_arena, win.status, "Memory Maps", "memory segments",
+        win.segments.size, win.process_name, win.pid);
 
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title);
+                                          title.data);
 
     bool should_be_opened = true;
     const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title, &should_be_opened, win_flags)) {
+    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 
-      if (win.status == eSmapsViewerStatus_Error) {
+      if (win.status == eOnDemandViewerStatus_Error) {
         draw_error_with_pkexec(win.error_code);
-      } else if (win.status == eSmapsViewerStatus_Ready) {
+      } else if (win.status == eOnDemandViewerStatus_Ready) {
         ImGuiTextFilter filter = draw_filter_input(
             "##SmapsFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
@@ -211,10 +205,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ulong total_swap = 0, total_size = 0;
         uint32_t visible_count = 0;
         for (const SmapsSegment &seg : win.segments) {
-          char filter_str[384];
-          snprintf(filter_str, sizeof(filter_str), "%s %s", segment_label(seg),
-                   seg.perms);
-          if (!filter.PassFilter(filter_str)) continue;
+          const String filter_str = smaps_filter_str(ctx, seg);
+          if (!filter.PassFilter(filter_str.data)) continue;
           total_size += seg.size_kb;
           total_rss += seg.rss_kb;
           total_pss += seg.pss_kb;
@@ -264,10 +256,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           };
           GrowingArray<SmapsGroup> groups = {};
           for (const SmapsSegment &seg : win.segments) {
-            char filter_str[384];
-            snprintf(filter_str, sizeof(filter_str), "%s %s",
-                     segment_label(seg), seg.perms);
-            if (!filter.PassFilter(filter_str)) continue;
+            const String filter_str = smaps_filter_str(ctx, seg);
+            if (!filter.PassFilter(filter_str.data)) continue;
 
             const char *name = segment_label(seg);
             SmapsGroup *found = nullptr;
@@ -372,9 +362,9 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
               // Segs
               ImGui::TableSetColumnIndex(0);
-              char seg_count[16];
-              snprintf(seg_count, sizeof(seg_count), "%u", g.count);
-              if (ImGui::Selectable(seg_count, is_selected,
+              const String seg_count =
+                  String::sprintf(ctx.frame_arena, "%u", g.count);
+              if (ImGui::Selectable(seg_count.data, is_selected,
                                     ImGuiSelectableFlags_SpanAllColumns)) {
                 win.selected_index = static_cast<int>(j);
               }
@@ -449,10 +439,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             for (uint32_t j = 0; j < win.segments.size; ++j) {
               const SmapsSegment &seg = win.segments.data[j];
 
-              char filter_str[384];
-              snprintf(filter_str, sizeof(filter_str), "%s %s",
-                       segment_label(seg), seg.perms);
-              if (!filter.PassFilter(filter_str)) continue;
+              const String filter_str = smaps_filter_str(ctx, seg);
+              if (!filter.PassFilter(filter_str.data)) continue;
 
               const bool is_selected =
                   (win.selected_index == static_cast<int>(j));
@@ -461,10 +449,9 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
               // Address
               ImGui::TableSetColumnIndex(eSmapsViewerColumnId_Address);
-              char addr_buf[32];
-              snprintf(addr_buf, sizeof(addr_buf), "%lx-%lx", seg.start_addr,
-                       seg.end_addr);
-              if (ImGui::Selectable(addr_buf, is_selected,
+              const String addr_buf = String::sprintf(
+                  ctx.frame_arena, "%lx-%lx", seg.start_addr, seg.end_addr);
+              if (ImGui::Selectable(addr_buf.data, is_selected,
                                     ImGuiSelectableFlags_SpanAllColumns)) {
                 win.selected_index = static_cast<int>(j);
               }
@@ -472,7 +459,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (ImGui::BeginPopupContextItem()) {
                 win.selected_index = static_cast<int>(j);
                 if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-                  copy_smaps_row(seg);
+                  copy_smaps_row(ctx.frame_arena, seg);
                 }
                 if (ImGui::MenuItem("Copy All")) {
                   copy_all_smaps(ctx.frame_arena, win);
@@ -517,7 +504,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (win.selected_index >= 0 &&
                 win.selected_index < static_cast<int>(win.segments.size) &&
                 ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-              copy_smaps_row(win.segments.data[win.selected_index]);
+              copy_smaps_row(ctx.frame_arena,
+                             win.segments.data[win.selected_index]);
             }
           }
         }

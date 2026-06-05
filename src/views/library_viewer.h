@@ -5,12 +5,6 @@
 
 #include "imgui.h"
 
-enum LibraryViewerStatus {
-  eLibraryViewerStatus_Loading,
-  eLibraryViewerStatus_Ready,
-  eLibraryViewerStatus_Error,
-};
-
 enum LibraryViewerColumnId {
   eLibraryViewerColumnId_Path,
   eLibraryViewerColumnId_MappedSize,
@@ -19,7 +13,7 @@ enum LibraryViewerColumnId {
 };
 
 struct LibraryViewerWindow {
-  LibraryViewerStatus status;
+  OnDemandViewerStatus status;
   Pid pid;
   ImGuiID dock_id;
   char process_name[64];

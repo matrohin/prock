@@ -14,12 +14,12 @@ const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_LIBRARIES = 5;
 
-static void copy_library_row(const LibraryEntry &lib) {
-  char buf[512];
+static void copy_library_row(BumpArena &frame_arena, const LibraryEntry &lib) {
   const unsigned long mapped_size = lib.addr_end - lib.addr_start;
-  snprintf(buf, sizeof(buf), "%s%s\t%lu\t%ld", LIBRARY_COPY_HEADER,
-           lib.path.data, mapped_size, lib.file_size);
-  ImGui::SetClipboardText(buf);
+  const String str =
+      String::sprintf(frame_arena, "%s%s\t%lu\t%ld", LIBRARY_COPY_HEADER,
+                      lib.path.data, mapped_size, lib.file_size);
+  ImGui::SetClipboardText(str.data);
 }
 
 static void copy_all_libraries(BumpArena &arena,
@@ -66,7 +66,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
 
   ++state.updates_since_last_cleanup;
   LibraryViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eLibraryViewerStatus_Loading;
+  win->status = eOnDemandViewerStatus_Loading;
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
@@ -84,7 +84,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
     for (LibraryViewerWindow &win : state.windows) {
       if (win.pid == response.pid) {
         if (response.error_code == 0) {
-          win.status = eLibraryViewerStatus_Ready;
+          win.status = eOnDemandViewerStatus_Ready;
           win.libraries = Array<LibraryEntry>::copy_from(state.cur_arena,
                                                          response.libraries);
           for (uint32_t j = 0; j < win.libraries.size; ++j) {
@@ -92,7 +92,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
             dst.path = String::copy_from(state.cur_arena, dst.path);
           }
         } else {
-          win.status = eLibraryViewerStatus_Error;
+          win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
         }
         response.owner_arena.destroy();
@@ -134,37 +134,27 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     LibraryViewerWindow &win = my_state.windows.data()[last];
-    char title[128];
-    if (win.status == eLibraryViewerStatus_Error) {
-      snprintf(title, sizeof(title), "Libraries: %s (%d) - Error###Libraries%d",
-               win.process_name, win.pid, win.pid);
-    } else if (win.status == eLibraryViewerStatus_Loading) {
-      snprintf(title, sizeof(title),
-               "Libraries: %s (%d) - Loading...###Libraries%d",
-               win.process_name, win.pid, win.pid);
-    } else {
-      snprintf(title, sizeof(title),
-               "Libraries: %s (%d) - %u libraries###Libraries%d",
-               win.process_name, win.pid, win.libraries.size, win.pid);
-    }
+    const String title = on_demand_viewer_title(
+        ctx.frame_arena, win.status, "Libraries", "libraries",
+        win.libraries.size, win.process_name, win.pid);
 
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title);
+                                          title.data);
 
     bool should_be_opened = true;
     const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title, &should_be_opened, win_flags)) {
+    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
       process_window_check_close(win.flags, should_be_opened);
 
       // Content area - show previous data while loading, or error message
-      if (win.status == eLibraryViewerStatus_Error) {
+      if (win.status == eOnDemandViewerStatus_Error) {
         draw_error_with_pkexec(win.error_code);
       } else if (win.libraries.size > 0) {
         ImGuiTextFilter filter = draw_filter_input(
             "##LibFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
         if (ImGui::Button("Refresh")) {
-          win.status = eLibraryViewerStatus_Loading;
+          win.status = eOnDemandViewerStatus_Loading;
           send_library_request(*view_state.sync, win.pid);
         }
         if (ImGui::BeginTable("Libraries", eLibraryViewerColumnId_Count,
@@ -204,7 +194,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (ImGui::BeginPopupContextItem()) {
               win.selected_index = static_cast<int>(j);
               if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-                copy_library_row(lib);
+                copy_library_row(ctx.frame_arena, lib);
               }
               if (ImGui::MenuItem("Copy All")) {
                 copy_all_libraries(ctx.frame_arena, win);
@@ -244,7 +234,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         // Ctrl+C to copy selected row
         if (win.selected_index >= 0 &&
             ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-          copy_library_row(win.libraries.data[win.selected_index]);
+          copy_library_row(ctx.frame_arena,
+                           win.libraries.data[win.selected_index]);
         }
       }
     }
