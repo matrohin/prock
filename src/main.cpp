@@ -66,6 +66,10 @@ void notify_data_ready(Sync &sync) {
 // Sometimes imgui needs second frame update to handle some UI without delays.
 // Reproducible example: context menus
 static int g_needs_updates = 1;
+
+// Window resizes as framebuffer-size events that do not enqueue any ImGui event
+static bool g_framebuffer_resized = false;
+
 static float g_applied_zoom_scale = 1.0f;
 static Theme g_applied_theme = Theme::Light;
 static float g_monitor_scale = 1.0f;
@@ -75,6 +79,11 @@ static ImGuiStyle g_base_style;
 static void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
                                       int /*action*/, int /*mods*/) {
   g_needs_updates = 2;
+}
+
+static void framebuffer_size_callback(GLFWwindow * /*window*/, int /*width*/,
+                                      int /*height*/) {
+  g_framebuffer_resized = true;
 }
 
 // Scale the alpha of background style colors so the desktop shows through
@@ -500,6 +509,10 @@ int main(int, char **) {
   ImGui_ImplGlfw_InitForOpenGL(window, install_callbacks);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
+  // Redraw while the window is being resized. The ImGui GLFW backend does not
+  // install a framebuffer-size callback, so set ours after init.
+  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
   // Setup state
   State state = {};
   if (!state_init(state)) {
@@ -532,7 +545,10 @@ int main(int, char **) {
         --g_needs_updates;
       } else {
         glfwWaitEvents();
-        if (!sync.data_ready.exchange(false) &&
+        const bool data_ready = sync.data_ready.exchange(false);
+        const bool resized = g_framebuffer_resized;
+        g_framebuffer_resized = false;
+        if (!data_ready && !resized &&
             ImGui::GetCurrentContext()->InputEventsQueue.Size == 0) {
           continue;
         }
