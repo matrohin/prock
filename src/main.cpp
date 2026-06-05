@@ -94,9 +94,11 @@ static void apply_window_opacity(ImGuiStyle &style, float opacity) {
     return;
   }
   static constexpr ImGuiCol bg_colors[] = {
-      ImGuiCol_WindowBg,
-      ImGuiCol_ChildBg,
-      ImGuiCol_MenuBarBg,
+      ImGuiCol_WindowBg,         ImGuiCol_ChildBg,
+      ImGuiCol_MenuBarBg,        ImGuiCol_TitleBg,
+      ImGuiCol_TitleBgActive,    ImGuiCol_TitleBgCollapsed,
+      ImGuiCol_ScrollbarBg,      ImGuiCol_TableHeaderBg,
+      ImGuiCol_TableRowBg,       ImGuiCol_TableRowBgAlt,
   };
   for (const ImGuiCol col : bg_colors) {
     style.Colors[col].w *= opacity;
