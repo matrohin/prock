@@ -247,9 +247,10 @@ static void merge_icon_font(ImGuiIO &io, const float scale) {
 }
 
 // The bundled default UI font: Inter, embedded compressed (see inter_font.h).
-static ImFont *add_inter(ImGuiIO &io, const float size) {
+static ImFont *add_inter(ImGuiIO &io, const float size,
+                         const ImFontConfig *cfg) {
   return io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-      inter_compressed_data_base85, size);
+      inter_compressed_data_base85, size, cfg);
 }
 
 static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
@@ -258,15 +259,23 @@ static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
   // ClearType), keeping horizontal spacing intact. Crisper small UI text than
   // the unhinted stb_truetype default, without the chunkiness of full hinting.
   io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
+
+  // Stop the base font from claiming the icon codepoints: some text fonts (e.g.
+  // Inter) ship Private-Use-Area glyphs that would otherwise shadow the merged
+  // Material Symbols icons. Must outlive this call; the atlas bakes later.
+  static const ImWchar icon_exclude[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
+  ImFontConfig cfg;
+  cfg.GlyphExcludeRanges = icon_exclude;
+
   const float size = BASE_FONT_SIZE * scale;
   if (font_path && font_path[0] != '\0') {
-    if (!io.Fonts->AddFontFromFileTTF(font_path, size)) {
+    if (!io.Fonts->AddFontFromFileTTF(font_path, size, &cfg)) {
       fprintf(stderr, "Failed to load font: %s, using bundled Inter\n",
               font_path);
-      add_inter(io, size);
+      add_inter(io, size, &cfg);
     }
   } else {
-    add_inter(io, size);
+    add_inter(io, size, &cfg);
   }
   merge_icon_font(io, scale);
 }
