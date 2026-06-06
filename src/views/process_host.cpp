@@ -73,7 +73,10 @@ void process_host_draw(ViewState &view_state) {
     view_state.cascade.next_if_new(win.title);
 
     bool should_be_opened = true;
-    if (ImGui::Begin(win.title, &should_be_opened, COMMON_VIEW_FLAGS)) {
+    // NoSavedSettings: per-process windows are keyed by ephemeral pids, so
+    // persisting them only pollutes settings.ini with stale entries.
+    if (ImGui::Begin(win.title, &should_be_opened,
+                     COMMON_VIEW_FLAGS | ImGuiWindowFlags_NoSavedSettings)) {
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)) {
         my_state.focused_pid = win.pid;
       }
