@@ -292,4 +292,7 @@ inline void apply_geometry(ImGuiStyle &style) {
   style.GrabRounding = kRounding;
   style.TabRounding = kRounding;
   style.ScrollbarRounding = kRounding;
+
+  // Slimmer scrollbars (default is 14)
+  style.ScrollbarSize = 11.0f;
 }
