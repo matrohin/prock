@@ -1,8 +1,10 @@
 #include "base/base.h"
 #include "base/channel.h"
+#include "material_symbols_font.h"
 #include "sources/process_stat.h"
 #include "sources/sync.h"
 #include "state.h"
+#include "views/icons.h"
 
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
@@ -224,6 +226,24 @@ static void glfw_error_callback(const int error, const char *description) {
 
 static constexpr float BASE_FONT_SIZE = 15.0f;
 
+// Merge the embedded Material Symbols glyphs onto the last-added base font so
+// context menus can prefix items with icons. GlyphMinAdvanceX makes every icon
+// occupy a fixed gutter, which keeps menu labels aligned (see MenuItemEx).
+static void merge_icon_font(ImGuiIO &io, const float scale) {
+  ImFontConfig cfg;
+  cfg.MergeMode = true;
+  cfg.FontDataOwnedByAtlas = false;
+  cfg.GlyphMinAdvanceX = BASE_FONT_SIZE * scale;
+  // Merged fonts inherit the base font's baseline, but Material Symbols fill the
+  // whole em above it, so they ride ~1px high. Nudge them down; ImGui snaps and
+  // rescales this offset per bake, so it stays centered across zoom levels.
+  cfg.GlyphOffset.y = BASE_FONT_SIZE * scale / 13.0f;
+  static constexpr ImWchar range[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
+  io.Fonts->AddFontFromMemoryTTF(
+      const_cast<unsigned char *>(material_symbols_ttf),
+      material_symbols_ttf_size, BASE_FONT_SIZE * scale, &cfg, range);
+}
+
 static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
   io.Fonts->Clear();
   if (font_path && font_path[0] != '\0') {
@@ -236,6 +256,7 @@ static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
   } else {
     io.Fonts->AddFontDefault();
   }
+  merge_icon_font(io, scale);
 }
 
 static bool state_init(State &state) {

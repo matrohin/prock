@@ -3,6 +3,7 @@
 #include "views/common.h"
 #include "views/cpu_chart.h"
 #include "views/environ_viewer.h"
+#include "views/icons.h"
 #include "views/io_chart.h"
 #include "views/library_viewer.h"
 #include "views/mem_chart.h"
@@ -197,13 +198,14 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
   const Pid pid = line.pid;
   if (ImGui::BeginPopupContextItem(label)) {
     my_state.selected_pid = pid;
-    if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+    if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
       copy_process_row(ctx.frame_arena, line);
     }
     if (ImGui::MenuItem("Copy All")) {
       copy_all_processes(ctx.frame_arena, my_state);
     }
-    if (ImGui::MenuItem("Filter to subtree")) {
+    ImGui::Separator();
+    if (ImGui::MenuItemEx("Filter to subtree", ICON_MD_FILTER_ALT)) {
       uint32_t len = static_cast<uint32_t>(strlen(my_state.filter_text));
       // Append comma if filter not empty
       if (len > 0 && len < sizeof(my_state.filter_text) - 2) {
@@ -213,73 +215,63 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                "+%s", line.name.data);
     }
     ImGui::Separator();
-    if (ImGui::BeginMenu("Charts")) {
-      if (ImGui::MenuItem("CPU Chart")) {
-        cpu_chart_add(view_state.cpu_chart_state, pid, line.name.data);
-      }
-      if (ImGui::MenuItem("Memory Chart")) {
-        mem_chart_add(view_state.mem_chart_state, pid, line.name.data);
-      }
-      if (ImGui::MenuItem("I/O Chart")) {
-        io_chart_add(view_state.io_chart_state, pid, line.name.data);
-      }
-      ImGui::EndMenu();
+    if (ImGui::MenuItemEx("CPU Chart", ICON_MD_SHOW_CHART)) {
+      cpu_chart_add(view_state.cpu_chart_state, pid, line.name.data);
+    }
+    if (ImGui::MenuItem("Memory Chart")) {
+      mem_chart_add(view_state.mem_chart_state, pid, line.name.data);
+    }
+    if (ImGui::MenuItem("I/O Chart")) {
+      io_chart_add(view_state.io_chart_state, pid, line.name.data);
     }
     ImGui::Separator();
-    if (ImGui::BeginMenu("Inspect")) {
-      if (ImGui::MenuItem("Loaded Libraries")) {
-        library_viewer_request(view_state.library_viewer_state,
-                               *view_state.sync, pid, line.name.data);
-      }
-      if (ImGui::MenuItem("Environment")) {
-        environ_viewer_request(view_state.environ_viewer_state,
-                               *view_state.sync, pid, line.name.data);
-      }
-      if (ImGui::MenuItem("Threads")) {
-        threads_viewer_open(view_state.threads_viewer_state, *view_state.sync,
-                            pid, line.name.data);
-      }
-      if (ImGui::MenuItem("Sockets")) {
-        socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
-                              pid, line.name.data);
-      }
-      if (ImGui::MenuItem("Memory Maps")) {
-        smaps_viewer_request(view_state.smaps_viewer_state, *view_state.sync,
+    if (ImGui::MenuItemEx("Loaded Libraries", ICON_MD_SEARCH)) {
+      library_viewer_request(view_state.library_viewer_state, *view_state.sync,
                              pid, line.name.data);
-      }
-      ImGui::EndMenu();
+    }
+    if (ImGui::MenuItem("Environment")) {
+      environ_viewer_request(view_state.environ_viewer_state, *view_state.sync,
+                             pid, line.name.data);
+    }
+    if (ImGui::MenuItem("Threads")) {
+      threads_viewer_open(view_state.threads_viewer_state, *view_state.sync,
+                          pid, line.name.data);
+    }
+    if (ImGui::MenuItem("Sockets")) {
+      socket_viewer_request(view_state.socket_viewer_state, *view_state.sync,
+                            pid, line.name.data);
+    }
+    if (ImGui::MenuItem("Memory Maps")) {
+      smaps_viewer_request(view_state.smaps_viewer_state, *view_state.sync, pid,
+                           line.name.data);
     }
     ImGui::Separator();
-    if (ImGui::BeginMenu("Control")) {
-      if (ImGui::MenuItem("Set Affinity...")) {
-        my_state.control_edit_pid = pid;
-        get_process_affinity(pid, my_state.affinity_edit_mask, num_cpus);
-        my_state.show_affinity_popup = true;
+    if (ImGui::MenuItemEx("Set Affinity...", ICON_MD_SETTINGS)) {
+      my_state.control_edit_pid = pid;
+      get_process_affinity(pid, my_state.affinity_edit_mask, num_cpus);
+      my_state.show_affinity_popup = true;
+    }
+    if (ImGui::MenuItem("Set Priority...")) {
+      my_state.control_edit_pid = pid;
+      my_state.priority_edit_nice = get_process_nice(pid);
+      my_state.show_priority_popup = true;
+    }
+    if (ImGui::MenuItem("Suspend Process")) {
+      if (kill(pid, SIGSTOP) != 0) {
+        const int err = errno;
+        notify_error(view_state.notifications, err, "Failed to suspend %d: %s",
+                     pid, strerror(err));
       }
-      if (ImGui::MenuItem("Set Priority...")) {
-        my_state.control_edit_pid = pid;
-        my_state.priority_edit_nice = get_process_nice(pid);
-        my_state.show_priority_popup = true;
+    }
+    if (ImGui::MenuItem("Resume Process")) {
+      if (kill(pid, SIGCONT) != 0) {
+        const int err = errno;
+        notify_error(view_state.notifications, err, "Failed to resume %d: %s",
+                     pid, strerror(err));
       }
-      ImGui::Separator();
-      if (ImGui::MenuItem("Suspend Process")) {
-        if (kill(pid, SIGSTOP) != 0) {
-          const int err = errno;
-          notify_error(view_state.notifications, err,
-                       "Failed to suspend %d: %s", pid, strerror(err));
-        }
-      }
-      if (ImGui::MenuItem("Resume Process")) {
-        if (kill(pid, SIGCONT) != 0) {
-          const int err = errno;
-          notify_error(view_state.notifications, err, "Failed to resume %d: %s",
-                       pid, strerror(err));
-        }
-      }
-      ImGui::EndMenu();
     }
     ImGui::Separator();
-    if (ImGui::MenuItem("Kill Process", "Del") ||
+    if (ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del") ||
         ImGui::IsKeyPressed(ImGuiKey_Delete)) {
       if (kill(pid, SIGTERM) != 0) {
         const int err = errno;
