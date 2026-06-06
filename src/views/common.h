@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cpu_chart.h"
+#include "icons.h"
 #include "notifications.h"
 
 #include "imgui_internal.h"
@@ -74,6 +75,18 @@ constexpr ImGuiTableFlags COMMON_TABLE_FLAGS =
     ImGuiTableFlags_ScrollY | ImGuiTableFlags_HighlightHoveredColumn;
 
 // Draw a filter input with Ctrl+F keyboard shortcut
+// Refresh toolbar button (icon + label). When `pending`, shows a disabled
+// "Refreshing..." state and returns false (smaps' in-flight reload state).
+inline bool draw_refresh_button(const bool pending = false) {
+  if (pending) {
+    ImGui::BeginDisabled();
+    ImGui::Button(ICON_MD_REFRESH " Refreshing...");
+    ImGui::EndDisabled();
+    return false;
+  }
+  return ImGui::Button(ICON_MD_REFRESH " Refresh");
+}
+
 inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
                                          const size_t filter_text_size) {
   if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
@@ -184,7 +197,7 @@ inline void draw_error_with_pkexec(const int error_code) {
            strerror(error_code));
   ImGui::Text("%s", error_message);
   if (is_permission_error(error_code)) {
-    if (ImGui::Button("Restart with pkexec")) {
+    if (ImGui::Button(ICON_MD_SHIELD " Restart with pkexec")) {
       restart_with_pkexec();
     }
   }

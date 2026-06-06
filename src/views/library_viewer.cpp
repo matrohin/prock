@@ -155,7 +155,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ImGuiTextFilter filter = draw_filter_input(
             "##LibFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
-        if (ImGui::Button("Refresh")) {
+        if (draw_refresh_button()) {
           win.status = eOnDemandViewerStatus_Loading;
           send_library_request(*view_state.sync, win.pid);
         }

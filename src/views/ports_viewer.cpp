@@ -141,13 +141,13 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   const ImGuiTextFilter filter = draw_filter_input(
       "##PortsFilter", state.filter_text, sizeof(state.filter_text));
   ImGui::SameLine();
-  if (ImGui::Button("Refresh")) {
+  if (draw_refresh_button()) {
     state.status = ePortsViewerStatus_Loading;
     send_port_scan_request(*view_state.sync);
   }
   if (state.permission_limited) {
     ImGui::SameLine();
-    if (ImGui::Button("Run with privileges")) {
+    if (ImGui::Button(ICON_MD_SHIELD " Run with privileges")) {
       restart_with_pkexec();
     }
     if (ImGui::IsItemHovered()) {

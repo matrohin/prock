@@ -162,7 +162,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ImGuiTextFilter filter = draw_filter_input(
             "##SockFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
-        if (ImGui::Button("Refresh")) {
+        if (draw_refresh_button()) {
           win.status = eOnDemandViewerStatus_Loading;
           send_socket_request(*view_state.sync, win.pid);
         }

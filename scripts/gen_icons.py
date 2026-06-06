@@ -28,7 +28,7 @@ import urllib.request
 
 # --- Icons to embed (Material Symbols glyph names) -------------------------
 ICONS = ["content_copy", "filter_alt", "show_chart", "search", "settings",
-         "delete"]
+         "delete", "refresh", "shield"]
 
 # Static cut of the variable font requested from the API (axis @ values).
 AXES = "opsz,wght,FILL,GRAD@24,400,0,0"

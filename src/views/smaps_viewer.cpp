@@ -188,17 +188,12 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         ImGuiTextFilter filter = draw_filter_input(
             "##SmapsFilter", win.filter_text, sizeof(win.filter_text));
         ImGui::SameLine();
-        if (win.refresh_pending) {
-          ImGui::BeginDisabled();
-          ImGui::Button("Refreshing...");
-          ImGui::EndDisabled();
-        } else if (ImGui::Button("Refresh")) {
+        if (draw_refresh_button(win.refresh_pending)) {
           win.refresh_pending = true;
           send_smaps_request(*view_state.sync, win.pid);
         }
         ImGui::SameLine();
-        if (ImGui::Button(win.grouped ? "Ungroup" : "Group")) {
-          win.grouped = !win.grouped;
+        if (ImGui::Checkbox("Group", &win.grouped)) {
           win.selected_index = -1;
         }
 
