@@ -110,6 +110,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
             dst.name = String::copy_from(state.cur_arena, dst.name);
             dst.value = String::copy_from(state.cur_arena, dst.value);
           }
+          sort_environ(win);
         } else {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;

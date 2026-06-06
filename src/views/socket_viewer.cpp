@@ -108,6 +108,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
                                                    response.sockets.size);
           memcpy(win.sockets.data, response.sockets.data,
                  response.sockets.size * sizeof(SocketEntry));
+          sort_sockets(win);
         } else {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;

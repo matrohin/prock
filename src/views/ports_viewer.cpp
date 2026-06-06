@@ -24,23 +24,6 @@ static void send_port_scan_request(Sync &sync) {
   sync.on_demand_reader.request_read_cv.notify_one();
 }
 
-void ports_viewer_update(PortsViewerState &state, Sync &sync) {
-  PortScanResponse response;
-  while (sync.on_demand_reader.port_scan_response_queue.pop(response)) {
-    state.cur_arena.destroy();
-    state.cur_arena = BumpArena::create();
-    state.entries =
-        Array<PortEntry>::copy_from(state.cur_arena, response.entries);
-    state.permission_limited = response.permission_limited;
-    state.scan_error_code = response.error_code;
-    state.status = ePortsViewerStatus_Ready;
-    if (state.selected_index >= static_cast<int>(state.entries.size)) {
-      state.selected_index = -1;
-    }
-    response.owner_arena.destroy();
-  }
-}
-
 static void sort_ports(PortsViewerState &state) {
   sort_bidirectional(state.entries.data, state.entries.size, state.sorted_order,
                      [&](const PortEntry &a, const PortEntry &b) {
@@ -61,6 +44,24 @@ static void sort_ports(PortsViewerState &state) {
                          return false;
                        }
                      });
+}
+
+void ports_viewer_update(PortsViewerState &state, Sync &sync) {
+  PortScanResponse response;
+  while (sync.on_demand_reader.port_scan_response_queue.pop(response)) {
+    state.cur_arena.destroy();
+    state.cur_arena = BumpArena::create();
+    state.entries =
+        Array<PortEntry>::copy_from(state.cur_arena, response.entries);
+    state.permission_limited = response.permission_limited;
+    state.scan_error_code = response.error_code;
+    state.status = ePortsViewerStatus_Ready;
+    if (state.selected_index >= static_cast<int>(state.entries.size)) {
+      state.selected_index = -1;
+    }
+    sort_ports(state);
+    response.owner_arena.destroy();
+  }
 }
 
 static void kill_selected(PortsViewerState &state, Notifications &notifications,
@@ -141,7 +142,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   const ImGuiTextFilter filter = draw_filter_input(
       "##PortsFilter", state.filter_text, sizeof(state.filter_text));
   ImGui::SameLine();
-  if (draw_refresh_button()) {
+  if (draw_refresh_button(state.status == ePortsViewerStatus_Loading)) {
     state.status = ePortsViewerStatus_Loading;
     send_port_scan_request(*view_state.sync);
   }
@@ -157,9 +158,6 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     }
   }
 
-  if (state.status == ePortsViewerStatus_Loading) {
-    ImGui::TextDisabled("Scanning...");
-  }
   if (state.scan_error_code != 0) {
     draw_error_with_pkexec(state.scan_error_code);
   }

@@ -93,6 +93,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
             LibraryEntry &dst = win.libraries.data[j];
             dst.path = String::copy_from(state.cur_arena, dst.path);
           }
+          sort_libraries(win);
         } else {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
