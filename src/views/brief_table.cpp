@@ -13,6 +13,7 @@
 #include "views/view_state.h"
 
 #include "state.h"
+#include "themes.h"
 
 #include "imgui_internal.h"
 #include "table_item.h"
@@ -76,11 +77,6 @@ static FilterResult imgui_filter_pass_filter_ext(const ImGuiTextFilter &filter,
   }
   return filter.CountGrep > 0 ? result : FilterResult_Match;
 }
-
-// Highlight colors (RGBA, values 0-255)
-// TODO: Change colors based on dark/light themes
-static constexpr ImU32 NEW_PROCESS_COLOR = IM_COL32(0, 140, 0, 60);
-static constexpr ImU32 DEAD_PROCESS_COLOR = IM_COL32(180, 50, 50, 60);
 
 const char *PROCESS_COPY_HEADER =
     "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
@@ -485,7 +481,7 @@ static void priority_popup_draw(BriefTableState &my_state,
     ImGui::SliderInt("##nice", &my_state.priority_edit_nice, -20, 19);
 
     if (my_state.priority_edit_nice < 0) {
-      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 180, 0, 255));
+      ImGui::PushStyleColor(ImGuiCol_Text, app_color_u32(eAppColor_WarningText));
       ImGui::Text("Warning: Requires root privileges");
       ImGui::PopStyleColor();
     }
@@ -599,7 +595,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       ImGuiTableFlags_ScrollY | ImGuiTableFlags_HighlightHoveredColumn;
   if (ImGui::BeginTable("Processes", eBriefTableColumnId_Count, flags)) {
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("Process ID", ImGuiTableColumnFlags_NoHide, 0.0f,
+    ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_NoHide, 0.0f,
                             eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f,
                             eBriefTableColumnId_Name);
@@ -623,11 +619,11 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_WidthFixed,
                             90.0f, eBriefTableColumnId_CpuKernelPerc);
-    ImGui::TableSetupColumn("RSS (Bytes)",
+    ImGui::TableSetupColumn("RSS",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_WidthFixed,
                             90.0f, eBriefTableColumnId_MemRssBytes);
-    ImGui::TableSetupColumn("Virtual Size (Bytes)",
+    ImGui::TableSetupColumn("Virtual Size",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_WidthFixed,
                             90.0f, eBriefTableColumnId_MemVirtBytes);
@@ -761,9 +757,11 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
         // Apply row highlighting
         if (is_dead) {
-          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, DEAD_PROCESS_COLOR);
+          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                                 app_color_u32(eAppColor_DeadProcessRow));
         } else if (is_new) {
-          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, NEW_PROCESS_COLOR);
+          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                                 app_color_u32(eAppColor_NewProcessRow));
         }
 
         const bool is_selected = my_state.selected_pid == line.pid;

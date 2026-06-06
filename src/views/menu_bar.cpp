@@ -35,8 +35,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       prefs.show_preferences_modal = false;
     }
 
-    ImGui::Text("Appearance");
-    ImGui::Separator();
+    ImGui::SeparatorText("Appearance");
 
     ImGui::SetNextItemWidth(120);
     if (ImGui::BeginCombo("Theme", theme_name(prefs.theme))) {
@@ -75,8 +74,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Text("Font");
-    ImGui::Separator();
+    ImGui::SeparatorText("Font");
 
     const float list_height = 8.0f * ImGui::GetTextLineHeightWithSpacing();
     if (prefs.font_list.size > 0) {
@@ -152,8 +150,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Text("Updates");
-    ImGui::Separator();
+    ImGui::SeparatorText("Updates");
 
     int current_idx = 2; // default to 0.5s
     for (int i = 0; i < 6; i++) {
@@ -171,8 +168,7 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Text("Rendering");
-    ImGui::Separator();
+    ImGui::SeparatorText("Rendering");
 
     ImGui::SetNextItemWidth(120);
     ImGui::SliderInt("FPS Limit", &prefs.target_fps, 15, 144);

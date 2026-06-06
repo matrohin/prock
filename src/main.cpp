@@ -176,7 +176,7 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
         fval < 0.75f ? 0.75f : (fval > 2.0f ? 2.0f : fval);
   } else if (sscanf(line, "WindowOpacity=%f", &fval) == 1) {
     view_state->preferences_state.window_opacity =
-        fval < 0.3f ? 0.3f : (fval > 1.0f ? 1.0f : fval);
+        fval < 0.0f ? 0.0f : (fval > 1.0f ? 1.0f : fval);
   } else if (strncmp(line, "FontPath=", 9) == 0) {
     const char *path = line + 9;
     const uint32_t len = static_cast<uint32_t>(strlen(path));

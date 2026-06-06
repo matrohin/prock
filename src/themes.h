@@ -35,6 +35,36 @@ inline const char *theme_name(const Theme theme) {
   }
 }
 
+enum AppColor : uint8_t {
+  eAppColor_NewProcessRow,  // new-process row highlight (table bg overlay)
+  eAppColor_DeadProcessRow, // dead-process row highlight (table bg overlay)
+  eAppColor_WarningText,    // caution text (e.g. "requires root")
+  eAppColor_COUNT,
+};
+
+// App-specific colors, parallel to ImGuiStyle::Colors. Populated per-theme by
+// apply_theme(); read from views via app_color_u32(). Not scaled by window
+// opacity - these are foreground highlights, not panel backgrounds.
+inline ImVec4 g_app_colors[eAppColor_COUNT];
+
+inline ImU32 app_color_u32(const AppColor idx) {
+  return ImGui::ColorConvertFloat4ToU32(g_app_colors[idx]);
+}
+
+// Shared highlight defaults: the dark set reads on Dark/Classic/Enemymouse, the
+// light set on Light. Themes with their own palette (Nord/OneNord) override
+// these in apply_theme().
+inline void set_app_colors_dark() {
+  g_app_colors[eAppColor_NewProcessRow] = ImVec4(0.24f, 0.75f, 0.24f, 0.22f);
+  g_app_colors[eAppColor_DeadProcessRow] = ImVec4(0.80f, 0.27f, 0.27f, 0.22f);
+  g_app_colors[eAppColor_WarningText] = ImVec4(1.00f, 0.75f, 0.24f, 1.00f);
+}
+inline void set_app_colors_light() {
+  g_app_colors[eAppColor_NewProcessRow] = ImVec4(0.16f, 0.63f, 0.16f, 0.28f);
+  g_app_colors[eAppColor_DeadProcessRow] = ImVec4(0.78f, 0.22f, 0.22f, 0.28f);
+  g_app_colors[eAppColor_WarningText] = ImVec4(0.67f, 0.35f, 0.00f, 1.00f);
+}
+
 inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
   ImGuiStyle *style = dst ? dst : &ImGui::GetStyle();
   ImVec4 *colors = style->Colors;
@@ -42,14 +72,17 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
   switch (theme) {
   case Theme::Dark:
     ImGui::StyleColorsDark(dst);
+    set_app_colors_dark();
     break;
 
   case Theme::Light:
     ImGui::StyleColorsLight(dst);
+    set_app_colors_light();
     break;
 
   case Theme::Classic:
     ImGui::StyleColorsClassic(dst);
+    set_app_colors_dark();
     break;
 
   case Theme::Enemymouse: {
@@ -105,6 +138,7 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.00f, 0.20f, 0.20f, 0.20f);
     colors[ImGuiCol_TextSelectedBg] = ImVec4(0.00f, 1.00f, 1.00f, 0.22f);
     colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.04f, 0.10f, 0.09f, 0.51f);
+    set_app_colors_dark();
     break;
   }
 
@@ -182,6 +216,9 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_TableRowBgAlt] = with_alpha(nord1, 0.30f);
     colors[ImGuiCol_TextSelectedBg] = with_alpha(nord10, 0.35f);
     colors[ImGuiCol_ModalWindowDimBg] = with_alpha(nord0, 0.73f);
+    g_app_colors[eAppColor_NewProcessRow] = with_alpha(nord14, 0.30f);
+    g_app_colors[eAppColor_DeadProcessRow] = with_alpha(nord11, 0.30f);
+    g_app_colors[eAppColor_WarningText] = nord13;
     break;
   }
 
@@ -258,11 +295,15 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_TableRowBgAlt] = wa(on1, 0.40f);
     colors[ImGuiCol_TextSelectedBg] = wa(on_blue2, 0.35f);
     colors[ImGuiCol_ModalWindowDimBg] = wa(on0, 0.73f);
+    g_app_colors[eAppColor_NewProcessRow] = wa(on_green, 0.30f);
+    g_app_colors[eAppColor_DeadProcessRow] = wa(on_red, 0.30f);
+    g_app_colors[eAppColor_WarningText] = on_yellow;
     break;
   }
 
   default:
     ImGui::StyleColorsLight(dst);
+    set_app_colors_light();
     break;
   }
 }
