@@ -94,11 +94,10 @@ static void apply_window_opacity(ImGuiStyle &style, float opacity) {
     return;
   }
   static constexpr ImGuiCol bg_colors[] = {
-      ImGuiCol_WindowBg,         ImGuiCol_ChildBg,
-      ImGuiCol_MenuBarBg,        ImGuiCol_TitleBg,
-      ImGuiCol_TitleBgActive,    ImGuiCol_TitleBgCollapsed,
-      ImGuiCol_ScrollbarBg,      ImGuiCol_TableHeaderBg,
-      ImGuiCol_TableRowBg,       ImGuiCol_TableRowBgAlt,
+      ImGuiCol_WindowBg,      ImGuiCol_ChildBg,       ImGuiCol_MenuBarBg,
+      ImGuiCol_TitleBg,       ImGuiCol_TitleBgActive, ImGuiCol_TitleBgCollapsed,
+      ImGuiCol_ScrollbarBg,   ImGuiCol_TableHeaderBg, ImGuiCol_TableRowBg,
+      ImGuiCol_TableRowBgAlt,
   };
   for (const ImGuiCol col : bg_colors) {
     style.Colors[col].w *= opacity;
@@ -156,6 +155,8 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     view_state->preferences_state.cpu_per_core = (val != 0);
   } else if (sscanf(line, "Stacked=%d", &val) == 1) {
     view_state->system_cpu_chart_state.stacked = (val != 0);
+  } else if (sscanf(line, "ShowMenuOnAlt=%d", &val) == 1) {
+    view_state->preferences_state.show_menu_on_alt = (val != 0);
   } else if (sscanf(line, "Theme=%d", &val) == 1) {
     if (val >= 0 && val < static_cast<int>(Theme::COUNT)) {
       view_state->preferences_state.theme = static_cast<Theme>(val);
@@ -195,6 +196,9 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   buf->appendf("[%s][Preferences]\n", handler->TypeName);
   buf->appendf("CpuPerCore=%d\n",
                static_cast<int>(view_state->preferences_state.cpu_per_core));
+  buf->appendf(
+      "ShowMenuOnAlt=%d\n",
+      static_cast<int>(view_state->preferences_state.show_menu_on_alt));
   buf->appendf("Theme=%d\n",
                static_cast<int>(view_state->preferences_state.theme));
   buf->appendf("UpdatePeriod=%.2f\n",
@@ -278,11 +282,15 @@ static void draw_main_window(const ImGuiIO &io, const State &state,
   ImGui::SetNextWindowSize(io.DisplaySize, ImGuiCond_Always);
   ImGui::SetNextWindowPos(ImVec2(0.0, 0.0), ImGuiCond_Always);
 
-  constexpr ImGuiWindowFlags main_window_flags =
+  ImGuiWindowFlags main_window_flags =
       ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
       ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar;
+  if (view_state.preferences_state.show_menu_on_alt &&
+      !ImGui::IsKeyDown(ImGuiKey_LeftAlt)) {
+    main_window_flags &= ~ImGuiWindowFlags_MenuBar;
+  }
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -494,7 +502,8 @@ int main(int, char **) {
   }
 
   // Build the unscaled base style: theme colors + shared geometry. The live
-  // style is derived from this on every rebuild, scaled by monitor scale * zoom.
+  // style is derived from this on every rebuild, scaled by monitor scale *
+  // zoom.
   apply_theme(view_state.preferences_state.theme, &g_base_style);
   apply_geometry(g_base_style);
   g_base_style.AntiAliasedLines = true;

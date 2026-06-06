@@ -220,7 +220,9 @@ void menu_bar_update(ViewState &view_state) {
 
 void menu_bar_draw(ViewState &view_state) {
   ZoneScoped;
-  if (ImGui::BeginMenuBar()) {
+  if ((!view_state.preferences_state.show_menu_on_alt ||
+       ImGui::IsKeyDown(ImGuiKey_LeftAlt)) &&
+      ImGui::BeginMenuBar()) {
     if (ImGui::BeginMenu("View")) {
       ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
 
@@ -237,6 +239,12 @@ void menu_bar_draw(ViewState &view_state) {
         view_state.system_cpu_chart_state.stacked =
             !view_state.system_cpu_chart_state.stacked;
         view_state.system_cpu_chart_state.y_axis_fitted = 0;
+      }
+
+      if (ImGui::MenuItem("Show menu bar on Alt", nullptr,
+                          view_state.preferences_state.show_menu_on_alt)) {
+        view_state.preferences_state.show_menu_on_alt =
+            !view_state.preferences_state.show_menu_on_alt;
       }
 
       if (view_state.process_host_state.focused_pid > 0) {
