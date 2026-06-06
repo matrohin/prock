@@ -87,6 +87,23 @@ inline bool draw_refresh_button(const bool pending = false) {
   return ImGui::Button(ICON_MD_REFRESH " Refresh");
 }
 
+// Draw a muted "Updated Xs ago" on the current toolbar line. `last_updated` is
+// an ImGui::GetTime() timestamp captured when data last arrived; 0 means never.
+inline void draw_last_updated(const double last_updated) {
+  if (last_updated <= 0.0) return;
+  const double secs = ImGui::GetTime() - last_updated;
+  ImGui::SameLine();
+  if (secs < 1.0) {
+    ImGui::TextDisabled("Updated just now");
+  } else if (secs < 60.0) {
+    ImGui::TextDisabled("Updated %.0fs ago", secs);
+  } else if (secs < 3600.0) {
+    ImGui::TextDisabled("Updated %.0fm ago", secs / 60.0);
+  } else {
+    ImGui::TextDisabled("Updated %.0fh ago", secs / 3600.0);
+  }
+}
+
 inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
                                          const size_t filter_text_size) {
   if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {

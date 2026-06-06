@@ -60,6 +60,7 @@ void ports_viewer_update(PortsViewerState &state, Sync &sync) {
       state.selected_index = -1;
     }
     sort_ports(state);
+    state.last_updated = ImGui::GetTime();
     response.owner_arena.destroy();
   }
 }
@@ -157,6 +158,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           "see them.");
     }
   }
+  draw_last_updated(state.last_updated);
 
   if (state.scan_error_code != 0) {
     draw_error_with_pkexec(state.scan_error_code);

@@ -38,6 +38,8 @@ struct SmapsViewerWindow {
   // Sorting
   SmapsViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
+
+  double last_updated;
 };
 
 struct SmapsViewerState {

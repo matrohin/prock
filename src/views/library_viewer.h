@@ -29,6 +29,8 @@ struct LibraryViewerWindow {
   // Sorting and selection
   LibraryViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
+
+  double last_updated;
 };
 
 struct LibraryViewerState {

@@ -91,6 +91,7 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const Pid pid,
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_index = -1;
+  win->last_updated = 0.0;
 
   send_socket_request(sync, pid);
 
@@ -109,6 +110,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
           memcpy(win.sockets.data, response.sockets.data,
                  response.sockets.size * sizeof(SocketEntry));
           sort_sockets(win);
+          win.last_updated = ImGui::GetTime();
         } else {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
@@ -167,6 +169,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           win.status = eOnDemandViewerStatus_Loading;
           send_socket_request(*view_state.sync, win.pid);
         }
+        draw_last_updated(win.last_updated);
 
         if (win.sockets.size == 0) {
           ImGui::TextDisabled("No sockets");

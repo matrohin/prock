@@ -95,6 +95,7 @@ void smaps_viewer_request(SmapsViewerState &state, Sync &sync, const Pid pid,
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_index = -1;
+  win->last_updated = 0.0;
 
   send_smaps_request(sync, pid);
 
@@ -124,6 +125,7 @@ void smaps_viewer_update(SmapsViewerState &state, Sync &sync) {
             }
           }
           sort_segments(win);
+          win.last_updated = ImGui::GetTime();
         } else {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
@@ -196,6 +198,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         if (ImGui::Checkbox("Group", &win.grouped)) {
           win.selected_index = -1;
         }
+        draw_last_updated(win.last_updated);
 
         // Pre-pass: compute totals over filtered segments (used by both modes)
         ulong total_pss = 0, total_rss = 0, total_private = 0;

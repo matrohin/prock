@@ -32,6 +32,8 @@ struct SocketViewerWindow {
   // Sorting
   SocketViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
+
+  double last_updated;
 };
 
 struct SocketViewerState {

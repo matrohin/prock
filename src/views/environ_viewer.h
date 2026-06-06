@@ -31,6 +31,8 @@ struct EnvironViewerWindow {
   // Sorting and selection
   EnvironViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
+
+  double last_updated;
 };
 
 struct EnvironViewerState {

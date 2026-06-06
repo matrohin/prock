@@ -35,6 +35,8 @@ struct PortsViewerState {
 
   int scan_error_code;
 
+  double last_updated = 0.0;
+
   PortsViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;
 };

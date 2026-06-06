@@ -90,6 +90,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
   win->selected_index = -1;
   win->selected_child_index = -1;
+  win->last_updated = 0.0;
 
   send_environ_request(sync, pid);
 
@@ -111,6 +112,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
             dst.value = String::copy_from(state.cur_arena, dst.value);
           }
           sort_environ(win);
+          win.last_updated = ImGui::GetTime();
         } else {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
@@ -179,6 +181,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           win.status = eOnDemandViewerStatus_Loading;
           send_environ_request(*view_state.sync, win.pid);
         }
+        draw_last_updated(win.last_updated);
         if (ImGui::BeginTable("Environment", eEnvironViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {
           ImGui::TableSetupScrollFreeze(0, 1);
