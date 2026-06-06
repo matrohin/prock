@@ -48,8 +48,8 @@ inline void table_item_draw_state(const char state) {
   }
 }
 
-inline void table_item_draw_float(const double value) {
-  ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f", value);
+inline void table_item_draw_percent(const double value) {
+  ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%.1f%%", value);
 }
 
 inline void table_item_draw_long(const long value) {

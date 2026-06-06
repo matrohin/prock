@@ -376,6 +376,14 @@ static void compute_filter_visibility(FrameContext &ctx,
   }
 }
 
+// Right-aligned I/O rate cell with dynamic units (B/s..GB/s). Reuses the chart
+// axis formatter so the table and charts ladder units identically.
+static void draw_io_rate(const double kb_per_sec) {
+  char buf[32];
+  format_io_rate_kb(kb_per_sec, buf, sizeof(buf), nullptr);
+  ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%s", buf);
+}
+
 static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
                               const bool cpu_per_core) {
   const ProcessDerivedStat &derived_stat = line.derived_stat;
@@ -390,23 +398,23 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads))
     table_item_draw_long(line.num_threads);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc))
-    table_item_draw_float(scale_cpu_perc(derived_stat.cpu_user_perc +
-                                             derived_stat.cpu_kernel_perc,
-                                         num_cpus, cpu_per_core));
+    table_item_draw_percent(scale_cpu_perc(derived_stat.cpu_user_perc +
+                                               derived_stat.cpu_kernel_perc,
+                                           num_cpus, cpu_per_core));
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuUserPerc))
-    table_item_draw_float(
+    table_item_draw_percent(
         scale_cpu_perc(derived_stat.cpu_user_perc, num_cpus, cpu_per_core));
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuKernelPerc))
-    table_item_draw_float(
+    table_item_draw_percent(
         scale_cpu_perc(derived_stat.cpu_kernel_perc, num_cpus, cpu_per_core));
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemRssBytes))
     table_item_draw_memory(derived_stat.mem_resident_bytes);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_MemVirtBytes))
     table_item_draw_memory(derived_stat.mem_virtual_bytes);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoReadKbPerSec))
-    table_item_draw_float(derived_stat.io_read_kb_per_sec);
+    draw_io_rate(derived_stat.io_read_kb_per_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec))
-    table_item_draw_float(derived_stat.io_write_kb_per_sec);
+    draw_io_rate(derived_stat.io_write_kb_per_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CmdLine)) {
     ImGui::TextUnformatted(line.cmdline);
     if (ImGui::IsItemHovered()) ImGui::SetItemTooltip("%s", line.cmdline);
@@ -606,16 +614,16 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                                 ImGuiTableColumnFlags_DefaultHide |
                                 ImGuiTableColumnFlags_WidthFixed,
                             60.0f, eBriefTableColumnId_Threads);
-    ImGui::TableSetupColumn("CPU Total (%)",
+    ImGui::TableSetupColumn("CPU Total",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_WidthFixed,
                             85.0f, eBriefTableColumnId_CpuTotalPerc);
-    ImGui::TableSetupColumn("CPU User (%)",
+    ImGui::TableSetupColumn("CPU User",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_DefaultHide |
                                 ImGuiTableColumnFlags_WidthFixed,
                             85.0f, eBriefTableColumnId_CpuUserPerc);
-    ImGui::TableSetupColumn("CPU Kernel (%)",
+    ImGui::TableSetupColumn("CPU Kernel",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_WidthFixed,
                             90.0f, eBriefTableColumnId_CpuKernelPerc);
@@ -627,12 +635,12 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_WidthFixed,
                             90.0f, eBriefTableColumnId_MemVirtBytes);
-    ImGui::TableSetupColumn("I/O Read (KB/s)",
+    ImGui::TableSetupColumn("I/O Read",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_DefaultHide |
                                 ImGuiTableColumnFlags_WidthFixed,
                             85.0f, eBriefTableColumnId_IoReadKbPerSec);
-    ImGui::TableSetupColumn("I/O Write (KB/s)",
+    ImGui::TableSetupColumn("I/O Write",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_DefaultHide |
                                 ImGuiTableColumnFlags_WidthFixed,

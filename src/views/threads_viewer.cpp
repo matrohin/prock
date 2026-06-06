@@ -247,7 +247,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                                   eThreadsViewerColumnId_Name);
           ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_None, 0.0f,
                                   eThreadsViewerColumnId_State);
-          ImGui::TableSetupColumn("CPU%",
+          ImGui::TableSetupColumn("CPU",
                                   ImGuiTableColumnFlags_PreferSortDescending,
                                   0.0f, eThreadsViewerColumnId_CpuTotal);
           ImGui::TableSetupColumn("Kernel",
@@ -296,12 +296,12 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             table_item_draw_state(line.state);
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuTotal);
-            table_item_draw_float(
+            table_item_draw_percent(
                 scale_cpu_perc(line.cpu_user_perc + line.cpu_kernel_perc,
                                num_cpus, cpu_per_core));
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuKernel);
-            table_item_draw_float(
+            table_item_draw_percent(
                 scale_cpu_perc(line.cpu_kernel_perc, num_cpus, cpu_per_core));
 
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Memory);
