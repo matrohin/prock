@@ -1,9 +1,11 @@
 #include "environ_viewer.h"
 
 #include "views/common.h"
+#include "views/icons.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "labels.h"
 #include "on_demand_common.h"
 #include "tracy/Tracy.hpp"
@@ -225,7 +227,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (ImGui::BeginPopupContextItem()) {
                 win.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
-                if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+                if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
                   copy_environ_row(ctx.frame_arena, entry);
                 }
                 if (ImGui::MenuItem("Copy All")) {
@@ -279,7 +281,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                     if (ImGui::BeginPopupContextItem()) {
                       win.selected_index = static_cast<int>(j);
                       win.selected_child_index = seg_idx;
-                      if (ImGui::MenuItem("Copy Path", "Ctrl+C")) {
+                      if (ImGui::MenuItemEx("Copy Path", ICON_MD_CONTENT_COPY,
+                                            "Ctrl+C")) {
                         copy_path_segment(ctx.frame_arena, seg_start, seg_end);
                       }
                       ImGui::EndPopup();
@@ -312,7 +315,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (ImGui::BeginPopupContextItem()) {
                 win.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
-                if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+                if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
                   copy_environ_row(ctx.frame_arena, entry);
                 }
                 if (ImGui::MenuItem("Copy All")) {

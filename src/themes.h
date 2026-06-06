@@ -269,8 +269,9 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
 
 // Layout metrics shared by every theme. This is a dense professional tool, so
 // spacing stays at ImGui's compact defaults; we only flatten the chrome:
-// borderless panels and just-barely-rounded corners. Values are DPI-independent;
-// callers scale them by monitor scale and zoom via ImGuiStyle::ScaleAllSizes().
+// borderless panels and just-barely-rounded corners. Values are
+// DPI-independent; callers scale them by monitor scale and zoom via
+// ImGuiStyle::ScaleAllSizes().
 inline void apply_geometry(ImGuiStyle &style) {
   // Flat, borderless panels - separation comes from dock splitters and tinted
   // headers, not outlines. A hairline is kept around popups so floating menus

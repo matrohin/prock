@@ -1,9 +1,11 @@
 #include "library_viewer.h"
 
 #include "views/common.h"
+#include "views/icons.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "tracy/Tracy.hpp"
 
 #include <cerrno>
@@ -193,7 +195,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             if (ImGui::BeginPopupContextItem()) {
               win.selected_index = static_cast<int>(j);
-              if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+              if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
                 copy_library_row(ctx.frame_arena, lib);
               }
               if (ImGui::MenuItem("Copy All")) {

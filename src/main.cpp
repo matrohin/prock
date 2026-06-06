@@ -234,9 +234,9 @@ static void merge_icon_font(ImGuiIO &io, const float scale) {
   cfg.MergeMode = true;
   cfg.FontDataOwnedByAtlas = false;
   cfg.GlyphMinAdvanceX = BASE_FONT_SIZE * scale;
-  // Merged fonts inherit the base font's baseline, but Material Symbols fill the
-  // whole em above it, so they ride ~1px high. Nudge them down; ImGui snaps and
-  // rescales this offset per bake, so it stays centered across zoom levels.
+  // Merged fonts inherit the base font's baseline, but Material Symbols fill
+  // the whole em above it, so they ride ~1px high. Nudge them down; ImGui snaps
+  // and rescales this offset per bake, so it stays centered across zoom levels.
   cfg.GlyphOffset.y = BASE_FONT_SIZE * scale / 13.0f;
   static constexpr ImWchar range[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
   io.Fonts->AddFontFromMemoryTTF(

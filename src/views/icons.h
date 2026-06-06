@@ -8,8 +8,8 @@
 #define ICON_MAX_MD 0xef7a
 
 #define ICON_MD_CONTENT_COPY "\xee\x85\x8d"
-#define ICON_MD_FILTER_ALT   "\xee\xbd\x8f"
-#define ICON_MD_SHOW_CHART   "\xee\x9b\xa1"
-#define ICON_MD_SEARCH       "\xee\xbd\xba"
-#define ICON_MD_SETTINGS     "\xee\xa2\xb8"
-#define ICON_MD_DELETE       "\xee\xa4\xae"
+#define ICON_MD_FILTER_ALT "\xee\xbd\x8f"
+#define ICON_MD_SHOW_CHART "\xee\x9b\xa1"
+#define ICON_MD_SEARCH "\xee\xbd\xba"
+#define ICON_MD_SETTINGS "\xee\xa2\xb8"
+#define ICON_MD_DELETE "\xee\xa4\xae"

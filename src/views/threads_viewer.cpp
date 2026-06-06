@@ -2,10 +2,12 @@
 
 #include "state.h"
 #include "views/common.h"
+#include "views/icons.h"
 #include "views/process_window_flags.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "table_item.h"
 #include "tracy/Tracy.hpp"
 
@@ -278,7 +280,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
 
             if (ImGui::BeginPopupContextItem()) {
               win.selected_tid = line.tid;
-              if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+              if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
                 copy_thread_row(line);
               }
               if (ImGui::MenuItem("Copy All")) {

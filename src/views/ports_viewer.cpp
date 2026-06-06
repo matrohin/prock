@@ -1,11 +1,13 @@
 #include "ports_viewer.h"
 
 #include "views/common.h"
+#include "views/icons.h"
 #include "views/notifications.h"
 #include "views/socket_format.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "tracy/Tracy.hpp"
 
 #include <cerrno>
@@ -200,14 +202,14 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       if (ImGui::BeginPopupContextItem()) {
         state.selected_index = static_cast<int>(i);
-        if (ImGui::MenuItem("Kill Process", "Del")) {
+        if (ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del")) {
           kill_selected(state, view_state.notifications, SIGTERM);
         }
         if (ImGui::MenuItem("Force Kill")) {
           kill_selected(state, view_state.notifications, SIGKILL);
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("Copy All")) {
+        if (ImGui::MenuItemEx("Copy All", ICON_MD_CONTENT_COPY)) {
           copy_all_ports(ctx.frame_arena, state);
         }
         ImGui::EndPopup();

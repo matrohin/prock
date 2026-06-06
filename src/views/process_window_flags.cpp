@@ -36,7 +36,8 @@ void process_window_handle_docking_and_pos(ViewState &view_state,
 ImGuiWindowFlags process_window_flags(ProcessWindowFlags &flags) {
   // NoSavedSettings: per-process windows are keyed by ephemeral pids, so
   // persisting them only pollutes settings.ini with stale entries.
-  ImGuiWindowFlags win_flags = COMMON_VIEW_FLAGS | ImGuiWindowFlags_NoSavedSettings;
+  ImGuiWindowFlags win_flags =
+      COMMON_VIEW_FLAGS | ImGuiWindowFlags_NoSavedSettings;
   if (flags & eProcessWindowFlags_NoFocusOnAppearing) {
     win_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
     flags &= ~eProcessWindowFlags_NoFocusOnAppearing;
