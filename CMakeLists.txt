@@ -6,6 +6,7 @@ set (CMAKE_CXX_FLAGS "-march=native")
 
 find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
+find_package(Freetype REQUIRED)
 
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(third-party/glfw-3.4)
@@ -31,7 +32,10 @@ target_include_directories(imgui_all PRIVATE
   third-party/implot
 )
 target_compile_definitions(imgui_all PRIVATE "IMPLOT_CUSTOM_NUMERIC_TYPES=(double)")
-target_link_libraries(imgui_all PRIVATE glfw OpenGL::GLES2)
+# PUBLIC so the main executable's TUs (which include imgui_internal.h) agree with
+# the library on the active font loader and stay ABI-consistent.
+target_compile_definitions(imgui_all PUBLIC IMGUI_ENABLE_FREETYPE)
+target_link_libraries(imgui_all PRIVATE glfw OpenGL::GLES2 Freetype::Freetype)
 
 # Main executable:
 include(GNUInstallDirs)

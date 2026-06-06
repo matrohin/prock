@@ -5,6 +5,11 @@
 #include "imgui_tables.cpp"
 #include "imgui_widgets.cpp"
 
+// FreeType rasterizer (replaces the embedded stb_truetype). Enabled via the
+// IMGUI_ENABLE_FREETYPE compile definition on this target, which also makes
+// ImGui select the FreeType font loader by default (see imgui_draw.cpp).
+#include "misc/freetype/imgui_freetype.cpp"
+
 #include "implot.cpp"
 
 // We only use PlotLine/PlotShaded (+ the getter "G" variants). Compiling out

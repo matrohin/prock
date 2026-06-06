@@ -40,12 +40,12 @@ The tool is still in development. I'm improving my Linux desktop experience.
 
 **Debian/Ubuntu:**
 ```bash
-sudo apt install cmake gcc libwayland-dev libxkbcommon-dev xorg-dev libgles2-mesa-dev
+sudo apt install cmake gcc libwayland-dev libxkbcommon-dev xorg-dev libgles2-mesa-dev libfreetype-dev
 ```
 
 **Arch Linux:**
 ```bash
-sudo pacman -Sy cmake gcc
+sudo pacman -Sy cmake gcc freetype2
 ```
 
 ### Install & Update

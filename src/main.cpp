@@ -10,6 +10,7 @@
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
 #include "implot.h"
+#include "misc/freetype/imgui_freetype.h"
 
 #include <GLES2/gl2.h>
 #include <GLFW/glfw3.h>
@@ -246,6 +247,10 @@ static void merge_icon_font(ImGuiIO &io, const float scale) {
 
 static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
   io.Fonts->Clear();
+  // FreeType light hinting: snap glyphs to the pixel grid vertically only (like
+  // ClearType), keeping horizontal spacing intact. Crisper small UI text than
+  // the unhinted stb_truetype default, without the chunkiness of full hinting.
+  io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
   if (font_path && font_path[0] != '\0') {
     ImFont *font =
         io.Fonts->AddFontFromFileTTF(font_path, BASE_FONT_SIZE * scale);
