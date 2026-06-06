@@ -18,6 +18,7 @@ static constexpr float ZOOM_SCALES[] = {0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
 static const char *ZOOM_LABELS[] = {"75%", "100%", "125%", "150%", "200%"};
 static constexpr int ZOOM_COUNT = std::size(ZOOM_LABELS);
 static const char *PREFERENCES_TITLE = "Preferences";
+static constexpr float FONT_LIST_WIDTH = 400.0f;
 
 static void draw_preferences_modal(PreferencesState &prefs) {
   if (prefs.show_preferences_modal) {
@@ -77,13 +78,14 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::Text("Font");
     ImGui::Separator();
 
+    const float list_height = 8.0f * ImGui::GetTextLineHeightWithSpacing();
     if (prefs.font_list.size > 0) {
-      const float list_height = 8.0f * ImGui::GetTextLineHeightWithSpacing();
-      ImGui::SetNextItemWidth(400);
+      ImGui::SetNextItemWidth(FONT_LIST_WIDTH);
       const ImGuiTextFilter filter = draw_filter_input(
           "##FontFilter", prefs.font_filter, sizeof(prefs.font_filter));
       bool found_in_list = (prefs.font_path[0] == '\0');
-      if (ImGui::BeginListBox("##FontList", ImVec2(400, list_height))) {
+      if (ImGui::BeginListBox("##FontList",
+                              ImVec2(FONT_LIST_WIDTH, list_height))) {
         const bool default_selected = (prefs.font_path[0] == '\0');
         if (ImGui::Selectable("Default (built-in)", default_selected)) {
           prefs.font_path[0] = '\0';
@@ -124,8 +126,19 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       if (!found_in_list) {
         ImGui::TextDisabled("Active: %s", prefs.font_path);
       }
-    } else if (prefs.font_list_requested && !prefs.font_list_received) {
-      ImGui::TextDisabled("Loading fonts...");
+    } else if (!prefs.font_list_received) {
+      // Reserve the loaded list's footprint so the modal opens at its final
+      // size and stays centered while the font list loads.
+      ImGui::BeginDisabled();
+      ImGui::SetNextItemWidth(FONT_LIST_WIDTH);
+      draw_filter_input("##FontFilter", prefs.font_filter,
+                        sizeof(prefs.font_filter));
+      if (ImGui::BeginListBox("##FontList",
+                              ImVec2(FONT_LIST_WIDTH, list_height))) {
+        ImGui::TextDisabled("Loading fonts...");
+        ImGui::EndListBox();
+      }
+      ImGui::EndDisabled();
     } else {
       ImGui::SetNextItemWidth(300);
       ImGui::InputTextWithHint("##Font", "Path to .ttf file (empty = default)",
