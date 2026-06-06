@@ -122,6 +122,19 @@ static void apply_plot_opacity(float opacity) {
   plot_style.Colors[ImPlotCol_PlotBg] = plot;
 }
 
+// Derive the live style from the unscaled base: scale every metric by monitor
+// scale * zoom in a single pass, keep the fullscreen main window square, then
+// apply background opacity. Colors are copied opaque from the base; only
+// background alpha is scaled down.
+static void rebuild_live_style(ImGuiStyle &live, const ImGuiStyle &base,
+                               float monitor_scale, float zoom, float opacity) {
+  live = base;
+  live.ScaleAllSizes(monitor_scale * zoom);
+  live.WindowRounding = 0.0f; // main window fills the screen; keep it square
+  apply_window_opacity(live, opacity);
+  apply_plot_opacity(opacity);
+}
+
 static void *view_settings_read_open(ImGuiContext *,
                                      ImGuiSettingsHandler *handler,
                                      const char *name) {
@@ -277,8 +290,13 @@ static void draw_main_window(const ImGuiIO &io, const State &state,
   ImGui::Begin("prock", nullptr, main_window_flags);
   ImGui::PopStyleVar(3);
 
+  // Hide the dock-node menu caret on the main panels (system charts, process
+  // table, ports). The flag inherits to every child node of this dockspace.
+  // Per-process host windows host their own dockspace (without the flag), so
+  // they keep the caret as a way to pick among their inspector sub-windows.
   const ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
-  ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+  ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f),
+                   ImGuiDockNodeFlags_NoWindowMenuButton);
 
   FrameContext frame_ctx = {};
   views_on_demand_update(view_state);
@@ -475,28 +493,21 @@ int main(int, char **) {
     ImGui::LoadIniSettingsFromDisk(io.IniFilename);
   }
 
-  apply_theme(view_state.preferences_state.theme);
+  // Build the unscaled base style: theme colors + shared geometry. The live
+  // style is derived from this on every rebuild, scaled by monitor scale * zoom.
+  apply_theme(view_state.preferences_state.theme, &g_base_style);
+  apply_geometry(g_base_style);
+  g_base_style.AntiAliasedLines = true;
+  g_base_style.AntiAliasedLinesUseTex = true;
+  g_base_style.AntiAliasedFill = true;
 
-  // Apply monitor scale and save as base style (before zoom)
+  const float zoom = view_state.preferences_state.zoom_scale;
+  const float opacity = view_state.preferences_state.window_opacity;
   ImGuiStyle &style = ImGui::GetStyle();
-  style.ScaleAllSizes(main_scale);
-  style.WindowRounding = 0.0f;
-  style.AntiAliasedLines = true;
-  style.AntiAliasedLinesUseTex = true;
-  style.AntiAliasedFill = true;
-  g_base_style = style;
-
-  // Apply zoom on top of base style
-  float zoom = view_state.preferences_state.zoom_scale;
-  style.ScaleAllSizes(zoom);
+  rebuild_live_style(style, g_base_style, main_scale, zoom, opacity);
   io.FontGlobalScale = zoom;
   g_applied_zoom_scale = zoom;
   g_applied_theme = view_state.preferences_state.theme;
-
-  // Apply background transparency on top (no-op when fully opaque)
-  float opacity = view_state.preferences_state.window_opacity;
-  apply_window_opacity(style, opacity);
-  apply_plot_opacity(opacity);
   g_applied_opacity = opacity;
 
   ImPlot::GetStyle().UseLocalTime = true;
@@ -591,15 +602,13 @@ int main(int, char **) {
     const float new_opacity = view_state.preferences_state.window_opacity;
     if (g_applied_theme != new_theme || g_applied_zoom_scale != new_zoom ||
         g_applied_opacity != new_opacity) {
+      // A theme switch only changes colors in the base; geometry stays put.
       if (g_applied_theme != new_theme) {
         apply_theme(new_theme, &g_base_style);
       }
-      // Restore base style (has monitor scale, no zoom) and re-apply zoom
-      style = g_base_style;
-      style.ScaleAllSizes(new_zoom);
+      rebuild_live_style(style, g_base_style, g_monitor_scale, new_zoom,
+                         new_opacity);
       io.FontGlobalScale = new_zoom;
-      apply_window_opacity(style, new_opacity);
-      apply_plot_opacity(new_opacity);
       g_applied_theme = new_theme;
       g_applied_zoom_scale = new_zoom;
       g_applied_opacity = new_opacity;

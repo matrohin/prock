@@ -54,12 +54,6 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
 
   case Theme::Enemymouse: {
     ImGui::StyleColorsDark(dst);
-    style->ChildRounding = 3.0f;
-    style->WindowRounding = 3.0f;
-    style->GrabRounding = 1.0f;
-    style->GrabMinSize = 20.0f;
-    style->FrameRounding = 3.0f;
-
     colors[ImGuiCol_Text] = ImVec4(0.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_TextDisabled] = ImVec4(0.00f, 0.40f, 0.41f, 1.00f);
     colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -137,14 +131,6 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     };
 
     ImGui::StyleColorsDark(dst);
-    style->WindowRounding = 4.0f;
-    style->ChildRounding = 4.0f;
-    style->FrameRounding = 4.0f;
-    style->GrabRounding = 4.0f;
-    style->PopupRounding = 4.0f;
-    style->ScrollbarRounding = 4.0f;
-    style->TabRounding = 4.0f;
-
     colors[ImGuiCol_Text] = nord4;
     colors[ImGuiCol_TextDisabled] = nord3;
     colors[ImGuiCol_WindowBg] = nord0;
@@ -221,14 +207,6 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     auto wa = [](ImVec4 c, float a) { return ImVec4(c.x, c.y, c.z, a); };
 
     ImGui::StyleColorsDark(dst);
-    style->WindowRounding = 4.0f;
-    style->ChildRounding = 4.0f;
-    style->FrameRounding = 4.0f;
-    style->GrabRounding = 4.0f;
-    style->PopupRounding = 4.0f;
-    style->ScrollbarRounding = 4.0f;
-    style->TabRounding = 4.0f;
-
     colors[ImGuiCol_Text] = on_fg;
     colors[ImGuiCol_TextDisabled] = wa(on_fg2, 0.55f);
     colors[ImGuiCol_WindowBg] = on0;
@@ -287,12 +265,30 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     ImGui::StyleColorsLight(dst);
     break;
   }
+}
 
-  style->WindowRounding = 2.0f;
-  style->ChildRounding = 2.0f;
-  style->FrameRounding = 2.0f;
-  style->GrabRounding = 2.0f;
-  style->PopupRounding = 2.0f;
-  style->ScrollbarRounding = 2.0f;
-  style->TabRounding = 2.0f;
+// Layout metrics shared by every theme. This is a dense professional tool, so
+// spacing stays at ImGui's compact defaults; we only flatten the chrome:
+// borderless panels and just-barely-rounded corners. Values are DPI-independent;
+// callers scale them by monitor scale and zoom via ImGuiStyle::ScaleAllSizes().
+inline void apply_geometry(ImGuiStyle &style) {
+  // Flat, borderless panels - separation comes from dock splitters and tinted
+  // headers, not outlines. A hairline is kept around popups so floating menus
+  // stay distinct from the content behind them.
+  style.WindowBorderSize = 0.0f;
+  style.ChildBorderSize = 0.0f;
+  style.FrameBorderSize = 0.0f;
+  style.TabBorderSize = 0.0f;
+  style.PopupBorderSize = 1.0f;
+
+  // Just a hint of rounding - enough to take the hard edge off without the
+  // rounded "consumer app" look.
+  constexpr float kRounding = 2.0f;
+  style.WindowRounding = kRounding;
+  style.ChildRounding = kRounding;
+  style.FrameRounding = kRounding;
+  style.PopupRounding = kRounding;
+  style.GrabRounding = kRounding;
+  style.TabRounding = kRounding;
+  style.ScrollbarRounding = kRounding;
 }
