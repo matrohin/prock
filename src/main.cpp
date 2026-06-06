@@ -1,5 +1,6 @@
 #include "base/base.h"
 #include "base/channel.h"
+#include "inter_font.h"
 #include "material_symbols_font.h"
 #include "sources/process_stat.h"
 #include "sources/sync.h"
@@ -245,21 +246,27 @@ static void merge_icon_font(ImGuiIO &io, const float scale) {
       material_symbols_ttf_size, BASE_FONT_SIZE * scale, &cfg, range);
 }
 
+// The bundled default UI font: Inter, embedded compressed (see inter_font.h).
+static ImFont *add_inter(ImGuiIO &io, const float size) {
+  return io.Fonts->AddFontFromMemoryCompressedBase85TTF(
+      inter_compressed_data_base85, size);
+}
+
 static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
   io.Fonts->Clear();
   // FreeType light hinting: snap glyphs to the pixel grid vertically only (like
   // ClearType), keeping horizontal spacing intact. Crisper small UI text than
   // the unhinted stb_truetype default, without the chunkiness of full hinting.
   io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
+  const float size = BASE_FONT_SIZE * scale;
   if (font_path && font_path[0] != '\0') {
-    ImFont *font =
-        io.Fonts->AddFontFromFileTTF(font_path, BASE_FONT_SIZE * scale);
-    if (!font) {
-      fprintf(stderr, "Failed to load font: %s, using default\n", font_path);
-      io.Fonts->AddFontDefault();
+    if (!io.Fonts->AddFontFromFileTTF(font_path, size)) {
+      fprintf(stderr, "Failed to load font: %s, using bundled Inter\n",
+              font_path);
+      add_inter(io, size);
     }
   } else {
-    io.Fonts->AddFontDefault();
+    add_inter(io, size);
   }
   merge_icon_font(io, scale);
 }
