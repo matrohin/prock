@@ -69,14 +69,18 @@
     {
       "name": "publish",
       "displayName": "Publish",
-      "description": "Portable release build (generic x86-64, LTO) for distribution",
+      "description": "Portable release build (zig cc, generic x86-64, glibc 2.17, static libc++, LTO) for distribution",
       "binaryDir": "${sourceDir}/build/Publish",
       "inherits": ["common"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ENABLE_TRACY": "OFF",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-        "BUILD_TESTS": "OFF"
+        "BUILD_TESTS": "OFF",
+        "CMAKE_C_COMPILER": "zig;cc;-target;x86_64-linux-gnu.2.17",
+        "CMAKE_CXX_COMPILER": "zig;c++;-target;x86_64-linux-gnu.2.17",
+        "CMAKE_LINK_DEPENDS_USE_LINKER": "OFF",
+        "CMAKE_EXE_LINKER_FLAGS": "-s"
       }
     }
   ]

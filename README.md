@@ -34,6 +34,29 @@ The tool is still in development. I'm improving my Linux desktop experience.
   - Environment variables
 - Double-click to open all windows at once
 
+## Runtime Dependencies
+
+The released `prock` binary targets glibc 2.17+, so it runs on most Linux distros.
+It dynamically loads the libraries below, which are already present on a standard desktop install:
+- **glibc 2.17+** — `libc`, `libm`, `libpthread`, `libdl`
+- **OpenGL ES 2.0 + EGL** — `libGLESv2.so.2`, `libEGL.so.1`
+- **FreeType** — `libfreetype.so.6`
+- **A display backend**, one of:
+  - **X11** — `libX11.so.6` `libXcursor`, `libXi`, `libXrandr`, `libXinerama`
+  - **Wayland** — `libwayland-client.so.0`, `libwayland-cursor.so.0`, `libwayland-egl.so.1`, `libxkbcommon.so.0`
+
+On a minimal or headless system, install them explicitly:
+
+**Debian/Ubuntu:**
+```bash
+sudo apt install libgles2 libegl1 libfreetype6 libx11-6 libxcursor1 libxi6 libxrandr2 libxinerama1 libwayland-client0 libwayland-cursor0 libwayland-egl1 libxkbcommon0
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S mesa libglvnd freetype2 libx11 libxcursor libxi libxrandr libxinerama wayland libxkbcommon
+```
+
 ## Building
 
 ### Dependencies
