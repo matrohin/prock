@@ -12,6 +12,7 @@ struct PreferencesState {
   Theme theme = Theme::Light;
   bool show_preferences_modal = false;
   bool show_about_modal = false;
+  bool show_licenses_modal = false;
   bool font_needs_reload = false; // Signal to reload font atlas
   bool show_debug_fps = false;    // Toggle with F3
   bool show_menu_on_alt = false;

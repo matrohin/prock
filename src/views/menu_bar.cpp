@@ -1,6 +1,7 @@
 #include "views/menu_bar.h"
 
 #include "views/common.h"
+#include "views/licenses.h"
 #include "views/process_host.h"
 #include "views/view_state.h"
 
@@ -23,6 +24,7 @@ static const char *ZOOM_LABELS[] = {"75%", "100%", "125%", "150%", "200%"};
 static constexpr int ZOOM_COUNT = std::size(ZOOM_LABELS);
 static const char *PREFERENCES_TITLE = "Preferences";
 static const char *ABOUT_TITLE = "About Prock";
+static const char *LICENSES_TITLE = "Third-Party Licenses";
 static constexpr float FONT_LIST_WIDTH = 400.0f;
 
 static void draw_preferences_modal(PreferencesState &prefs) {
@@ -207,6 +209,46 @@ static void about_centered_text(const char *text) {
   ImGui::TextUnformatted(text);
 }
 
+static void draw_licenses_modal(PreferencesState &prefs) {
+  if (prefs.show_licenses_modal) {
+    ImGui::OpenPopup(LICENSES_TITLE);
+  }
+
+  const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+  ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+  ImGui::SetNextWindowSize(ImVec2(640.0f, 480.0f), ImGuiCond_Appearing);
+
+  if (ImGui::BeginPopupModal(LICENSES_TITLE, &prefs.show_licenses_modal)) {
+    if (popup_close_on_escape()) {
+      prefs.show_licenses_modal = false;
+    }
+
+    ImGui::TextWrapped(
+        "Prock bundles the third-party libraries and fonts listed below. "
+        "Expand an entry to read its full license.");
+    ImGui::Spacing();
+
+    const float footer = ImGui::GetFrameHeightWithSpacing();
+    if (ImGui::BeginChild("licenses_scroll", ImVec2(0.0f, -footer),
+                          ImGuiChildFlags_Borders)) {
+      for (const ThirdPartyLicense &lic : THIRD_PARTY_LICENSES) {
+        if (ImGui::CollapsingHeader(lic.name)) {
+          ImGui::TextUnformatted(lic.text);
+        }
+      }
+    }
+    ImGui::EndChild();
+
+    const float button_w = 120.0f;
+    if (ImGui::Button("Close", ImVec2(button_w, 0.0f))) {
+      ImGui::CloseCurrentPopup();
+      prefs.show_licenses_modal = false;
+    }
+
+    ImGui::EndPopup();
+  }
+}
+
 static void draw_about_modal(PreferencesState &prefs) {
   if (prefs.show_about_modal) {
     ImGui::OpenPopup(ABOUT_TITLE);
@@ -345,6 +387,9 @@ void menu_bar_draw(ViewState &view_state) {
         open_url("https://github.com/matrohin/prock/issues");
       }
       ImGui::Separator();
+      if (ImGui::MenuItem("Third-Party Licenses...")) {
+        view_state.preferences_state.show_licenses_modal = true;
+      }
       if (ImGui::MenuItem("About Prock...")) {
         view_state.preferences_state.show_about_modal = true;
       }
@@ -368,4 +413,5 @@ void menu_bar_draw(ViewState &view_state) {
 
   draw_preferences_modal(view_state.preferences_state);
   draw_about_modal(view_state.preferences_state);
+  draw_licenses_modal(view_state.preferences_state);
 }
