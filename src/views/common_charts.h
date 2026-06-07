@@ -32,7 +32,7 @@ inline ConstString cmdline_display_name(const char *cmdline,
 template <class F>
 TopProcess find_top_process(const StateSnapshot &snapshot,
                             InternTable &interner, F get_value) {
-  TopProcess top = {0, nullptr, 0.0};
+  TopProcess top = {};
   for (uint32_t i = 0; i < snapshot.stats.size; ++i) {
     const double val = get_value(snapshot.derived_stats.data[i]);
     if (val > top.value) {

@@ -68,6 +68,9 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
       ssize_t len = recv(fd, buf, sizeof(buf), 0);
       if (len <= 0) break;
 
+// NLMSG_NEXT/RTA_NEXT walk buffers the kernel guarantees are aligned.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
       for (nlmsghdr *h = reinterpret_cast<nlmsghdr *>(buf); NLMSG_OK(h, len);
            h = NLMSG_NEXT(h, len)) {
         if (h->nlmsg_type == NLMSG_DONE || h->nlmsg_type == NLMSG_ERROR) {
@@ -117,6 +120,7 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
           }
         }
       }
+#pragma GCC diagnostic pop
     }
   }
 

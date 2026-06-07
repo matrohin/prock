@@ -1,7 +1,10 @@
 #include "base/base.h"
 #include "base/channel.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
 #include "inter_font.h"
 #include "material_symbols_font.h"
+#pragma GCC diagnostic pop
 #include "sources/process_stat.h"
 #include "sources/sync.h"
 #include "state.h"
@@ -447,7 +450,7 @@ DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,19 Size=1280,673 Split=Y
 Stacked=0
 )";
 
-constexpr const char *MAIN_FRAME = "main_frame";
+[[maybe_unused]] constexpr const char *MAIN_FRAME = "main_frame";
 
 int main(int, char **) {
   glfwSetErrorCallback(glfw_error_callback);
