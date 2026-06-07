@@ -4,7 +4,7 @@ The tool is still in development. I'm improving my Linux desktop experience.
 
 ![Screenshot](./images/screenshot.png)
 
-*My configuration: FiraSansCondensed font, Nord theme, 74% Opacity.*
+*My configuration: Default font, Nord theme, 86% Opacity.*
 
 ## Features
 
