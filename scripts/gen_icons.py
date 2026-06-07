@@ -154,7 +154,6 @@ def write_macros(codepoints):
         utf8 = "".join(f"\\x{b:02x}" for b in chr(cp).encode("utf-8"))
         entries.append((f"ICON_MD_{name.upper()}", cp, utf8))
     cps = [cp for _, cp, _ in entries]
-    width = max(len(macro) for macro, _, _ in entries)
     # Just codepoint mappings (not the copyrighted font data), so this carries a
     # pointer rather than the full attribution block; that lives on the font.
     lines = [
@@ -168,7 +167,7 @@ def write_macros(codepoints):
         f"#define ICON_MAX_MD 0x{max(cps):04x}",
         "",
     ]
-    lines += [f'#define {macro:<{width}} "{utf8}"' for macro, _, utf8 in entries]
+    lines += [f'#define {macro} "{utf8}"' for macro, _, utf8 in entries]
     (REPO / "src/views/icons.h").write_text("\n".join(lines) + "\n")
 
 
