@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.27)
 project(prock VERSION 0.0.1 LANGUAGES CXX)
 
 set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_FLAGS "-march=native")
 
 find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
@@ -54,6 +53,22 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE imgui_all glfw OpenGL::GLES2 X11::X11 tracy project_warnings)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_CLANG_TIDY clang-tidy)
+
+# Version string from git, embedded as a compile define. Captured at configure
+# time; the CMAKE_CONFIGURE_DEPENDS below re-runs configure (and thus git
+# describe) when HEAD/index change, so build-only flows stay current.
+execute_process(
+  COMMAND git describe --tags --always --dirty=-dirty
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE PROCK_VERSION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET)
+if(NOT PROCK_VERSION) # not a git checkout (e.g. release tarball)
+  set(PROCK_VERSION "v${PROJECT_VERSION}")
+endif()
+target_compile_definitions(${PROJECT_NAME} PRIVATE PROCK_VERSION="${PROCK_VERSION}")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  ${CMAKE_SOURCE_DIR}/.git/HEAD ${CMAKE_SOURCE_DIR}/.git/index)
 
 
 # Test target:

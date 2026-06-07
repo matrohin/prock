@@ -15,11 +15,19 @@
       }
     },
     {
+      "name": "native",
+      "hidden": true,
+      "inherits": ["common"],
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-march=native"
+      }
+    },
+    {
       "name": "debug",
       "displayName": "Debug Dev",
       "description": "Debug build for development",
       "binaryDir": "${sourceDir}/build/Debug",
-      "inherits": ["common"],
+      "inherits": ["native"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "ENABLE_TRACY": "OFF"
@@ -30,7 +38,7 @@
       "displayName": "Release Tracy",
       "description": "Release build for development",
       "binaryDir": "${sourceDir}/build/RelTracy",
-      "inherits": ["common"],
+      "inherits": ["native"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "ENABLE_TRACY": "ON"
@@ -39,12 +47,13 @@
     {
       "name": "release",
       "displayName": "Release",
-      "description": "Release build for production",
+      "description": "Release build for production (native arch, LTO)",
       "binaryDir": "${sourceDir}/build/Release",
-      "inherits": ["common"],
+      "inherits": ["native"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "ENABLE_TRACY": "OFF"
+        "ENABLE_TRACY": "OFF",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
       }
     },
     {
@@ -52,11 +61,22 @@
       "displayName": "Release X11",
       "description": "Release build with Wayland disabled",
       "binaryDir": "${sourceDir}/build/ReleaseX11",
+      "inherits": ["release"],
+      "cacheVariables": {
+        "GLFW_BUILD_WAYLAND": "OFF"
+      }
+    },
+    {
+      "name": "publish",
+      "displayName": "Publish",
+      "description": "Portable release build (generic x86-64, LTO) for distribution",
+      "binaryDir": "${sourceDir}/build/Publish",
+      "inherits": ["common"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ENABLE_TRACY": "OFF",
-        "GLFW_BUILD_X11": "ON",
-        "GLFW_BUILD_WAYLAND": "OFF"
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+        "BUILD_TESTS": "OFF"
       }
     }
   ]

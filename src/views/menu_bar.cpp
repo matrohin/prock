@@ -10,6 +10,10 @@
 #include <cstring>
 #include <iterator>
 
+#ifndef PROCK_VERSION
+#define PROCK_VERSION "unknown"
+#endif
+
 static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
 static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
                                       "1s",     "2s",    "5s"};
@@ -18,6 +22,7 @@ static constexpr float ZOOM_SCALES[] = {0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
 static const char *ZOOM_LABELS[] = {"75%", "100%", "125%", "150%", "200%"};
 static constexpr int ZOOM_COUNT = std::size(ZOOM_LABELS);
 static const char *PREFERENCES_TITLE = "Preferences";
+static const char *ABOUT_TITLE = "About Prock";
 static constexpr float FONT_LIST_WIDTH = 400.0f;
 
 static void draw_preferences_modal(PreferencesState &prefs) {
@@ -186,6 +191,68 @@ static void draw_preferences_modal(PreferencesState &prefs) {
   }
 }
 
+static void open_url(const char *url) {
+  ImGuiPlatformIO &pio = ImGui::GetPlatformIO();
+  if (pio.Platform_OpenInShellFn != nullptr) {
+    pio.Platform_OpenInShellFn(ImGui::GetCurrentContext(), url);
+  }
+}
+
+static void about_centered_text(const char *text) {
+  const float item_w = ImGui::CalcTextSize(text).x;
+  const float avail = ImGui::GetContentRegionAvail().x;
+  if (item_w < avail) {
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - item_w) * 0.5f);
+  }
+  ImGui::TextUnformatted(text);
+}
+
+static void draw_about_modal(PreferencesState &prefs) {
+  if (prefs.show_about_modal) {
+    ImGui::OpenPopup(ABOUT_TITLE);
+  }
+
+  const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+  ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+  if (ImGui::BeginPopupModal(ABOUT_TITLE, &prefs.show_about_modal,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (popup_close_on_escape()) {
+      prefs.show_about_modal = false;
+    }
+
+    ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase * 2.0f);
+    about_centered_text("Prock");
+    ImGui::PopFont();
+
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+    about_centered_text(PROCK_VERSION);
+    ImGui::PopStyleColor();
+
+    ImGui::Spacing();
+
+    ImGui::Text("A process explorer and system monitor for Linux");
+    ImGui::Text("Created by Dmitrii Matrokhin");
+
+    ImGui::Spacing();
+
+    ImGui::TextLinkOpenURL("Source code", "https://github.com/matrohin/prock");
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    const float button_w = 120.0f;
+    if (ImGui::Button("Close", ImVec2(button_w, 0.0f))) {
+      ImGui::CloseCurrentPopup();
+      prefs.show_about_modal = false;
+    }
+
+    ImGui::EndPopup();
+  }
+}
+
 void menu_bar_update(ViewState &view_state) {
   PreferencesState &prefs = view_state.preferences_state;
   Sync &sync = *view_state.sync;
@@ -273,6 +340,16 @@ void menu_bar_draw(ViewState &view_state) {
       }
       ImGui::EndMenu();
     }
+    if (ImGui::BeginMenu("Help")) {
+      if (ImGui::MenuItem("Report a Bug")) {
+        open_url("https://github.com/matrohin/prock/issues");
+      }
+      ImGui::Separator();
+      if (ImGui::MenuItem("About Prock...")) {
+        view_state.preferences_state.show_about_modal = true;
+      }
+      ImGui::EndMenu();
+    }
 
     // Draw FPS on the right side if debug mode enabled (toggle with F3)
     if (view_state.preferences_state.show_debug_fps) {
@@ -290,4 +367,5 @@ void menu_bar_draw(ViewState &view_state) {
   }
 
   draw_preferences_modal(view_state.preferences_state);
+  draw_about_modal(view_state.preferences_state);
 }

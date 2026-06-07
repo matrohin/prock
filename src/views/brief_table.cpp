@@ -489,7 +489,8 @@ static void priority_popup_draw(BriefTableState &my_state,
     ImGui::SliderInt("##nice", &my_state.priority_edit_nice, -20, 19);
 
     if (my_state.priority_edit_nice < 0) {
-      ImGui::PushStyleColor(ImGuiCol_Text, app_color_u32(eAppColor_WarningText));
+      ImGui::PushStyleColor(ImGuiCol_Text,
+                            app_color_u32(eAppColor_WarningText));
       ImGui::Text("Warning: Requires root privileges");
       ImGui::PopStyleColor();
     }
