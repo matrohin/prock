@@ -15,3 +15,4 @@
 #define ICON_MD_DELETE "\xee\xa4\xae"
 #define ICON_MD_REFRESH "\xee\x97\x95"
 #define ICON_MD_SHIELD "\xee\xa7\xa0"
+#define ICON_MD_OPEN_IN_NEW "\xee\xa2\x9e"

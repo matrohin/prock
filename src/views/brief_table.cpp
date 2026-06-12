@@ -253,6 +253,10 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                "+%s", line.name.data);
     }
     ImGui::Separator();
+    if (ImGui::MenuItemEx("Open All Windows", ICON_MD_OPEN_IN_NEW)) {
+      open_all_windows(pid, line.name.data, view_state);
+    }
+    ImGui::Separator();
     if (ImGui::MenuItemEx("CPU Chart", ICON_MD_SHOW_CHART)) {
       cpu_chart_add(view_state.cpu_chart_state, pid, line.name.data);
     }
