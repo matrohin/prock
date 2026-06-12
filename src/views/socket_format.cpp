@@ -32,6 +32,16 @@ const char *tcp_state_name(const int state) {
   }
 }
 
+const char *socket_state_name(const SocketProtocol protocol,
+                              const TcpState state) {
+  if (is_tcp(protocol)) {
+    return tcp_state_name(state);
+  }
+  // The kernel reports UDP sockets as ESTABLISHED (connected) or CLOSE
+  // (unconnected); show the latter as UNCONN like ss does.
+  return state == eTcpState_ESTABLISHED ? "ESTABLISHED" : "UNCONN";
+}
+
 const char *protocol_name(const int protocol) {
   switch (protocol) {
   case eSocketProtocol_TCP:

@@ -88,7 +88,7 @@ static String port_cell_text(BumpArena &arena, const PortEntry &e,
     return format_address(arena, e.sock, true);
   case ePortsViewerColumnId_State:
     return String::static_string(
-        is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state) : "-");
+        socket_state_name(e.sock.protocol, e.sock.state));
   case ePortsViewerColumnId_Pid:
     return String::sprintf(arena, "%d", e.pid);
   case ePortsViewerColumnId_Process:
@@ -104,8 +104,7 @@ static void copy_port_row(Notifications &notifications, BumpArena &frame_arena,
   const String buf = String::sprintf(
       frame_arena, "%s%s\t%s\t%s\t%d\t%s", PORTS_COPY_HEADER,
       protocol_name(e.sock.protocol), local_addr.data,
-      is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state) : "-", e.pid,
-      e.comm);
+      socket_state_name(e.sock.protocol, e.sock.state), e.pid, e.comm);
   clipboard_copy_row(notifications, buf.data);
 }
 
@@ -117,9 +116,8 @@ static void copy_all_ports(Notifications &notifications, BumpArena &arena,
         const String local_addr = format_address(arena, e.sock, true);
         return snprintf(ptr, rem, "%s\t%s\t%s\t%d\t%s\n",
                         protocol_name(e.sock.protocol), local_addr.data,
-                        is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state)
-                                                : "-",
-                        e.pid, e.comm);
+                        socket_state_name(e.sock.protocol, e.sock.state), e.pid,
+                        e.comm);
       });
 }
 
@@ -215,8 +213,8 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         char filter_str[320];
         snprintf(filter_str, sizeof(filter_str), "%s %s %s %d %s",
                  protocol_name(e.sock.protocol), local_addr.data,
-                 is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state) : "",
-                 e.pid, e.comm);
+                 socket_state_name(e.sock.protocol, e.sock.state), e.pid,
+                 e.comm);
         if (!filter.PassFilter(filter_str)) continue;
       }
 
@@ -259,11 +257,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       ImGui::TextUnformatted(local_addr.data);
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_State);
-      if (is_tcp(e.sock.protocol)) {
-        ImGui::TextUnformatted(tcp_state_name(e.sock.state));
-      } else {
-        ImGui::TextDisabled("-");
-      }
+      ImGui::TextUnformatted(socket_state_name(e.sock.protocol, e.sock.state));
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_Pid);
       ImGui::Text("%d", e.pid);

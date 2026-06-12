@@ -5,6 +5,7 @@
 #include "sources/process_stat.h"
 
 const char *tcp_state_name(int state);
+const char *socket_state_name(SocketProtocol protocol, TcpState state);
 const char *protocol_name(int protocol);
 bool is_tcp(SocketProtocol protocol);
 

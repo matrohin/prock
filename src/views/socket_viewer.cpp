@@ -29,7 +29,7 @@ static String socket_cell_text(BumpArena &arena, const SocketEntry &sock,
     return format_address(arena, sock, false);
   case eSocketViewerColumnId_State:
     return String::static_string(
-        is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-");
+        socket_state_name(sock.protocol, sock.state));
   case eSocketViewerColumnId_RecvQ:
     return String::sprintf(arena, "%u", sock.rx_queue);
   case eSocketViewerColumnId_SendQ:
@@ -47,7 +47,7 @@ static void copy_socket_row(Notifications &notifications,
   const String buf = String::sprintf(
       frame_arena, "%s%s\t%s\t%s\t%s\t%u\t%u", SOCKET_COPY_HEADER,
       protocol_name(sock.protocol), local_addr.data, remote_addr.data,
-      is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-", sock.rx_queue,
+      socket_state_name(sock.protocol, sock.state), sock.rx_queue,
       sock.tx_queue);
   clipboard_copy_row(notifications, buf.data);
 }
@@ -63,8 +63,8 @@ static void copy_all_sockets(Notifications &notifications, BumpArena &arena,
         return snprintf(
             ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n", protocol_name(sock.protocol),
             local_addr.data, remote_addr.data,
-            is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-",
-            sock.rx_queue, sock.tx_queue);
+            socket_state_name(sock.protocol, sock.state), sock.rx_queue,
+            sock.tx_queue);
       });
 }
 
@@ -232,7 +232,8 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             const String filter_str = String::sprintf(
                 ctx.frame_arena, "%s %s %s %s", protocol_name(sock.protocol),
-                local_addr.data, remote_addr.data, tcp_state_name(sock.state));
+                local_addr.data, remote_addr.data,
+                socket_state_name(sock.protocol, sock.state));
             if (!filter.PassFilter(filter_str.data)) continue;
 
             const bool is_selected =
@@ -279,11 +280,8 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             // State
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_State);
-            if (is_tcp(sock.protocol)) {
-              ImGui::TextUnformatted(tcp_state_name(sock.state));
-            } else {
-              ImGui::TextDisabled("-");
-            }
+            ImGui::TextUnformatted(
+                socket_state_name(sock.protocol, sock.state));
 
             // Recv-Q
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_RecvQ);
