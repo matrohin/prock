@@ -233,6 +233,60 @@ inline void notify_error(Notifications &notifications, const int error_code,
   va_end(args);
 }
 
+inline void notify_info(Notifications &notifications, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  notifications_vpush_action(notifications, eNotificationSeverity_Info, nullptr,
+                             nullptr, fmt, args);
+  va_end(args);
+}
+
+// Clipboard helpers that confirm the copy with a toast. Cell copies preview
+// the value; rows are too long to preview, so they just say what happened.
+inline void clipboard_copy_cell(Notifications &notifications,
+                                const String &text) {
+  ImGui::SetClipboardText(text.data);
+  constexpr uint32_t MAX_PREVIEW = 64;
+  if (text.len <= MAX_PREVIEW) {
+    notify_info(notifications, "Copied: %s", text.data);
+  } else {
+    notify_info(notifications, "Copied: %.*s...", MAX_PREVIEW, text.data);
+  }
+}
+
+inline void clipboard_copy_row(Notifications &notifications, const char *text) {
+  ImGui::SetClipboardText(text);
+  notify_info(notifications, "Copied row");
+}
+
+// Remembers which column was under the mouse on the right-click that opened a
+// row context menu, so "Copy <cell>" knows what to copy while the popup is up.
+// Call right after the row's spanning Selectable/TreeNode (it must be the last
+// item). Only one context menu can be open at a time, so a single slot serves
+// every table. The trigger must mirror OpenPopupOnItemClick's (mouse release +
+// AllowWhenBlockedByPopup): a press-based plain-hover check misses the
+// recapture when right-clicking while the previous popup is still open.
+inline int table_context_column(const int column_count) {
+  static int captured = 0;
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
+      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup)) {
+    const int hovered = ImGui::TableGetHoveredColumn();
+    captured = (hovered >= 0 && hovered < column_count) ? hovered : 0;
+  }
+  return captured;
+}
+
+// Menu label like: Copy "esbuild". Long values are elided; the ### suffix
+// keeps the item ID stable regardless of the value.
+inline String copy_cell_menu_label(BumpArena &arena, const String &cell) {
+  constexpr uint32_t MAX_LABEL = 24;
+  if (cell.len <= MAX_LABEL) {
+    return String::sprintf(arena, "Copy \"%s\"###CopyCell", cell.data);
+  }
+  return String::sprintf(arena, "Copy \"%.*s...\"###CopyCell", MAX_LABEL,
+                         cell.data);
+}
+
 inline bool popup_close_on_escape() {
   if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
     ImGui::CloseCurrentPopup();
@@ -262,7 +316,8 @@ void sort_bidirectional(T *data, uint32_t size, ImGuiSortDirection dir,
 }
 
 template <typename T, typename FormatFn>
-void copy_all_to_clipboard(BumpArena &arena, const T *data, uint32_t count,
+void copy_all_to_clipboard(Notifications &notifications, BumpArena &arena,
+                           const T *data, uint32_t count,
                            size_t per_item_estimate, const char *header,
                            FormatFn fmt) {
   const size_t buf_size = 128 + count * per_item_estimate;
@@ -273,4 +328,5 @@ void copy_all_to_clipboard(BumpArena &arena, const T *data, uint32_t count,
     ptr += fmt(ptr, buf_size - static_cast<size_t>(ptr - buf), data[i]);
   }
   ImGui::SetClipboardText(buf);
+  notify_info(notifications, "Copied %u rows", count);
 }

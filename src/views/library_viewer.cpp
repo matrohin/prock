@@ -16,19 +16,34 @@ const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_LIBRARIES = 5;
 
-static void copy_library_row(BumpArena &frame_arena, const LibraryEntry &lib) {
+static String library_cell_text(BumpArena &arena, const LibraryEntry &lib,
+                                const int column) {
+  switch (column) {
+  case eLibraryViewerColumnId_Path:
+    return lib.path;
+  case eLibraryViewerColumnId_MappedSize:
+    return String::sprintf(arena, "%lu", lib.addr_end - lib.addr_start);
+  case eLibraryViewerColumnId_FileSize:
+    return String::sprintf(arena, "%ld", lib.file_size);
+  default:
+    return String::static_string("");
+  }
+}
+
+static void copy_library_row(Notifications &notifications,
+                             BumpArena &frame_arena, const LibraryEntry &lib) {
   const unsigned long mapped_size = lib.addr_end - lib.addr_start;
   const String str =
       String::sprintf(frame_arena, "%s%s\t%lu\t%ld", LIBRARY_COPY_HEADER,
                       lib.path.data, mapped_size, lib.file_size);
-  ImGui::SetClipboardText(str.data);
+  clipboard_copy_row(notifications, str.data);
 }
 
-static void copy_all_libraries(BumpArena &arena,
+static void copy_all_libraries(Notifications &notifications, BumpArena &arena,
                                const LibraryViewerWindow &win) {
   copy_all_to_clipboard(
-      arena, win.libraries.data, win.libraries.size, 320, LIBRARY_COPY_HEADER,
-      [](char *ptr, size_t rem, const LibraryEntry &lib) {
+      notifications, arena, win.libraries.data, win.libraries.size, 320,
+      LIBRARY_COPY_HEADER, [](char *ptr, size_t rem, const LibraryEntry &lib) {
         const unsigned long mapped_size = lib.addr_end - lib.addr_start;
         return snprintf(ptr, rem, "%s\t%lu\t%ld\n", lib.path.data, mapped_size,
                         lib.file_size);
@@ -197,13 +212,24 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ImGui::SetTooltip("%s", lib.path.data);
             }
 
+            const int copy_column =
+                table_context_column(eLibraryViewerColumnId_Count);
             if (ImGui::BeginPopupContextItem()) {
               win.selected_index = static_cast<int>(j);
-              if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-                copy_library_row(ctx.frame_arena, lib);
+              const String cell =
+                  library_cell_text(ctx.frame_arena, lib, copy_column);
+              if (ImGui::MenuItemEx(
+                      copy_cell_menu_label(ctx.frame_arena, cell).data,
+                      ICON_MD_CONTENT_COPY)) {
+                clipboard_copy_cell(view_state.notifications, cell);
+              }
+              if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
+                copy_library_row(view_state.notifications, ctx.frame_arena,
+                                 lib);
               }
               if (ImGui::MenuItem("Copy All")) {
-                copy_all_libraries(ctx.frame_arena, win);
+                copy_all_libraries(view_state.notifications, ctx.frame_arena,
+                                   win);
               }
               ImGui::EndPopup();
             }
@@ -240,7 +266,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         // Ctrl+C to copy selected row
         if (win.selected_index >= 0 &&
             ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-          copy_library_row(ctx.frame_arena,
+          copy_library_row(view_state.notifications, ctx.frame_arena,
                            win.libraries.data[win.selected_index]);
         }
       }

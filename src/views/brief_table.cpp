@@ -104,7 +104,42 @@ static void open_all_windows(const Pid pid, const char *comm,
                        comm, dock_id, no_focus);
 }
 
-static void copy_process_row(BumpArena &arena, const BriefTableLine &line) {
+static String process_cell_text(BumpArena &arena, const BriefTableLine &line,
+                                const int column) {
+  const ProcessDerivedStat &derived = line.derived_stat;
+  switch (column) {
+  case eBriefTableColumnId_Pid:
+    return String::sprintf(arena, "%d", line.pid);
+  case eBriefTableColumnId_Name:
+    return String::static_string(line.name.data);
+  case eBriefTableColumnId_State:
+    return String::sprintf(arena, "%c", line.state);
+  case eBriefTableColumnId_Threads:
+    return String::sprintf(arena, "%ld", line.num_threads);
+  case eBriefTableColumnId_CpuTotalPerc:
+    return String::sprintf(arena, "%.1f",
+                           derived.cpu_user_perc + derived.cpu_kernel_perc);
+  case eBriefTableColumnId_CpuUserPerc:
+    return String::sprintf(arena, "%.1f", derived.cpu_user_perc);
+  case eBriefTableColumnId_CpuKernelPerc:
+    return String::sprintf(arena, "%.1f", derived.cpu_kernel_perc);
+  case eBriefTableColumnId_MemRssBytes:
+    return String::sprintf(arena, "%.0f", derived.mem_resident_bytes / 1024.0);
+  case eBriefTableColumnId_MemVirtBytes:
+    return String::sprintf(arena, "%.0f", derived.mem_virtual_bytes / 1024.0);
+  case eBriefTableColumnId_IoReadKbPerSec:
+    return String::sprintf(arena, "%.1f", derived.io_read_kb_per_sec);
+  case eBriefTableColumnId_IoWriteKbPerSec:
+    return String::sprintf(arena, "%.1f", derived.io_write_kb_per_sec);
+  case eBriefTableColumnId_CmdLine:
+    return String::static_string(line.cmdline);
+  default:
+    return String::static_string("");
+  }
+}
+
+static void copy_process_row(Notifications &notifications, BumpArena &arena,
+                             const BriefTableLine &line) {
   const ProcessDerivedStat &derived = line.derived_stat;
   const String str = String::sprintf(
       arena, "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
@@ -113,7 +148,7 @@ static void copy_process_row(BumpArena &arena, const BriefTableLine &line) {
       derived.cpu_user_perc, derived.cpu_kernel_perc,
       derived.mem_resident_bytes / 1024.0, derived.mem_virtual_bytes / 1024.0,
       derived.io_read_kb_per_sec, derived.io_write_kb_per_sec, line.cmdline);
-  ImGui::SetClipboardText(str.data);
+  clipboard_copy_row(notifications, str.data);
 }
 
 static bool get_process_affinity(const Pid pid, uint64_t &mask,
@@ -165,7 +200,7 @@ static bool set_process_nice(Notifications &notifications, const Pid pid,
   return true;
 }
 
-static void copy_all_processes(BumpArena &arena,
+static void copy_all_processes(Notifications &notifications, BumpArena &arena,
                                const BriefTableState &my_state) {
   // Header + all rows (extra space for cmdline)
   const size_t buf_size = 256 + my_state.lines.size * 4352;
@@ -185,6 +220,7 @@ static void copy_all_processes(BumpArena &arena,
         derived.io_write_kb_per_sec, line.cmdline);
   }
   ImGui::SetClipboardText(buf);
+  notify_info(notifications, "Copied %u rows", my_state.lines.size);
 }
 
 static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
@@ -192,13 +228,19 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                                     const BriefTableLine &line,
                                     const char *label, const int num_cpus) {
   const Pid pid = line.pid;
+  const int copy_column = table_context_column(eBriefTableColumnId_Count);
   if (ImGui::BeginPopupContextItem(label)) {
     my_state.selected_pid = pid;
-    if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-      copy_process_row(ctx.frame_arena, line);
+    const String cell = process_cell_text(ctx.frame_arena, line, copy_column);
+    if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
+                          ICON_MD_CONTENT_COPY)) {
+      clipboard_copy_cell(view_state.notifications, cell);
+    }
+    if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
+      copy_process_row(view_state.notifications, ctx.frame_arena, line);
     }
     if (ImGui::MenuItem("Copy All")) {
-      copy_all_processes(ctx.frame_arena, my_state);
+      copy_all_processes(view_state.notifications, ctx.frame_arena, my_state);
     }
     ImGui::Separator();
     if (ImGui::MenuItemEx("Filter to subtree", ICON_MD_FILTER_ALT)) {
@@ -863,7 +905,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
       for (BriefTableLine &line : my_state.lines) {
         if (line.pid == my_state.selected_pid) {
-          copy_process_row(ctx.frame_arena, line);
+          copy_process_row(view_state.notifications, ctx.frame_arena, line);
           break;
         }
       }

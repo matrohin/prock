@@ -79,20 +79,41 @@ static void kill_selected(PortsViewerState &state, Notifications &notifications,
   notify_error(notifications, err, "Failed to kill %d: %s", pid, strerror(err));
 }
 
-static void copy_port_row(BumpArena &frame_arena, const PortEntry &e) {
+static String port_cell_text(BumpArena &arena, const PortEntry &e,
+                             const int column) {
+  switch (column) {
+  case ePortsViewerColumnId_Protocol:
+    return String::static_string(protocol_name(e.sock.protocol));
+  case ePortsViewerColumnId_LocalAddress:
+    return format_address(arena, e.sock, true);
+  case ePortsViewerColumnId_State:
+    return String::static_string(
+        is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state) : "-");
+  case ePortsViewerColumnId_Pid:
+    return String::sprintf(arena, "%d", e.pid);
+  case ePortsViewerColumnId_Process:
+    return String::static_string(e.comm);
+  default:
+    return String::static_string("");
+  }
+}
+
+static void copy_port_row(Notifications &notifications, BumpArena &frame_arena,
+                          const PortEntry &e) {
   const String local_addr = format_address(frame_arena, e.sock, true);
   const String buf = String::sprintf(
       frame_arena, "%s%s\t%s\t%s\t%d\t%s", PORTS_COPY_HEADER,
       protocol_name(e.sock.protocol), local_addr.data,
       is_tcp(e.sock.protocol) ? tcp_state_name(e.sock.state) : "-", e.pid,
       e.comm);
-  ImGui::SetClipboardText(buf.data);
+  clipboard_copy_row(notifications, buf.data);
 }
 
-static void copy_all_ports(BumpArena &arena, const PortsViewerState &state) {
+static void copy_all_ports(Notifications &notifications, BumpArena &arena,
+                           const PortsViewerState &state) {
   copy_all_to_clipboard(
-      arena, state.entries.data, state.entries.size, 128, PORTS_COPY_HEADER,
-      [&arena](char *ptr, size_t rem, const PortEntry &e) {
+      notifications, arena, state.entries.data, state.entries.size, 128,
+      PORTS_COPY_HEADER, [&arena](char *ptr, size_t rem, const PortEntry &e) {
         const String local_addr = format_address(arena, e.sock, true);
         return snprintf(ptr, rem, "%s\t%s\t%s\t%d\t%s\n",
                         protocol_name(e.sock.protocol), local_addr.data,
@@ -210,16 +231,19 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         state.selected_index = static_cast<int>(i);
       }
 
+      const int copy_column = table_context_column(ePortsViewerColumnId_Count);
       if (ImGui::BeginPopupContextItem()) {
         state.selected_index = static_cast<int>(i);
-        if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-          copy_port_row(ctx.frame_arena, e);
+        const String cell = port_cell_text(ctx.frame_arena, e, copy_column);
+        if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
+                              ICON_MD_CONTENT_COPY)) {
+          clipboard_copy_cell(view_state.notifications, cell);
         }
-        if (ImGui::MenuItem("Copy Address")) {
-          ImGui::SetClipboardText(local_addr.data);
+        if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
+          copy_port_row(view_state.notifications, ctx.frame_arena, e);
         }
         if (ImGui::MenuItem("Copy All")) {
-          copy_all_ports(ctx.frame_arena, state);
+          copy_all_ports(view_state.notifications, ctx.frame_arena, state);
         }
         ImGui::Separator();
         if (ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del")) {
@@ -256,6 +280,10 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   // (possibly filtered) list, so a hidden selection can't be killed blindly.
   if (selected_visible && ImGui::Shortcut(ImGuiKey_Delete)) {
     kill_selected(state, view_state.notifications, SIGTERM);
+  }
+  if (selected_visible && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+    copy_port_row(view_state.notifications, ctx.frame_arena,
+                  state.entries.data[state.selected_index]);
   }
 
   ImGui::End();

@@ -36,19 +36,70 @@ const char *SMAPS_COPY_HEADER = "Address\tPerms\tSize(kB)\tRSS(kB)\tPSS(kB)"
 const char *SMAPS_GROUP_COPY_HEADER =
     "Segs\tSize(kB)\tRSS(kB)\tPSS(kB)\tPrivate(kB)\tSwap(kB)\tMapping\n";
 
-static void copy_smaps_row(BumpArena &frame_arena, const SmapsSegment &seg) {
+static String smaps_cell_text(BumpArena &arena, const SmapsSegment &seg,
+                              const int column) {
+  switch (column) {
+  case eSmapsViewerColumnId_Address:
+    return String::sprintf(arena, "%lx-%lx", seg.start_addr, seg.end_addr);
+  case eSmapsViewerColumnId_Perms:
+    return String::static_string(seg.perms);
+  case eSmapsViewerColumnId_Size:
+    return String::sprintf(arena, "%lu", seg.size_kb);
+  case eSmapsViewerColumnId_Rss:
+    return String::sprintf(arena, "%lu", seg.rss_kb);
+  case eSmapsViewerColumnId_Pss:
+    return String::sprintf(arena, "%lu", seg.pss_kb);
+  case eSmapsViewerColumnId_Private:
+    return String::sprintf(arena, "%lu",
+                           seg.private_clean_kb + seg.private_dirty_kb);
+  case eSmapsViewerColumnId_Swap:
+    return String::sprintf(arena, "%lu", seg.swap_kb);
+  case eSmapsViewerColumnId_Mapping:
+    return String::static_string(segment_label(seg));
+  default:
+    return String::static_string("");
+  }
+}
+
+// Grouped table column indices (0..6: Segs, Size, RSS, PSS, Private, Swap,
+// Mapping), not SmapsViewerColumnId values.
+static String smaps_group_cell_text(BumpArena &arena, const SmapsGroup &g,
+                                    const int column) {
+  switch (column) {
+  case 0:
+    return String::sprintf(arena, "%u", g.count);
+  case 1:
+    return String::sprintf(arena, "%lu", g.size_kb);
+  case 2:
+    return String::sprintf(arena, "%lu", g.rss_kb);
+  case 3:
+    return String::sprintf(arena, "%lu", g.pss_kb);
+  case 4:
+    return String::sprintf(arena, "%lu", g.private_kb);
+  case 5:
+    return String::sprintf(arena, "%lu", g.swap_kb);
+  case 6:
+    return String::static_string(g.name);
+  default:
+    return String::static_string("");
+  }
+}
+
+static void copy_smaps_row(Notifications &notifications, BumpArena &frame_arena,
+                           const SmapsSegment &seg) {
   const String buf = String::sprintf(
       frame_arena, "%s%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s",
       SMAPS_COPY_HEADER, seg.start_addr, seg.end_addr, seg.perms, seg.size_kb,
       seg.rss_kb, seg.pss_kb, seg.private_clean_kb + seg.private_dirty_kb,
       seg.swap_kb, segment_label(seg));
-  ImGui::SetClipboardText(buf.data);
+  clipboard_copy_row(notifications, buf.data);
 }
 
-static void copy_all_smaps(BumpArena &arena, const SmapsViewerWindow &win) {
+static void copy_all_smaps(Notifications &notifications, BumpArena &arena,
+                           const SmapsViewerWindow &win) {
   copy_all_to_clipboard(
-      arena, win.segments.data, win.segments.size, 160, SMAPS_COPY_HEADER,
-      [](char *ptr, size_t rem, const SmapsSegment &seg) {
+      notifications, arena, win.segments.data, win.segments.size, 160,
+      SMAPS_COPY_HEADER, [](char *ptr, size_t rem, const SmapsSegment &seg) {
         return snprintf(ptr, rem, "%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s\n",
                         seg.start_addr, seg.end_addr, seg.perms, seg.size_kb,
                         seg.rss_kb, seg.pss_kb,
@@ -57,22 +108,24 @@ static void copy_all_smaps(BumpArena &arena, const SmapsViewerWindow &win) {
       });
 }
 
-static void copy_smaps_group(BumpArena &frame_arena, const SmapsGroup &g) {
+static void copy_smaps_group(Notifications &notifications,
+                             BumpArena &frame_arena, const SmapsGroup &g) {
   const String buf = String::sprintf(
       frame_arena, "%s%u\t%lu\t%lu\t%lu\t%lu\t%lu\t%s", SMAPS_GROUP_COPY_HEADER,
       g.count, g.size_kb, g.rss_kb, g.pss_kb, g.private_kb, g.swap_kb, g.name);
-  ImGui::SetClipboardText(buf.data);
+  clipboard_copy_row(notifications, buf.data);
 }
 
-static void copy_all_smaps_groups(BumpArena &arena, const SmapsGroup *groups,
+static void copy_all_smaps_groups(Notifications &notifications,
+                                  BumpArena &arena, const SmapsGroup *groups,
                                   const uint32_t count) {
-  copy_all_to_clipboard(arena, groups, count, 96, SMAPS_GROUP_COPY_HEADER,
-                        [](char *ptr, size_t rem, const SmapsGroup &g) {
-                          return snprintf(
-                              ptr, rem, "%u\t%lu\t%lu\t%lu\t%lu\t%lu\t%s\n",
-                              g.count, g.size_kb, g.rss_kb, g.pss_kb,
-                              g.private_kb, g.swap_kb, g.name);
-                        });
+  copy_all_to_clipboard(
+      notifications, arena, groups, count, 96, SMAPS_GROUP_COPY_HEADER,
+      [](char *ptr, size_t rem, const SmapsGroup &g) {
+        return snprintf(ptr, rem, "%u\t%lu\t%lu\t%lu\t%lu\t%lu\t%s\n", g.count,
+                        g.size_kb, g.rss_kb, g.pss_kb, g.private_kb, g.swap_kb,
+                        g.name);
+      });
 }
 
 static void sort_segments(SmapsViewerWindow &win) {
@@ -392,13 +445,23 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 win.selected_index = static_cast<int>(j);
               }
 
+              const int copy_column = table_context_column(kGroupedCols);
               if (ImGui::BeginPopupContextItem()) {
                 win.selected_index = static_cast<int>(j);
-                if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-                  copy_smaps_group(ctx.frame_arena, g);
+                const String cell =
+                    smaps_group_cell_text(ctx.frame_arena, g, copy_column);
+                if (ImGui::MenuItemEx(
+                        copy_cell_menu_label(ctx.frame_arena, cell).data,
+                        ICON_MD_CONTENT_COPY)) {
+                  clipboard_copy_cell(view_state.notifications, cell);
+                }
+                if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
+                  copy_smaps_group(view_state.notifications, ctx.frame_arena,
+                                   g);
                 }
                 if (ImGui::MenuItem("Copy All")) {
-                  copy_all_smaps_groups(ctx.frame_arena, groups.data(),
+                  copy_all_smaps_groups(view_state.notifications,
+                                        ctx.frame_arena, groups.data(),
                                         groups.size());
                 }
                 ImGui::EndPopup();
@@ -436,7 +499,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (win.selected_index >= 0 &&
                 win.selected_index < static_cast<int>(groups.size()) &&
                 ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-              copy_smaps_group(ctx.frame_arena,
+              copy_smaps_group(view_state.notifications, ctx.frame_arena,
                                groups.data()[win.selected_index]);
             }
           }
@@ -498,13 +561,23 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 win.selected_index = static_cast<int>(j);
               }
 
+              const int copy_column = table_context_column(kFlatCols);
               if (ImGui::BeginPopupContextItem()) {
                 win.selected_index = static_cast<int>(j);
-                if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-                  copy_smaps_row(ctx.frame_arena, seg);
+                const String cell =
+                    smaps_cell_text(ctx.frame_arena, seg, copy_column);
+                if (ImGui::MenuItemEx(
+                        copy_cell_menu_label(ctx.frame_arena, cell).data,
+                        ICON_MD_CONTENT_COPY)) {
+                  clipboard_copy_cell(view_state.notifications, cell);
+                }
+                if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
+                  copy_smaps_row(view_state.notifications, ctx.frame_arena,
+                                 seg);
                 }
                 if (ImGui::MenuItem("Copy All")) {
-                  copy_all_smaps(ctx.frame_arena, win);
+                  copy_all_smaps(view_state.notifications, ctx.frame_arena,
+                                 win);
                 }
                 ImGui::EndPopup();
               }
@@ -546,7 +619,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (win.selected_index >= 0 &&
                 win.selected_index < static_cast<int>(win.segments.size) &&
                 ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-              copy_smaps_row(ctx.frame_arena,
+              copy_smaps_row(view_state.notifications, ctx.frame_arena,
                              win.segments.data[win.selected_index]);
             }
           }

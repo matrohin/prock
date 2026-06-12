@@ -18,7 +18,29 @@ static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
 const char *SOCKET_COPY_HEADER =
     "Protocol\tLocal Address\tRemote Address\tState\tRecv-Q\tSend-Q\n";
 
-static void copy_socket_row(BumpArena &frame_arena, const SocketEntry &sock) {
+static String socket_cell_text(BumpArena &arena, const SocketEntry &sock,
+                               const int column) {
+  switch (column) {
+  case eSocketViewerColumnId_Protocol:
+    return String::static_string(protocol_name(sock.protocol));
+  case eSocketViewerColumnId_LocalAddress:
+    return format_address(arena, sock, true);
+  case eSocketViewerColumnId_RemoteAddress:
+    return format_address(arena, sock, false);
+  case eSocketViewerColumnId_State:
+    return String::static_string(
+        is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-");
+  case eSocketViewerColumnId_RecvQ:
+    return String::sprintf(arena, "%u", sock.rx_queue);
+  case eSocketViewerColumnId_SendQ:
+    return String::sprintf(arena, "%u", sock.tx_queue);
+  default:
+    return String::static_string("");
+  }
+}
+
+static void copy_socket_row(Notifications &notifications,
+                            BumpArena &frame_arena, const SocketEntry &sock) {
   const String local_addr = format_address(frame_arena, sock, true);
   const String remote_addr = format_address(frame_arena, sock, false);
 
@@ -27,12 +49,14 @@ static void copy_socket_row(BumpArena &frame_arena, const SocketEntry &sock) {
       protocol_name(sock.protocol), local_addr.data, remote_addr.data,
       is_tcp(sock.protocol) ? tcp_state_name(sock.state) : "-", sock.rx_queue,
       sock.tx_queue);
-  ImGui::SetClipboardText(buf.data);
+  clipboard_copy_row(notifications, buf.data);
 }
 
-static void copy_all_sockets(BumpArena &arena, const SocketViewerWindow &win) {
+static void copy_all_sockets(Notifications &notifications, BumpArena &arena,
+                             const SocketViewerWindow &win) {
   copy_all_to_clipboard(
-      arena, win.sockets.data, win.sockets.size, 256, SOCKET_COPY_HEADER,
+      notifications, arena, win.sockets.data, win.sockets.size, 256,
+      SOCKET_COPY_HEADER,
       [&arena](char *ptr, size_t rem, const SocketEntry &sock) {
         const String local_addr = format_address(arena, sock, true);
         const String remote_addr = format_address(arena, sock, false);
@@ -223,13 +247,24 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               win.selected_index = static_cast<int>(j);
             }
 
+            const int copy_column =
+                table_context_column(eSocketViewerColumnId_Count);
             if (ImGui::BeginPopupContextItem()) {
               win.selected_index = static_cast<int>(j);
-              if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-                copy_socket_row(ctx.frame_arena, sock);
+              const String cell =
+                  socket_cell_text(ctx.frame_arena, sock, copy_column);
+              if (ImGui::MenuItemEx(
+                      copy_cell_menu_label(ctx.frame_arena, cell).data,
+                      ICON_MD_CONTENT_COPY)) {
+                clipboard_copy_cell(view_state.notifications, cell);
+              }
+              if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
+                copy_socket_row(view_state.notifications, ctx.frame_arena,
+                                sock);
               }
               if (ImGui::MenuItem("Copy All")) {
-                copy_all_sockets(ctx.frame_arena, win);
+                copy_all_sockets(view_state.notifications, ctx.frame_arena,
+                                 win);
               }
               ImGui::EndPopup();
             }
@@ -273,7 +308,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           // Ctrl+C to copy selected row
           if (win.selected_index >= 0 &&
               ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-            copy_socket_row(ctx.frame_arena,
+            copy_socket_row(view_state.notifications, ctx.frame_arena,
                             win.sockets.data[win.selected_index]);
           }
         }

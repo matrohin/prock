@@ -10,6 +10,7 @@
 namespace {
 
 constexpr double NOTIFY_TTL_SECONDS = 8.0;
+constexpr double NOTIFY_INFO_TTL_SECONDS = 4.0;
 constexpr float NOTIFY_WIDTH = 320.0f;
 constexpr float NOTIFY_EDGE_PAD = 12.0f;
 constexpr float NOTIFY_STACK_GAP = 8.0f;
@@ -39,7 +40,10 @@ const char *severity_label(const NotificationSeverity severity) {
 }
 
 bool is_expired(const Notification &note, const double now) {
-  return now - note.created_time > NOTIFY_TTL_SECONDS;
+  const double ttl = note.severity == eNotificationSeverity_Info
+                         ? NOTIFY_INFO_TTL_SECONDS
+                         : NOTIFY_TTL_SECONDS;
+  return now - note.created_time > ttl;
 }
 
 } // namespace

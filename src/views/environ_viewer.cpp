@@ -18,25 +18,53 @@ const char *ENVIRON_COPY_HEADER = "Name\tValue\n";
 
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_ENVIRON = 5;
 
-static void copy_environ_row(BumpArena &arena, const EnvironEntry &entry) {
+static void copy_environ_row(Notifications &notifications, BumpArena &arena,
+                             const EnvironEntry &entry) {
   const String str = String::sprintf(arena, "%s%s\t%s", ENVIRON_COPY_HEADER,
                                      entry.name.data, entry.value.data);
-  ImGui::SetClipboardText(str.data);
+  clipboard_copy_row(notifications, str.data);
 }
 
-static void copy_path_segment(BumpArena &arena, const char *start,
-                              const char *end) {
-  const String str = String::copy_from(arena, start, end - start);
-  ImGui::SetClipboardText(str.data);
+static void copy_path_segment(Notifications &notifications, BumpArena &arena,
+                              const char *start, const char *end) {
+  clipboard_copy_cell(notifications,
+                      String::copy_from(arena, start, end - start));
 }
 
-static void copy_all_environ(BumpArena &arena, const EnvironViewerWindow &win) {
-  copy_all_to_clipboard(arena, win.entries.data, win.entries.size, 4400,
-                        ENVIRON_COPY_HEADER,
+static void copy_all_environ(Notifications &notifications, BumpArena &arena,
+                             const EnvironViewerWindow &win) {
+  copy_all_to_clipboard(notifications, arena, win.entries.data,
+                        win.entries.size, 4400, ENVIRON_COPY_HEADER,
                         [](char *ptr, size_t rem, const EnvironEntry &entry) {
                           return snprintf(ptr, rem, "%s\t%s\n", entry.name.data,
                                           entry.value.data);
                         });
+}
+
+// Context menu shared by expandable and plain rows; the last submitted item
+// must be the row's spanning Selectable/TreeNode.
+static void environ_context_menu(FrameContext &ctx,
+                                 Notifications &notifications,
+                                 EnvironViewerWindow &win, const int index,
+                                 const EnvironEntry &entry) {
+  const int copy_column = table_context_column(eEnvironViewerColumnId_Count);
+  if (ImGui::BeginPopupContextItem()) {
+    win.selected_index = index;
+    win.selected_child_index = -1;
+    const String cell =
+        copy_column == eEnvironViewerColumnId_Value ? entry.value : entry.name;
+    if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
+                          ICON_MD_CONTENT_COPY)) {
+      clipboard_copy_cell(notifications, cell);
+    }
+    if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
+      copy_environ_row(notifications, ctx.frame_arena, entry);
+    }
+    if (ImGui::MenuItem("Copy All")) {
+      copy_all_environ(notifications, ctx.frame_arena, win);
+    }
+    ImGui::EndPopup();
+  }
 }
 
 // Returns true if value looks like a PATH-style variable (multiple
@@ -227,18 +255,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 win.selected_child_index = -1;
               }
 
-              // Context menu
-              if (ImGui::BeginPopupContextItem()) {
-                win.selected_index = static_cast<int>(j);
-                win.selected_child_index = -1;
-                if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-                  copy_environ_row(ctx.frame_arena, entry);
-                }
-                if (ImGui::MenuItem("Copy All")) {
-                  copy_all_environ(ctx.frame_arena, win);
-                }
-                ImGui::EndPopup();
-              }
+              environ_context_menu(ctx, view_state.notifications, win,
+                                   static_cast<int>(j), entry);
 
               // Value column - show collapsed hint or nothing when expanded
               ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
@@ -287,7 +305,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                       win.selected_child_index = seg_idx;
                       if (ImGui::MenuItemEx("Copy Path", ICON_MD_CONTENT_COPY,
                                             "Ctrl+C")) {
-                        copy_path_segment(ctx.frame_arena, seg_start, seg_end);
+                        copy_path_segment(view_state.notifications,
+                                          ctx.frame_arena, seg_start, seg_end);
                       }
                       ImGui::EndPopup();
                     }
@@ -316,17 +335,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 win.selected_child_index = -1;
               }
 
-              if (ImGui::BeginPopupContextItem()) {
-                win.selected_index = static_cast<int>(j);
-                win.selected_child_index = -1;
-                if (ImGui::MenuItemEx("Copy", ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-                  copy_environ_row(ctx.frame_arena, entry);
-                }
-                if (ImGui::MenuItem("Copy All")) {
-                  copy_all_environ(ctx.frame_arena, win);
-                }
-                ImGui::EndPopup();
-              }
+              environ_context_menu(ctx, view_state.notifications, win,
+                                   static_cast<int>(j), entry);
 
               // Value
               ImGui::TableSetColumnIndex(eEnvironViewerColumnId_Value);
@@ -354,7 +364,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             while (*p || seg_start != p) {
               if (*p == ':' || *p == '\0') {
                 if (seg_idx == win.selected_child_index) {
-                  copy_path_segment(ctx.frame_arena, seg_start, p);
+                  copy_path_segment(view_state.notifications, ctx.frame_arena,
+                                    seg_start, p);
                   break;
                 }
                 if (*p == '\0') break;
@@ -364,7 +375,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ++p;
             }
           } else {
-            copy_environ_row(ctx.frame_arena, entry);
+            copy_environ_row(view_state.notifications, ctx.frame_arena, entry);
           }
         }
       }
