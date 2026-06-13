@@ -758,7 +758,9 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             // refine the existing match
             const uint32_t total = my_state.lines.size;
             if (len == 0) current_idx += 1;
-            for (uint32_t offset = 0; offset <= total; ++offset) {
+            // total > 0 guards the % total below (table can be empty before the
+            // first snapshot arrives while still holding keyboard focus).
+            for (uint32_t offset = 0; total > 0 && offset <= total; ++offset) {
               const uint32_t j = (current_idx + offset) % total;
               const BriefTableLine &l = my_state.lines.data[j];
               if (filter_active && l.filter_state == 0) continue;

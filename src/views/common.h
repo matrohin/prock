@@ -322,10 +322,23 @@ void copy_all_to_clipboard(Notifications &notifications, BumpArena &arena,
                            FormatFn fmt) {
   const size_t buf_size = 128 + count * per_item_estimate;
   char *buf = arena.alloc_string(buf_size);
-  char *ptr = buf;
-  ptr += snprintf(ptr, buf_size, "%s", header);
-  for (uint32_t i = 0; i < count; ++i) {
-    ptr += fmt(ptr, buf_size - static_cast<size_t>(ptr - buf), data[i]);
+  size_t used = 0;
+
+  // snprintf returns the length it WOULD have written; clamp every advance to
+  // the bytes actually stored so one oversized row (e.g. a near-PATH_MAX path
+  // against a small per_item_estimate) can't push `used` past the buffer and
+  // underflow the remaining-size passed to the next call.
+  const auto advance = [&](const int written) {
+    if (written <= 0) return;
+    const size_t remaining = buf_size - used; // includes null terminator slot
+    used += static_cast<size_t>(written) < remaining
+                ? static_cast<size_t>(written)
+                : remaining - 1;
+  };
+
+  advance(snprintf(buf, buf_size, "%s", header));
+  for (uint32_t i = 0; i < count && used + 1 < buf_size; ++i) {
+    advance(fmt(buf + used, buf_size - used, data[i]));
   }
   ImGui::SetClipboardText(buf);
   notify_info(notifications, "Copied %u rows", count);

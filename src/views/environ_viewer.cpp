@@ -160,7 +160,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
     for (EnvironViewerWindow &win : state.windows) {
       if (win.entries.size > 0) {
         Array<EnvironEntry> new_entries =
-            Array<EnvironEntry>::copy_from(state.cur_arena, win.entries);
+            Array<EnvironEntry>::copy_from(new_arena, win.entries);
         for (uint32_t j = 0; j < win.entries.size; ++j) {
           EnvironEntry &dst = new_entries.data[j];
           dst.name = String::copy_from(new_arena, dst.name);
