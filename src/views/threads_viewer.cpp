@@ -115,7 +115,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   win->status = eOnDemandViewerStatus_Loading;
-  strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
+  snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_tid = -1;
   win->sorted_by = eThreadsViewerColumnId_CpuTotal;
   win->sorted_order = ImGuiSortDirection_Descending;

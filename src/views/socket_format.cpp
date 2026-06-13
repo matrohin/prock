@@ -79,7 +79,7 @@ String format_ipv6(BumpArena &arena, const unsigned char *ip,
     }
   }
   if (is_v4_mapped && ip[10] == 0xFF && ip[11] == 0xFF) {
-    return String::sprintf(arena, "::ffff:%u.%u.%u.%u:%u", ip[12], ip[13],
+    return String::sprintf(arena, "[::ffff:%u.%u.%u.%u]:%u", ip[12], ip[13],
                            ip[14], ip[15], port);
   }
 
@@ -92,7 +92,7 @@ String format_ipv6(BumpArena &arena, const unsigned char *ip,
     }
   }
   if (is_loopback && ip[15] == 1) {
-    return String::sprintf(arena, "::1:%u", port);
+    return String::sprintf(arena, "[::1]:%u", port);
   }
 
   // All zeros (::)
@@ -104,13 +104,13 @@ String format_ipv6(BumpArena &arena, const unsigned char *ip,
     }
   }
   if (is_any) {
-    return String::sprintf(arena, ":::%u", port);
+    return String::sprintf(arena, "[::]:%u", port);
   }
 
   return String::sprintf(
       arena,
-      "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%"
-      "02x%02x:%u",
+      "[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%"
+      "02x%02x]:%u",
       ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7], ip[8], ip[9],
       ip[10], ip[11], ip[12], ip[13], ip[14], ip[15], port);
 }

@@ -118,7 +118,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   win->pid = pid;
   win->dock_id = dock_id;
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
-  strncpy(win->process_name, comm, sizeof(win->process_name) - 1);
+  snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_index = -1;
   win->selected_child_index = -1;
   win->last_updated = 0.0;

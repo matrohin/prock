@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <cstring>
 
-SmapsResponse read_process_smaps(BumpArena & /*temp_arena*/,
+SmapsResponse read_process_smaps(BumpArena &temp_arena,
                                  const SmapsRequest &request) {
   ZoneScoped;
   const Pid pid = request.pid;
@@ -36,7 +36,7 @@ SmapsResponse read_process_smaps(BumpArena & /*temp_arena*/,
 
     if (sscanf(line, "%lx-%lx %7s %lx %x:%x %lu%n", &start_addr, &end_addr,
                perms, &offset, &dev_maj, &dev_min, &inode, &chars_read) == 7) {
-      cur = segments.emplace_back(response.owner_arena);
+      cur = segments.emplace_back(temp_arena);
       cur->start_addr = start_addr;
       cur->end_addr = end_addr;
       memcpy(cur->perms, perms, sizeof(cur->perms));
@@ -80,6 +80,7 @@ SmapsResponse read_process_smaps(BumpArena & /*temp_arena*/,
   }
 
   fclose(f);
-  response.segments = segments.to_array();
+  response.segments = Array<SmapsSegment>::copy_from(
+      response.owner_arena, segments.data(), segments.size());
   return response;
 }

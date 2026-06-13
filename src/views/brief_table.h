@@ -38,8 +38,7 @@ struct BriefTableLine {
   Pid ppid;
   int tree_depth; // 0 for root, incremented for children (used in tree mode)
   char state;
-  uint8_t
-      filter_state; // 0=hidden, 1=matches filter, 2=ancestor of match (grayed)
+  uint8_t filter_state; // 0=hidden, 1=match, 2=ancestor (grayed), 3=subtree
 };
 
 struct BriefTableState {

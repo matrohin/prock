@@ -7,11 +7,9 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   const Array<ProcessDerivedStat> derived_stats =
       Array<ProcessDerivedStat>::create(arena, snapshot.stats.size);
 
-  const double ticks_passed =
-      old_state.system.ticks_in_second *
+  const double time_delta =
       std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
-  const double time_delta_secs =
-      std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
+  const double ticks_passed = old_state.system.ticks_in_second * time_delta;
 
   uint32_t old_state_idx = 0;
   for (uint32_t i = 0; i < derived_stats.size; ++i) {
@@ -39,16 +37,16 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
       result.mem_virtual_bytes = new_stat.vsize;
 
       // Compute I/O rates in KB/s
-      if (time_delta_secs > 0) {
+      if (time_delta > 0) {
         if (new_stat.io_read_bytes >= old_stat.io_read_bytes) {
           result.io_read_kb_per_sec =
               (new_stat.io_read_bytes - old_stat.io_read_bytes) / 1024.0 /
-              time_delta_secs;
+              time_delta;
         }
         if (new_stat.io_write_bytes >= old_stat.io_write_bytes) {
           result.io_write_kb_per_sec =
               (new_stat.io_write_bytes - old_stat.io_write_bytes) / 1024.0 /
-              time_delta_secs;
+              time_delta;
         }
       }
     }
@@ -82,8 +80,6 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   constexpr double SECTOR_SIZE = 512.0;
   constexpr double BYTES_TO_MB = 1.0 / (1024.0 * 1024.0);
   DiskIoRate disk_io_rate = {};
-  const double time_delta =
-      std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
   if (time_delta > 0 && old.disk_io_stats.sectors_read > 0) {
     const ulonglong read_sectors_delta =
         snapshot.disk_io_stats.sectors_read - old.disk_io_stats.sectors_read;

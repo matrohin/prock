@@ -918,7 +918,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     }
 
     // Del key to kill selected process
-    if (my_state.selected_pid > 0 && ImGui::Shortcut(ImGuiKey_Delete)) {
+    if (ImGui::Shortcut(ImGuiKey_Delete)) {
       if (kill(my_state.selected_pid, SIGTERM) != 0) {
         const int err = errno;
         notify_error(view_state.notifications, err, "Failed to kill %d: %s",
