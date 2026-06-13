@@ -97,7 +97,10 @@ static void sort_environ(EnvironViewerWindow &win) {
 
 static void send_environ_request(Sync &sync, const Pid pid) {
   const EnvironRequest req = {pid};
-  sync.on_demand_reader.environ_request_queue.push(req);
+  {
+    std::lock_guard<std::mutex> lock(sync.quit_mutex);
+    sync.on_demand_reader.environ_request_queue.push(req);
+  }
   sync.on_demand_reader.request_read_cv.notify_one();
 }
 

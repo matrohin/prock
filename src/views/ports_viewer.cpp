@@ -20,7 +20,10 @@ const char *PORTS_COPY_HEADER =
     "Protocol\tLocal Address\tState\tPID\tProcess\n";
 
 static void send_port_scan_request(Sync &sync) {
-  sync.on_demand_reader.port_scan_request_queue.push({});
+  {
+    std::lock_guard<std::mutex> lock(sync.quit_mutex);
+    sync.on_demand_reader.port_scan_request_queue.push({});
+  }
   sync.on_demand_reader.request_read_cv.notify_one();
 }
 

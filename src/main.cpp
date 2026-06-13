@@ -644,7 +644,10 @@ int main(int, char **) {
     // Sync update period to gathering thread
     const float new_period = view_state.preferences_state.update_period;
     if (sync.update_period.load() != new_period) {
-      sync.update_period.store(new_period);
+      {
+        std::lock_guard<std::mutex> lock(sync.quit_mutex);
+        sync.update_period.store(new_period);
+      }
       sync.quit_cv.notify_one();
     }
 
@@ -688,7 +691,10 @@ int main(int, char **) {
   }
 
   // Cleanup
-  sync.quit.store(true);
+  {
+    std::lock_guard<std::mutex> lock(sync.quit_mutex);
+    sync.quit.store(true);
+  }
   sync.quit_cv.notify_one();
   sync.on_demand_reader.request_read_cv.notify_one();
   gathering_thread.join();

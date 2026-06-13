@@ -96,7 +96,10 @@ static void sort_sockets(const SocketViewerWindow &win) {
 
 static void send_socket_request(Sync &sync, const Pid pid) {
   const SocketRequest req = {pid};
-  sync.on_demand_reader.socket_request_queue.push(req);
+  {
+    std::lock_guard<std::mutex> lock(sync.quit_mutex);
+    sync.on_demand_reader.socket_request_queue.push(req);
+  }
   sync.on_demand_reader.request_read_cv.notify_one();
 }
 

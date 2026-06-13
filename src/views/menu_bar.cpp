@@ -317,7 +317,10 @@ void menu_bar_update(ViewState &view_state) {
   }
 
   if (prefs.show_preferences_modal && !prefs.font_list_requested) {
-    sync.on_demand_reader.font_list_request_queue.push({});
+    {
+      std::lock_guard<std::mutex> lock(sync.quit_mutex);
+      sync.on_demand_reader.font_list_request_queue.push({});
+    }
     sync.on_demand_reader.request_read_cv.notify_one();
     prefs.font_list_requested = true;
   }
