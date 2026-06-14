@@ -8,9 +8,7 @@
 #include "imgui_internal.h"
 #include "tracy/Tracy.hpp"
 
-#include <cerrno>
 #include <cstring>
-#include <unistd.h>
 
 const char *LIBRARY_COPY_HEADER = "Path\tMapped Size\tFile Size\n";
 

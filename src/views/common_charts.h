@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/base.h"
+#include "base/const_string.h"
 #include "base/ring_track.h"
 #include "state.h"
 

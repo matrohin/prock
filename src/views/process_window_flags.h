@@ -50,6 +50,8 @@ bool process_window_focus(GrowingArray<T> &windows, const Pid pid) {
   return false;
 }
 
+struct ViewState;
+
 void process_window_check_close(ProcessWindowFlags &flags,
                                 bool &should_be_opened);
 

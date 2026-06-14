@@ -4,6 +4,7 @@
 #include "process_window_flags.h"
 
 #include "imgui.h"
+#include "on_demand_common.h"
 
 struct ThreadLine {
   double cpu_user_perc;

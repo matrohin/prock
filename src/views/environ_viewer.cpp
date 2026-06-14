@@ -10,9 +10,7 @@
 #include "on_demand_common.h"
 #include "tracy/Tracy.hpp"
 
-#include <cerrno>
 #include <cstring>
-#include <unistd.h>
 
 const char *ENVIRON_COPY_HEADER = "Name\tValue\n";
 

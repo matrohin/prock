@@ -10,7 +10,6 @@
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
-#include <cerrno>
 #include <cstring>
 
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SMAPS = 5;

@@ -1,9 +1,11 @@
 #pragma once
 
 #include "base/base.h"
+#include "process_window_flags.h"
 #include "sources/sync.h"
 
 #include "imgui.h"
+#include "on_demand_common.h"
 
 enum SocketViewerColumnId {
   eSocketViewerColumnId_Protocol,

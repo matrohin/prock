@@ -11,8 +11,6 @@
 #include "implot.h"
 #include "tracy/Tracy.hpp"
 
-#include <cmath>
-
 struct CpuChartScaledData {
   const double *times;
   const double *values;

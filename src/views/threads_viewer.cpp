@@ -11,7 +11,6 @@
 #include "table_item.h"
 #include "tracy/Tracy.hpp"
 
-#include <algorithm>
 #include <cstring>
 
 const char *THREAD_COPY_HEADER =

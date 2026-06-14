@@ -10,7 +10,6 @@
 #include "imgui_internal.h"
 #include "tracy/Tracy.hpp"
 
-#include <cerrno>
 #include <cstring>
 
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
