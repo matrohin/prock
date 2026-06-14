@@ -1,1 +1,14 @@
-Checks: '-*,clang-analyzer-*,llvm-*,bugprone-*,performance-*'
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: 'third-party/'
+
+# Dropped checks:
+#   llvm-header-guard                      -> we use #pragma once
+#   llvm-include-order                     -> clang-format (LLVM) owns include order
+#   bugprone-suspicious-include            -> the unity build #includes .cpp files
+#   *-unchecked-string-to-number-conversion-> sscanf is the /proc parsing idiom
+#   bugprone-narrowing-conversions         -> intentional ulong/int->double in stats/UI
+#   bugprone-throwing-static-initialization-> globals here don't throw; no exceptions used
+#   performance-enum-size                  -> not worth shrinking every enum's storage
+#   bugprone-easily-swappable-parameters   -> heuristic, rarely actionable
+#   llvm-use-ranges                        -> suggests llvm:: helpers we don't depend on
+Checks: '-*,clang-analyzer-*,llvm-*,bugprone-*,performance-*,-llvm-header-guard,-llvm-include-order,-bugprone-suspicious-include,-bugprone-unchecked-string-to-number-conversion,-bugprone-narrowing-conversions,-bugprone-throwing-static-initialization,-performance-enum-size,-bugprone-easily-swappable-parameters,-llvm-use-ranges'

@@ -52,6 +52,8 @@ struct SlabCache {
     return bits | (tag & TAG_MASK);
   }
   static ArenaSlab *ptr_of(uintptr_t value) {
+    // Tagged-pointer stack: this int->ptr round-trip is the whole design.
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
     return reinterpret_cast<ArenaSlab *>(value & ~TAG_MASK);
   }
 

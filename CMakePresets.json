@@ -30,7 +30,8 @@
       "inherits": ["native"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "ENABLE_TRACY": "OFF"
+        "ENABLE_TRACY": "OFF",
+        "PROCK_CLANG_TIDY": "clang-tidy"
       }
     },
     {

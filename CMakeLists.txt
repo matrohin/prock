@@ -52,7 +52,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE imgui_all glfw OpenGL::GLES2 X11::X11 tracy project_warnings)
-set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_CLANG_TIDY clang-tidy)
+# clang-tidy is opt-in per preset via PROCK_CLANG_TIDY (empty = off): on for the
+# debug preset, off for release/publish, and scoped to this target (not vendored).
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${PROCK_CLANG_TIDY}")
 
 # Version string from git, embedded as a compile define. Captured at configure
 # time; the CMAKE_CONFIGURE_DEPENDS below re-runs configure (and thus git

@@ -344,7 +344,7 @@ static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
     }
   }
 
-  rewind(stat_file);
+  fseek(stat_file, 0, SEEK_SET);
 
   Array<CpuCoreStat> result = Array<CpuCoreStat>::create(arena, num_cpus);
   int idx = 0;

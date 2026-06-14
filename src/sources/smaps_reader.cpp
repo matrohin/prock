@@ -42,6 +42,8 @@ SmapsResponse read_process_smaps(BumpArena &temp_arena,
       memcpy(cur->perms, perms, sizeof(cur->perms));
 
       const char *p = line + chars_read;
+      // chars_read is sscanf's %n, bounded by the matched prefix of line.
+      // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
       while (*p == ' ')
         p++;
       uint32_t plen = static_cast<uint32_t>(strlen(p));

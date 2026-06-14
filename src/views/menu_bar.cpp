@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "tracy/Tracy.hpp"
 
+#include <cmath>
 #include <cstring>
 #include <iterator>
 
@@ -73,7 +74,8 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     }
 
     ImGui::SetNextItemWidth(120);
-    int opacity_pct = static_cast<int>(prefs.window_opacity * 100.0f + 0.5f);
+    int opacity_pct =
+        static_cast<int>(std::lround(prefs.window_opacity * 100.0f));
     if (ImGui::SliderInt("Opacity", &opacity_pct, 0, 100, "%d%%")) {
       prefs.window_opacity = static_cast<float>(opacity_pct) / 100.0f;
     }

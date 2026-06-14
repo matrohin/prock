@@ -14,6 +14,8 @@ struct String {
                           const uint32_t len) {
     const uint32_t size = len + 1;
     char *dst = static_cast<char *>(arena.alloc_raw(size, 1));
+    // dst spans size == len + 1 bytes; alloc_raw's size is opaque to the
+    // analyzer. NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
     dst[len] = '\0';
     memcpy(dst, from, len);
     return String{dst, len};

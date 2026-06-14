@@ -44,6 +44,8 @@ EnvironResponse read_process_environ(BumpArena &temp_arena,
       memcpy(new_buf, accumulated, accumulated_size);
     }
     memcpy(new_buf + accumulated_size, buf, total_read);
+    // new_buf spans new_size + 1 bytes; alloc_string's size is opaque to the
+    // analyzer. NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
     new_buf[new_size] = '\0';
     accumulated = new_buf;
     accumulated_size = new_size;

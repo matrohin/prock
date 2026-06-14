@@ -238,7 +238,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             // Mapped Size (memory range)
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_MappedSize);
             unsigned long mapped_size = lib.addr_end - lib.addr_start;
-            if (mapped_size >= 1024 * 1024) {
+            if (mapped_size >= 1024UL * 1024) {
               ImGui::Text("%.1f MB", mapped_size / (1024.0 * 1024.0));
             } else if (mapped_size >= 1024) {
               ImGui::Text("%.1f KB", mapped_size / 1024.0);
@@ -249,7 +249,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             // File Size
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_FileSize);
             if (lib.file_size >= 0) {
-              if (lib.file_size >= 1024 * 1024) {
+              if (lib.file_size >= 1024L * 1024) {
                 ImGui::Text("%.1f MB", lib.file_size / (1024.0 * 1024.0));
               } else if (lib.file_size >= 1024) {
                 ImGui::Text("%.1f KB", lib.file_size / 1024.0);
