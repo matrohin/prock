@@ -40,25 +40,45 @@ struct ArenaSlab {
 };
 
 struct SlabCache {
-  std::atomic<ArenaSlab *> head{nullptr};
+  // Cached slabs are page-aligned, so the low 12 bits are always zero and carry
+  // an ABA counter bumped on every successful head update (a stale CAS that
+  // sees the pointer recycled back still fails on the tag).
+  static constexpr uintptr_t TAG_MASK = 0xFFF;
+  std::atomic<uintptr_t> head{0};
+
+  static uintptr_t pack(ArenaSlab *slab, uintptr_t tag) {
+    const uintptr_t bits = reinterpret_cast<uintptr_t>(slab);
+    assert((bits & TAG_MASK) == 0);
+    return bits | (tag & TAG_MASK);
+  }
+  static ArenaSlab *ptr_of(uintptr_t value) {
+    return reinterpret_cast<ArenaSlab *>(value & ~TAG_MASK);
+  }
 
   void push(ArenaSlab *slab) {
     slab->reset();
-    ArenaSlab *old_head = head.load(std::memory_order_relaxed);
+    uintptr_t old_head = head.load(std::memory_order_relaxed);
+    uintptr_t new_head;
     do {
-      slab->prev = old_head;
-    } while (!head.compare_exchange_weak(
-        old_head, slab, std::memory_order_release, std::memory_order_relaxed));
+      slab->prev = ptr_of(old_head);
+      new_head = pack(slab, (old_head & TAG_MASK) + 1);
+    } while (!head.compare_exchange_weak(old_head, new_head,
+                                         std::memory_order_release,
+                                         std::memory_order_relaxed));
   }
 
   ArenaSlab *pop() {
-    ArenaSlab *old_head = head.load(std::memory_order_relaxed);
+    uintptr_t old_head = head.load(std::memory_order_relaxed);
+    ArenaSlab *node;
+    uintptr_t new_head;
     do {
-      if (!old_head) return nullptr;
-    } while (!head.compare_exchange_weak(old_head, old_head->prev,
+      node = ptr_of(old_head);
+      if (!node) return nullptr;
+      new_head = pack(node->prev, (old_head & TAG_MASK) + 1);
+    } while (!head.compare_exchange_weak(old_head, new_head,
                                          std::memory_order_acquire,
                                          std::memory_order_relaxed));
-    return old_head;
+    return node;
   }
 };
 

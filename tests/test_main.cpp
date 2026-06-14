@@ -72,6 +72,64 @@ TEST_CASE("BumpArena destroy and reuse") {
 }
 
 // ============================================================================
+// SlabCache Tests
+// ============================================================================
+
+// Page-aligned slab with total_size set so push()'s reset() is valid.
+static ArenaSlab *test_alloc_slab() {
+  ArenaSlab *slab = static_cast<ArenaSlab *>(vm_alloc(SLAB_SIZE));
+  slab->total_size = SLAB_SIZE;
+  return slab;
+}
+
+TEST_CASE("SlabCache tagged pointer") {
+  SlabCache cache;
+
+  SUBCASE("empty pop returns null") { CHECK(cache.pop() == nullptr); }
+
+  SUBCASE("pack/unpack recovers the pointer for any tag") {
+    ArenaSlab *slab = test_alloc_slab();
+    CHECK(SlabCache::ptr_of(SlabCache::pack(slab, SlabCache::TAG_MASK)) == slab);
+    CHECK(SlabCache::ptr_of(SlabCache::pack(nullptr, 7)) == nullptr);
+    vm_free(slab, SLAB_SIZE);
+  }
+
+  SUBCASE("push/pop is LIFO") {
+    ArenaSlab *a = test_alloc_slab();
+    ArenaSlab *b = test_alloc_slab();
+    ArenaSlab *c = test_alloc_slab();
+
+    cache.push(a);
+    cache.push(b);
+    cache.push(c);
+
+    CHECK(cache.pop() == c);
+    CHECK(cache.pop() == b);
+    CHECK(cache.pop() == a);
+    CHECK(cache.pop() == nullptr);
+
+    vm_free(a, SLAB_SIZE);
+    vm_free(b, SLAB_SIZE);
+    vm_free(c, SLAB_SIZE);
+  }
+
+  SUBCASE("tag increments on every push and pop") {
+    ArenaSlab *slab = test_alloc_slab();
+    const uintptr_t tag0 = cache.head.load() & SlabCache::TAG_MASK;
+
+    cache.push(slab);
+    const uintptr_t tag1 = cache.head.load() & SlabCache::TAG_MASK;
+    CHECK(((tag1 - tag0) & SlabCache::TAG_MASK) == 1);
+
+    CHECK(cache.pop() == slab);
+    const uintptr_t tag2 = cache.head.load() & SlabCache::TAG_MASK;
+    CHECK(((tag2 - tag1) & SlabCache::TAG_MASK) == 1);
+
+    vm_free(slab, SLAB_SIZE);
+  }
+}
+
+// ============================================================================
 // Array Tests
 // ============================================================================
 
