@@ -14,6 +14,14 @@ struct ThreadLine {
   char state;
 };
 
+// Per-thread CPU counters kept for cross-update deltas. Storing only these
+// (not full ProcessStat) avoids dangling snapshot-owned comm/cmdline pointers.
+struct ThreadCpuSample {
+  Pid pid;
+  ulong utime;
+  ulong stime;
+};
+
 enum ThreadsViewerColumnId {
   eThreadsViewerColumnId_Tid,
   eThreadsViewerColumnId_Name,
@@ -42,7 +50,7 @@ struct ThreadsViewerWindow {
   // Previous snapshot for delta computation (owned by cur_arena)
   // Stored in TID-sorted order (as returned by read_process_threads)
   // for linear-scan delta matching
-  Array<ProcessStat> prev_threads;
+  Array<ThreadCpuSample> prev_threads;
   int64_t prev_at_ns; // nanoseconds since steady_clock epoch
 
   // UI state

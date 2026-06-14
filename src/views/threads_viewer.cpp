@@ -155,10 +155,10 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
 
     // Account for wasted memory from old arrays
     state.wasted_bytes += win.lines.size * sizeof(ThreadLine) +
-                          win.prev_threads.size * sizeof(ProcessStat);
+                          win.prev_threads.size * sizeof(ThreadCpuSample);
 
     SteadyTimePoint prev_at{SteadyClock::duration{win.prev_at_ns}};
-    const Array<ProcessStat> prev_threads = win.prev_threads;
+    const Array<ThreadCpuSample> prev_threads = win.prev_threads;
 
     // Build ThreadLine array from snapshot
     win.lines = Array<ThreadLine>::create(state.cur_arena, snap->threads.size);
@@ -189,7 +189,7 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
 
       if (prev_idx < prev_threads.size &&
           prev_threads.data[prev_idx].pid == thread.pid && ticks_passed > 0) {
-        const ProcessStat &prev = prev_threads.data[prev_idx];
+        const ThreadCpuSample &prev = prev_threads.data[prev_idx];
         if (thread.utime >= prev.utime) {
           line.cpu_user_perc = (thread.utime - prev.utime) / ticks_passed * 100;
         }
@@ -200,9 +200,13 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       }
     }
 
-    // Store current raw stats as prev for next update
+    // Store current CPU counters as prev for next update
     win.prev_threads =
-        Array<ProcessStat>::copy_from(state.cur_arena, snap->threads);
+        Array<ThreadCpuSample>::create(state.cur_arena, snap->threads.size);
+    for (uint32_t i = 0; i < snap->threads.size; ++i) {
+      const ProcessStat &t = snap->threads.data[i];
+      win.prev_threads.data[i] = {t.pid, t.utime, t.stime};
+    }
     win.prev_at_ns = now.time_since_epoch().count();
 
     // Apply current sorting
@@ -223,7 +227,7 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       }
       if (win.prev_threads.size > 0) {
         win.prev_threads =
-            Array<ProcessStat>::copy_from(new_arena, win.prev_threads);
+            Array<ThreadCpuSample>::copy_from(new_arena, win.prev_threads);
       }
     }
 
@@ -372,7 +376,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
         view_state.sync->thread_unwatch_queue.push(win.pid);
       }
       my_state.wasted_bytes += win.lines.size * sizeof(ThreadLine) +
-                               win.prev_threads.size * sizeof(ProcessStat);
+                               win.prev_threads.size * sizeof(ThreadCpuSample);
     }
   }
   my_state.windows.shrink_to(last);

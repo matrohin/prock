@@ -202,25 +202,22 @@ static bool set_process_nice(Notifications &notifications, const Pid pid,
 
 static void copy_all_processes(Notifications &notifications, BumpArena &arena,
                                const BriefTableState &my_state) {
-  // Header + all rows (extra space for cmdline)
-  const size_t buf_size = 256 + my_state.lines.size * 4352;
-  char *buf = arena.alloc_string(buf_size);
-  char *ptr = buf;
-  ptr += snprintf(ptr, buf_size, "%s", PROCESS_COPY_HEADER);
-
-  for (const BriefTableLine &line : my_state.lines) {
-    const ProcessDerivedStat &derived = line.derived_stat;
-    ptr += snprintf(
-        ptr, buf_size - (ptr - buf),
-        "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
-        line.pid, line.name.data, line.state, line.num_threads,
-        derived.cpu_user_perc + derived.cpu_kernel_perc, derived.cpu_user_perc,
-        derived.cpu_kernel_perc, derived.mem_resident_bytes / 1024.0,
-        derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
-        derived.io_write_kb_per_sec, line.cmdline);
-  }
-  ImGui::SetClipboardText(buf);
-  notify_info(notifications, "Copied %u rows", my_state.lines.size);
+  // name and cmdline are each bounded by the 4 KB /proc/[pid]/cmdline buffer.
+  copy_all_to_clipboard(
+      notifications, arena, my_state.lines.data, my_state.lines.size,
+      2 * 4096 + 256, PROCESS_COPY_HEADER,
+      [](char *ptr, size_t rem, const BriefTableLine &line) {
+        const ProcessDerivedStat &derived = line.derived_stat;
+        return snprintf(
+            ptr, rem,
+            "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
+            line.pid, line.name.data, line.state, line.num_threads,
+            derived.cpu_user_perc + derived.cpu_kernel_perc,
+            derived.cpu_user_perc, derived.cpu_kernel_perc,
+            derived.mem_resident_bytes / 1024.0,
+            derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
+            derived.io_write_kb_per_sec, line.cmdline);
+      });
 }
 
 static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
