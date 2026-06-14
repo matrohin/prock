@@ -171,7 +171,10 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
   } else if (sscanf(line, "UpdatePeriod=%f", &fval) == 1) {
     view_state->preferences_state.update_period = fval;
   } else if (sscanf(line, "TargetFPS=%d", &val) == 1) {
-    view_state->preferences_state.target_fps = val;
+    // Clamp to the slider's range; an unclamped 0 would divide by zero in the
+    // frame-pacing sleep, and a negative value would busy-loop.
+    view_state->preferences_state.target_fps =
+        val < 15 ? 15 : (val > 144 ? 144 : val);
   } else if (sscanf(line, "TreeMode=%d", &val) == 1) {
     view_state->brief_table_state.tree_mode = (val != 0);
   } else if (sscanf(line, "ZoomScale=%f", &fval) == 1) {

@@ -354,8 +354,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
 
         // Ctrl+C to copy selected row or child segment
-        if (win.selected_index >= 0 &&
-            ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+        if (copy_row_shortcut(win.selected_index, win.entries.size)) {
           const EnvironEntry &entry = win.entries.data[win.selected_index];
           if (win.selected_child_index >= 0) {
             // Copy specific path segment

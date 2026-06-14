@@ -259,6 +259,15 @@ inline void clipboard_copy_row(Notifications &notifications, const char *text) {
   notify_info(notifications, "Copied row");
 }
 
+// Ctrl+C "copy selected row" gate for the viewer tables. Confirms the stored
+// selection is still in range before the caller indexes data[selected_index]:
+// a Refresh can replace the list with fewer rows and leave selected_index
+// pointing past the end.
+inline bool copy_row_shortcut(const int selected_index, const uint32_t size) {
+  return selected_index >= 0 && selected_index < static_cast<int>(size) &&
+         ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C);
+}
+
 // Remembers which column was under the mouse on the right-click that opened a
 // row context menu, so "Copy <cell>" knows what to copy while the popup is up.
 // Call right after the row's spanning Selectable/TreeNode (it must be the last

@@ -265,8 +265,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
 
         // Ctrl+C to copy selected row
-        if (win.selected_index >= 0 &&
-            ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+        if (copy_row_shortcut(win.selected_index, win.libraries.size)) {
           copy_library_row(view_state.notifications, ctx.frame_arena,
                            win.libraries.data[win.selected_index]);
         }

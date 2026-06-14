@@ -368,6 +368,9 @@ TEST_CASE("state_snapshot_update") {
     // New process - no old data to compare, so CPU should be 0
     CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(0.0));
     CHECK(result.derived_stats.data[0].cpu_kernel_perc == doctest::Approx(0.0));
+    // ...but memory is instantaneous, so it's still reported on first sight.
+    CHECK(result.derived_stats.data[0].mem_resident_bytes ==
+          doctest::Approx(100 * 4096));
   }
 
   SUBCASE("system CPU percentage calculation") {

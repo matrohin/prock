@@ -498,9 +498,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             ImGui::EndTable();
 
-            if (win.selected_index >= 0 &&
-                win.selected_index < static_cast<int>(groups.size()) &&
-                ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+            if (copy_row_shortcut(win.selected_index, groups.size())) {
               copy_smaps_group(view_state.notifications, ctx.frame_arena,
                                groups.data()[win.selected_index]);
             }
@@ -618,9 +616,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             ImGui::EndTable();
 
-            if (win.selected_index >= 0 &&
-                win.selected_index < static_cast<int>(win.segments.size) &&
-                ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
+            if (copy_row_shortcut(win.selected_index, win.segments.size)) {
               copy_smaps_row(view_state.notifications, ctx.frame_arena,
                              win.segments.data[win.selected_index]);
             }

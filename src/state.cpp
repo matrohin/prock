@@ -1,6 +1,17 @@
 #include "state.h"
 #include "sources/sync.h"
 
+// Per-second rate between two samples of a monotonically increasing kernel
+// counter. A "current" below "previous" means the counter was reset (e.g. a
+// network interface bouncing or a reboot), so clamp the delta to zero instead
+// of letting the unsigned subtraction wrap into a huge spike. The caller
+// guarantees divisor > 0.
+static double counter_rate(const ulonglong cur, const ulonglong prev,
+                           const double scale, const double divisor) {
+  const ulonglong delta = cur >= prev ? cur - prev : 0;
+  return static_cast<double>(delta) * scale / divisor;
+}
+
 StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
                                     const UpdateSnapshot &snapshot) {
   const StateSnapshot &old = old_state.snapshot;
@@ -16,39 +27,33 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
     ProcessDerivedStat &result = derived_stats.data[i];
     const ProcessStat &new_stat = snapshot.stats.data[i];
 
+    // Memory is instantaneous (no previous sample needed), so derive it for
+    // every process - including ones appearing for the first time.
+    result.mem_resident_bytes =
+        new_stat.statm_resident * old_state.system.mem_page_size;
+    result.mem_virtual_bytes = new_stat.vsize;
+
     while (old_state_idx < old.stats.size &&
            new_stat.pid > old.stats.data[old_state_idx].pid) {
       ++old_state_idx;
     }
 
+    // CPU and I/O are rates: they need both a matching previous sample and a
+    // positive interval (which keeps ticks_passed > 0). Without those the
+    // zero-initialized result stands.
     if (old_state_idx < old.stats.size &&
-        new_stat.pid == old.stats.data[old_state_idx].pid) {
+        new_stat.pid == old.stats.data[old_state_idx].pid && time_delta > 0) {
       const ProcessStat &old_stat = old.stats.data[old_state_idx];
-      if (new_stat.utime >= old_stat.utime) {
-        result.cpu_user_perc =
-            (new_stat.utime - old_stat.utime) / ticks_passed * 100;
-      }
-      if (new_stat.stime >= old_stat.stime) {
-        result.cpu_kernel_perc =
-            (new_stat.stime - old_stat.stime) / ticks_passed * 100;
-      }
-      result.mem_resident_bytes =
-          new_stat.statm_resident * old_state.system.mem_page_size;
-      result.mem_virtual_bytes = new_stat.vsize;
-
-      // Compute I/O rates in KB/s
-      if (time_delta > 0) {
-        if (new_stat.io_read_bytes >= old_stat.io_read_bytes) {
-          result.io_read_kb_per_sec =
-              (new_stat.io_read_bytes - old_stat.io_read_bytes) / 1024.0 /
-              time_delta;
-        }
-        if (new_stat.io_write_bytes >= old_stat.io_write_bytes) {
-          result.io_write_kb_per_sec =
-              (new_stat.io_write_bytes - old_stat.io_write_bytes) / 1024.0 /
-              time_delta;
-        }
-      }
+      result.cpu_user_perc =
+          counter_rate(new_stat.utime, old_stat.utime, 100.0, ticks_passed);
+      result.cpu_kernel_perc =
+          counter_rate(new_stat.stime, old_stat.stime, 100.0, ticks_passed);
+      result.io_read_kb_per_sec =
+          counter_rate(new_stat.io_read_bytes, old_stat.io_read_bytes,
+                       1.0 / 1024.0, time_delta);
+      result.io_write_kb_per_sec =
+          counter_rate(new_stat.io_write_bytes, old_stat.io_write_bytes,
+                       1.0 / 1024.0, time_delta);
     }
   }
 
@@ -81,26 +86,24 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   constexpr double BYTES_TO_MB = 1.0 / (1024.0 * 1024.0);
   DiskIoRate disk_io_rate = {};
   if (time_delta > 0 && old.disk_io_stats.sectors_read > 0) {
-    const ulonglong read_sectors_delta =
-        snapshot.disk_io_stats.sectors_read - old.disk_io_stats.sectors_read;
-    const ulonglong write_sectors_delta =
-        snapshot.disk_io_stats.sectors_written -
-        old.disk_io_stats.sectors_written;
-    disk_io_rate.read_mb_per_sec =
-        (read_sectors_delta * SECTOR_SIZE * BYTES_TO_MB) / time_delta;
+    disk_io_rate.read_mb_per_sec = counter_rate(
+        snapshot.disk_io_stats.sectors_read, old.disk_io_stats.sectors_read,
+        SECTOR_SIZE * BYTES_TO_MB, time_delta);
     disk_io_rate.write_mb_per_sec =
-        (write_sectors_delta * SECTOR_SIZE * BYTES_TO_MB) / time_delta;
+        counter_rate(snapshot.disk_io_stats.sectors_written,
+                     old.disk_io_stats.sectors_written,
+                     SECTOR_SIZE * BYTES_TO_MB, time_delta);
   }
 
   // Compute network I/O rates in MB/s
   NetIoRate net_io_rate = {};
   if (time_delta > 0 && old.net_io_stats.bytes_received > 0) {
-    const ulonglong recv_delta =
-        snapshot.net_io_stats.bytes_received - old.net_io_stats.bytes_received;
-    const ulonglong send_delta = snapshot.net_io_stats.bytes_transmitted -
-                                 old.net_io_stats.bytes_transmitted;
-    net_io_rate.recv_mb_per_sec = (recv_delta * BYTES_TO_MB) / time_delta;
-    net_io_rate.send_mb_per_sec = (send_delta * BYTES_TO_MB) / time_delta;
+    net_io_rate.recv_mb_per_sec =
+        counter_rate(snapshot.net_io_stats.bytes_received,
+                     old.net_io_stats.bytes_received, BYTES_TO_MB, time_delta);
+    net_io_rate.send_mb_per_sec = counter_rate(
+        snapshot.net_io_stats.bytes_transmitted,
+        old.net_io_stats.bytes_transmitted, BYTES_TO_MB, time_delta);
   }
 
   return StateSnapshot{snapshot.stats,     derived_stats,
