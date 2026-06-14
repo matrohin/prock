@@ -28,8 +28,7 @@ static String socket_cell_text(BumpArena &arena, const SocketEntry &sock,
   case eSocketViewerColumnId_RemoteAddress:
     return format_address(arena, sock, false);
   case eSocketViewerColumnId_State:
-    return String::static_string(
-        socket_state_name(sock.protocol, sock.state));
+    return String::static_string(socket_state_name(sock.protocol, sock.state));
   case eSocketViewerColumnId_RecvQ:
     return String::sprintf(arena, "%u", sock.rx_queue);
   case eSocketViewerColumnId_SendQ:
@@ -60,11 +59,11 @@ static void copy_all_sockets(Notifications &notifications, BumpArena &arena,
       [&arena](char *ptr, size_t rem, const SocketEntry &sock) {
         const String local_addr = format_address(arena, sock, true);
         const String remote_addr = format_address(arena, sock, false);
-        return snprintf(
-            ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n", protocol_name(sock.protocol),
-            local_addr.data, remote_addr.data,
-            socket_state_name(sock.protocol, sock.state), sock.rx_queue,
-            sock.tx_queue);
+        return snprintf(ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n",
+                        protocol_name(sock.protocol), local_addr.data,
+                        remote_addr.data,
+                        socket_state_name(sock.protocol, sock.state),
+                        sock.rx_queue, sock.tx_queue);
       });
 }
 
@@ -142,10 +141,10 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
         }
-        response.owner_arena.destroy();
         break;
       }
     }
+    response.owner_arena.destroy();
   }
 
   // Compact arena if wasted too much

@@ -89,14 +89,17 @@ static void sort_thread_lines(ThreadsViewerWindow &win) {
       });
 }
 
-// Check if any other window still needs this PID watched
+// Check if any other window still needs this PID watched. The closing window
+// sits at index `survivors` and its pre-compaction copy at `cur`, so only the
+// compacted head [0, survivors) and the untouched tail (cur, size) are
+// distinct.
 static bool pid_still_needed(const ThreadsViewerState &state, const Pid pid,
-                             const uint32_t exclude_idx) {
-  for (uint32_t i = 0; i < state.windows.size(); ++i) {
-    if (i != exclude_idx && state.windows.data()[i].pid == pid) {
-      return true;
-    }
-  }
+                             const uint32_t survivors, const uint32_t cur) {
+  const ThreadsViewerWindow *data = state.windows.data();
+  for (uint32_t i = 0; i < survivors; ++i)
+    if (data[i].pid == pid) return true;
+  for (uint32_t i = cur + 1; i < state.windows.size(); ++i)
+    if (data[i].pid == pid) return true;
   return false;
 }
 
@@ -365,7 +368,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
       ++last;
     } else {
       // Remove from watched list if no other window needs this PID
-      if (!pid_still_needed(my_state, win.pid, i)) {
+      if (!pid_still_needed(my_state, win.pid, last, i)) {
         view_state.sync->thread_unwatch_queue.push(win.pid);
       }
       my_state.wasted_bytes += win.lines.size * sizeof(ThreadLine) +

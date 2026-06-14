@@ -214,10 +214,10 @@ void smaps_viewer_update(SmapsViewerState &state, Sync &sync) {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
         }
-        response.owner_arena.destroy();
         break;
       }
     }
+    response.owner_arena.destroy();
   }
 
   if (state.updates_since_last_cleanup > CLEANUP_AFTER_N_UPDATES_SMAPS) {

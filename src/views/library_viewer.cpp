@@ -118,10 +118,10 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
         }
-        response.owner_arena.destroy();
         break;
       }
     }
+    response.owner_arena.destroy();
   }
 
   // Compact arena if wasted too much

@@ -404,17 +404,15 @@ static DiskIoStat read_disk_io_stats() {
       continue;
     }
 
-    // For nvme devices: include nvme0n1, skip nvme0n1p1
-    // For sd/vd devices: include sda, skip sda1
+    // nvme/mmcblk whole disks end in a digit; their partitions add a 'p'
+    // separator (nvme0n1p1, mmcblk0p1). Others use the trailing-digit rule.
     bool is_partition = false;
-    if (strncmp(device, "nvme", 4) == 0) {
-      // NVMe partitions have 'p' followed by digit
+    if (strncmp(device, "nvme", 4) == 0 || strncmp(device, "mmcblk", 6) == 0) {
       const char *p = strrchr(device, 'p');
-      if (p && p > device + 4 && p[1] >= '0' && p[1] <= '9') {
+      if (p && p > device && p[1] >= '0' && p[1] <= '9') {
         is_partition = true;
       }
     } else {
-      // Traditional devices: partitions end with digit
       char last = device[len - 1];
       if (last >= '0' && last <= '9') {
         is_partition = true;
