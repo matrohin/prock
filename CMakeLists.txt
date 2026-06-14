@@ -52,6 +52,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE imgui_all glfw OpenGL::GLES2 X11::X11 tracy project_warnings)
+
+# Our code never throws/catches and uses no RTTI, so drop the unwinding tables
+# and typeinfo. Scoped to this target: not the vendored libs, and not the test
+# target (doctest's REQUIRE throws).
+target_compile_options(${PROJECT_NAME} PRIVATE -fno-exceptions -fno-rtti)
+
 # clang-tidy is opt-in per preset via PROCK_CLANG_TIDY (empty = off): on for the
 # debug preset, off for release/publish, and scoped to this target (not vendored).
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${PROCK_CLANG_TIDY}")
