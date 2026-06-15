@@ -1,5 +1,7 @@
 #include "views/menu_bar.h"
 
+#include "constants.h"
+#include "style_control.h"
 #include "views/common.h"
 #include "views/licenses.h"
 #include "views/process_host.h"
@@ -19,14 +21,28 @@
 static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
 static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
                                       "1s",     "2s",    "5s"};
-
-static constexpr float ZOOM_SCALES[] = {0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
-static const char *ZOOM_LABELS[] = {"75%", "100%", "125%", "150%", "200%"};
-static constexpr int ZOOM_COUNT = std::size(ZOOM_LABELS);
 static const char *PREFERENCES_TITLE = "Preferences";
 static const char *ABOUT_TITLE = "About Prock";
 static const char *LICENSES_TITLE = "Third-Party Licenses";
 static constexpr float FONT_LIST_WIDTH = 400.0f;
+static constexpr float UI_ELEMENT_WIDTH = 140.0f;
+static constexpr float FONT_PATH_WIDTH = 300.0f;
+
+// Fixed widget widths are authored at the base font size; scale them by the
+// live zoom/DPI so fields grow with the text instead of staying cramped (and
+// pinning the auto-resized modal narrow) when the UI is zoomed in.
+static float ui_scale() { return ImGui::GetFontSize() / BASE_FONT_SIZE; }
+
+static bool input_int(const char *title, int &value, const int min,
+                      const int max) {
+  ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * ui_scale());
+  ImGui::InputInt(title, &value, 1, 10);
+  if (ImGui::IsItemDeactivatedAfterEdit()) {
+    value = std::clamp(value, min, max);
+    return true;
+  }
+  return false;
+}
 
 static void draw_preferences_modal(PreferencesState &prefs) {
   if (prefs.show_preferences_modal) {
@@ -45,13 +61,18 @@ static void draw_preferences_modal(PreferencesState &prefs) {
 
     ImGui::SeparatorText("Appearance");
 
-    ImGui::SetNextItemWidth(120);
+    const float scale = ui_scale();
+
+    bool changed_style = false;
+
+    ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * scale);
     if (ImGui::BeginCombo("Theme", theme_name(prefs.theme))) {
       for (int i = 0; i < static_cast<int>(Theme::COUNT); i++) {
         const Theme t = static_cast<Theme>(i);
         const bool is_selected = prefs.theme == t;
         if (ImGui::Selectable(theme_name(t), is_selected)) {
           prefs.theme = t;
+          changed_style = true;
         }
         if (is_selected) {
           ImGui::SetItemDefaultFocus();
@@ -60,24 +81,41 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       ImGui::EndCombo();
     }
 
-    int zoom_idx = 1; // default to 100%
-    for (int i = 0; i < ZOOM_COUNT; i++) {
-      if (prefs.zoom_scale == ZOOM_SCALES[i]) {
-        zoom_idx = i;
+    changed_style |=
+        input_int("Zoom", prefs.zoom_scale_pct, ZOOM_MIN_PCT, ZOOM_MAX_PCT);
+    changed_style |= input_int("Opacity", prefs.window_opacity_pct, 0, 100);
+
+    if (changed_style) {
+      style_control_select_theme(prefs.theme);
+      style_control_rebuild(prefs.zoom_scale_pct, prefs.window_opacity_pct);
+    }
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::SeparatorText("Rendering");
+
+    if (input_int("FPS Limit", prefs.target_fps, TARGET_FPS_MIN,
+                  TARGET_FPS_MAX)) {
+      style_control_set_target_fps(prefs.target_fps);
+    }
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::SeparatorText("Updates");
+
+    int current_idx = 2; // default to 0.5s
+    for (int i = 0; i < 6; i++) {
+      if (prefs.update_period == PERIODS[i]) {
+        current_idx = i;
         break;
       }
     }
 
-    ImGui::SetNextItemWidth(120);
-    if (ImGui::Combo("Zoom", &zoom_idx, ZOOM_LABELS, ZOOM_COUNT)) {
-      prefs.zoom_scale = ZOOM_SCALES[zoom_idx];
-    }
-
-    ImGui::SetNextItemWidth(120);
-    int opacity_pct =
-        static_cast<int>(std::lround(prefs.window_opacity * 100.0f));
-    if (ImGui::SliderInt("Opacity", &opacity_pct, 0, 100, "%d%%")) {
-      prefs.window_opacity = static_cast<float>(opacity_pct) / 100.0f;
+    ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * scale);
+    if (ImGui::Combo("Update Period", &current_idx, PERIOD_LABELS, 6)) {
+      prefs.update_period = PERIODS[current_idx];
     }
 
     ImGui::Spacing();
@@ -86,13 +124,14 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     ImGui::SeparatorText("Font");
 
     const float list_height = 8.0f * ImGui::GetTextLineHeightWithSpacing();
+    const float font_list_width = FONT_LIST_WIDTH * scale;
     if (prefs.font_list.size > 0) {
-      ImGui::SetNextItemWidth(FONT_LIST_WIDTH);
+      ImGui::SetNextItemWidth(font_list_width);
       const ImGuiTextFilter filter = draw_filter_input(
           "##FontFilter", prefs.font_filter, sizeof(prefs.font_filter));
       bool found_in_list = (prefs.font_path[0] == '\0');
       if (ImGui::BeginListBox("##FontList",
-                              ImVec2(FONT_LIST_WIDTH, list_height))) {
+                              ImVec2(font_list_width, list_height))) {
         const bool default_selected = (prefs.font_path[0] == '\0');
         if (ImGui::Selectable("Default (built-in)", default_selected)) {
           prefs.font_path[0] = '\0';
@@ -137,17 +176,17 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       // Reserve the loaded list's footprint so the modal opens at its final
       // size and stays centered while the font list loads.
       ImGui::BeginDisabled();
-      ImGui::SetNextItemWidth(FONT_LIST_WIDTH);
+      ImGui::SetNextItemWidth(font_list_width);
       draw_filter_input("##FontFilter", prefs.font_filter,
                         sizeof(prefs.font_filter));
       if (ImGui::BeginListBox("##FontList",
-                              ImVec2(FONT_LIST_WIDTH, list_height))) {
+                              ImVec2(font_list_width, list_height))) {
         ImGui::TextDisabled("Loading fonts...");
         ImGui::EndListBox();
       }
       ImGui::EndDisabled();
     } else {
-      ImGui::SetNextItemWidth(300);
+      ImGui::SetNextItemWidth(FONT_PATH_WIDTH * scale);
       ImGui::InputTextWithHint("##Font", "Path to .ttf file (empty = default)",
                                prefs.font_path, sizeof(prefs.font_path));
       ImGui::SameLine();
@@ -157,36 +196,10 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     }
 
     ImGui::Spacing();
-    ImGui::Spacing();
-
-    ImGui::SeparatorText("Updates");
-
-    int current_idx = 2; // default to 0.5s
-    for (int i = 0; i < 6; i++) {
-      if (prefs.update_period == PERIODS[i]) {
-        current_idx = i;
-        break;
-      }
-    }
-
-    ImGui::SetNextItemWidth(120);
-    if (ImGui::Combo("Update Period", &current_idx, PERIOD_LABELS, 6)) {
-      prefs.update_period = PERIODS[current_idx];
-    }
-
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    ImGui::SeparatorText("Rendering");
-
-    ImGui::SetNextItemWidth(120);
-    ImGui::SliderInt("FPS Limit", &prefs.target_fps, 15, 144);
-
-    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 
-    if (ImGui::Button("Close", ImVec2(120, 0))) {
+    if (ImGui::Button("Close", ImVec2(UI_ELEMENT_WIDTH * scale, 0))) {
       ImGui::CloseCurrentPopup();
       prefs.show_preferences_modal = false;
     }

@@ -1,10 +1,6 @@
 #include "base/base.h"
 #include "base/channel.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Woverlength-strings"
-#include "inter_font.h"
-#include "material_symbols_font.h"
-#pragma GCC diagnostic pop
+#include "constants.h"
 #include "sources/process_stat.h"
 #include "sources/sync.h"
 #include "state.h"
@@ -45,6 +41,7 @@ void notify_data_ready(Sync &sync) {
 #include "sources/smaps_reader.cpp"
 #include "sources/socket_reader.cpp"
 #include "state.cpp"
+#include "style_control.cpp"
 #include "tracy/Tracy.hpp"
 #include "views/brief_table.cpp"
 #include "views/brief_table_logic.cpp"
@@ -77,12 +74,6 @@ static int g_needs_updates = 1;
 // Window resizes as framebuffer-size events that do not enqueue any ImGui event
 static bool g_framebuffer_resized = false;
 
-static float g_applied_zoom_scale = 1.0f;
-static Theme g_applied_theme = Theme::Light;
-static float g_monitor_scale = 1.0f;
-static float g_applied_opacity = 1.0f;
-static ImGuiStyle g_base_style;
-
 static void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
                                       int /*action*/, int /*mods*/) {
   g_needs_updates = 2;
@@ -91,54 +82,6 @@ static void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
 static void framebuffer_size_callback(GLFWwindow * /*window*/, int /*width*/,
                                       int /*height*/) {
   g_framebuffer_resized = true;
-}
-
-// Scale the alpha of background style colors so the desktop shows through
-// translucent panels while text, borders, and accents stay fully opaque.
-// Applied on top of a theme's base (opaque) colors; opacity 1.0 is a no-op.
-static void apply_window_opacity(ImGuiStyle &style, float opacity) {
-  if (opacity >= 1.0f) {
-    return;
-  }
-  static constexpr ImGuiCol bg_colors[] = {
-      ImGuiCol_WindowBg,      ImGuiCol_ChildBg,       ImGuiCol_MenuBarBg,
-      ImGuiCol_TitleBg,       ImGuiCol_TitleBgActive, ImGuiCol_TitleBgCollapsed,
-      ImGuiCol_ScrollbarBg,   ImGuiCol_TableHeaderBg, ImGuiCol_TableRowBg,
-      ImGuiCol_TableRowBgAlt,
-  };
-  for (const ImGuiCol col : bg_colors) {
-    style.Colors[col].w *= opacity;
-  }
-}
-
-// ImPlot draws an opaque frame (ImPlotCol_FrameBg, auto = ImGuiCol_FrameBg)
-// across the whole plot rect, boxing every chart. Always clear it so the plot
-// margin matches the surrounding panel. The inner plot background scales with
-// opacity (auto = ImGuiCol_WindowBg); at opacity 1.0 the scaled value equals
-// the automatic one, so there is no jump and we let ImPlot manage it.
-static void apply_plot_opacity(float opacity) {
-  ImPlotStyle &plot_style = ImPlot::GetStyle();
-  plot_style.Colors[ImPlotCol_FrameBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-  if (opacity >= 1.0f) {
-    plot_style.Colors[ImPlotCol_PlotBg] = IMPLOT_AUTO_COL;
-    return;
-  }
-  ImVec4 plot = g_base_style.Colors[ImGuiCol_WindowBg];
-  plot.w *= opacity;
-  plot_style.Colors[ImPlotCol_PlotBg] = plot;
-}
-
-// Derive the live style from the unscaled base: scale every metric by monitor
-// scale * zoom in a single pass, keep the fullscreen main window square, then
-// apply background opacity. Colors are copied opaque from the base; only
-// background alpha is scaled down.
-static void rebuild_live_style(ImGuiStyle &live, const ImGuiStyle &base,
-                               float monitor_scale, float zoom, float opacity) {
-  live = base;
-  live.ScaleAllSizes(monitor_scale * zoom);
-  live.WindowRounding = 0.0f; // main window fills the screen; keep it square
-  apply_window_opacity(live, opacity);
-  apply_plot_opacity(opacity);
 }
 
 static void *view_settings_read_open(ImGuiContext *,
@@ -171,18 +114,15 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
   } else if (sscanf(line, "UpdatePeriod=%f", &fval) == 1) {
     view_state->preferences_state.update_period = fval;
   } else if (sscanf(line, "TargetFPS=%d", &val) == 1) {
-    // Clamp to the slider's range; an unclamped 0 would divide by zero in the
-    // frame-pacing sleep, and a negative value would busy-loop.
     view_state->preferences_state.target_fps =
-        val < 15 ? 15 : (val > 144 ? 144 : val);
+        std::clamp(val, TARGET_FPS_MIN, TARGET_FPS_MAX);
   } else if (sscanf(line, "TreeMode=%d", &val) == 1) {
     view_state->brief_table_state.tree_mode = (val != 0);
-  } else if (sscanf(line, "ZoomScale=%f", &fval) == 1) {
-    view_state->preferences_state.zoom_scale =
-        fval < 0.75f ? 0.75f : (fval > 2.0f ? 2.0f : fval);
-  } else if (sscanf(line, "WindowOpacity=%f", &fval) == 1) {
-    view_state->preferences_state.window_opacity =
-        fval < 0.0f ? 0.0f : (fval > 1.0f ? 1.0f : fval);
+  } else if (sscanf(line, "ZoomScalePct=%d", &val) == 1) {
+    view_state->preferences_state.zoom_scale_pct =
+        std::clamp(val, ZOOM_MIN_PCT, ZOOM_MAX_PCT);
+  } else if (sscanf(line, "WindowOpacityPct=%d", &val) == 1) {
+    view_state->preferences_state.window_opacity_pct = std::clamp(val, 0, 100);
   } else if (strncmp(line, "FontPath=", 9) == 0) {
     const char *path = line + 9;
     const uint32_t len = static_cast<uint32_t>(strlen(path));
@@ -214,9 +154,10 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   buf->appendf("UpdatePeriod=%.2f\n",
                view_state->preferences_state.update_period);
   buf->appendf("TargetFPS=%d\n", view_state->preferences_state.target_fps);
-  buf->appendf("ZoomScale=%.2f\n", view_state->preferences_state.zoom_scale);
-  buf->appendf("WindowOpacity=%.2f\n",
-               view_state->preferences_state.window_opacity);
+  buf->appendf("ZoomScalePct=%d\n",
+               view_state->preferences_state.zoom_scale_pct);
+  buf->appendf("WindowOpacityPct=%d\n",
+               view_state->preferences_state.window_opacity_pct);
   if (view_state->preferences_state.font_path[0] != '\0') {
     buf->appendf("FontPath=%s\n", view_state->preferences_state.font_path);
   }
@@ -230,60 +171,6 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
 
 static void glfw_error_callback(const int error, const char *description) {
   fprintf(stderr, "GLFW Error: %x: %s\n", error, description);
-}
-
-static constexpr float BASE_FONT_SIZE = 15.0f;
-
-// Merge the embedded Material Symbols glyphs onto the last-added base font so
-// context menus can prefix items with icons. GlyphMinAdvanceX makes every icon
-// occupy a fixed gutter, which keeps menu labels aligned (see MenuItemEx).
-static void merge_icon_font(ImGuiIO &io, const float scale) {
-  ImFontConfig cfg;
-  cfg.MergeMode = true;
-  cfg.FontDataOwnedByAtlas = false;
-  cfg.GlyphMinAdvanceX = BASE_FONT_SIZE * scale;
-  // Merged fonts inherit the base font's baseline, but Material Symbols fill
-  // the whole em above it, so they ride ~1px high. Nudge them down; ImGui snaps
-  // and rescales this offset per bake, so it stays centered across zoom levels.
-  cfg.GlyphOffset.y = BASE_FONT_SIZE * scale / 13.0f;
-  static constexpr ImWchar range[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
-  io.Fonts->AddFontFromMemoryTTF(
-      const_cast<unsigned char *>(material_symbols_ttf),
-      material_symbols_ttf_size, BASE_FONT_SIZE * scale, &cfg, range);
-}
-
-// The bundled default UI font: Inter, embedded compressed (see inter_font.h).
-static ImFont *add_inter(ImGuiIO &io, const float size,
-                         const ImFontConfig *cfg) {
-  return io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-      inter_compressed_data_base85, size, cfg);
-}
-
-static void load_fonts(ImGuiIO &io, const char *font_path, float scale) {
-  io.Fonts->Clear();
-  // FreeType light hinting: snap glyphs to the pixel grid vertically only (like
-  // ClearType), keeping horizontal spacing intact. Crisper small UI text than
-  // the unhinted stb_truetype default, without the chunkiness of full hinting.
-  io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
-
-  // Stop the base font from claiming the icon codepoints: some text fonts (e.g.
-  // Inter) ship Private-Use-Area glyphs that would otherwise shadow the merged
-  // Material Symbols icons. Must outlive this call; the atlas bakes later.
-  static const ImWchar icon_exclude[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
-  ImFontConfig cfg;
-  cfg.GlyphExcludeRanges = icon_exclude;
-
-  const float size = BASE_FONT_SIZE * scale;
-  if (font_path && font_path[0] != '\0') {
-    if (!io.Fonts->AddFontFromFileTTF(font_path, size, &cfg)) {
-      fprintf(stderr, "Failed to load font: %s, using bundled Inter\n",
-              font_path);
-      add_inter(io, size, &cfg);
-    }
-  } else {
-    add_inter(io, size, &cfg);
-  }
-  merge_icon_font(io, scale);
 }
 
 static bool state_init(State &state) {
@@ -383,7 +270,7 @@ static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
   // Clear to a transparent framebuffer when transparency is enabled so gaps
   // show the desktop; opaque windows then write alpha 1.0 over it.
   const float clear_alpha =
-      view_state.preferences_state.window_opacity < 1.0f ? 0.0f : 1.0f;
+      view_state.preferences_state.window_opacity_pct < 100 ? 0.0f : 1.0f;
   glClearColor(0.0f, 0.0f, 0.0f, clear_alpha);
   glClear(GL_COLOR_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -476,7 +363,6 @@ int main(int, char **) {
   // Create window with graphics context
   float main_scale =
       ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
-  g_monitor_scale = main_scale;
   GLFWwindow *window = glfwCreateWindow(static_cast<int>(1280 * main_scale),
                                         static_cast<int>(800 * main_scale),
                                         "Prock", nullptr, nullptr);
@@ -549,29 +435,10 @@ int main(int, char **) {
     ImGui::LoadIniSettingsFromDisk(io.IniFilename);
   }
 
-  // Build the unscaled base style: theme colors + shared geometry. The live
-  // style is derived from this on every rebuild, scaled by monitor scale *
-  // zoom.
-  apply_theme(view_state.preferences_state.theme, &g_base_style);
-  apply_geometry(g_base_style);
-  g_base_style.AntiAliasedLines = true;
-  g_base_style.AntiAliasedLinesUseTex = true;
-  g_base_style.AntiAliasedFill = true;
-
-  const float zoom = view_state.preferences_state.zoom_scale;
-  const float opacity = view_state.preferences_state.window_opacity;
-  ImGuiStyle &style = ImGui::GetStyle();
-  rebuild_live_style(style, g_base_style, main_scale, zoom, opacity);
-  io.FontGlobalScale = zoom;
-  g_applied_zoom_scale = zoom;
-  g_applied_theme = view_state.preferences_state.theme;
-  g_applied_opacity = opacity;
-
-  ImPlot::GetStyle().UseLocalTime = true;
-  ImPlot::GetStyle().UseISO8601 = true;
-
-  // Load fonts (before OpenGL backend init)
-  load_fonts(io, view_state.preferences_state.font_path, main_scale);
+  style_control_init(view_state.preferences_state.theme, main_scale, view_state.preferences_state.target_fps);
+  style_control_rebuild(view_state.preferences_state.zoom_scale_pct,
+                        view_state.preferences_state.window_opacity_pct);
+  style_control_load_fonts(view_state.preferences_state.font_path);
 
   // Setup Platform/Renderer backends
   glfwSetMouseButtonCallback(window, maintaining_second_update);
@@ -654,30 +521,9 @@ int main(int, char **) {
       sync.quit_cv.notify_one();
     }
 
-    // Rebuild the live style from the base whenever theme, zoom, or window
-    // opacity changes. Theme/zoom set opaque base colors; opacity is applied
-    // last so backgrounds become translucent while text stays opaque.
-    const Theme new_theme = view_state.preferences_state.theme;
-    const float new_zoom = view_state.preferences_state.zoom_scale;
-    const float new_opacity = view_state.preferences_state.window_opacity;
-    if (g_applied_theme != new_theme || g_applied_zoom_scale != new_zoom ||
-        g_applied_opacity != new_opacity) {
-      // A theme switch only changes colors in the base; geometry stays put.
-      if (g_applied_theme != new_theme) {
-        apply_theme(new_theme, &g_base_style);
-      }
-      rebuild_live_style(style, g_base_style, g_monitor_scale, new_zoom,
-                         new_opacity);
-      io.FontGlobalScale = new_zoom;
-      g_applied_theme = new_theme;
-      g_applied_zoom_scale = new_zoom;
-      g_applied_opacity = new_opacity;
-    }
-
-    // Reload font if requested
     if (view_state.preferences_state.font_needs_reload) {
       view_state.preferences_state.font_needs_reload = false;
-      load_fonts(io, view_state.preferences_state.font_path, g_monitor_scale);
+      style_control_load_fonts(view_state.preferences_state.font_path);
     }
 
     draw(window, io, state, view_state);
@@ -685,12 +531,8 @@ int main(int, char **) {
     glfwSwapBuffers(window);
     FrameMarkEnd(MAIN_FRAME);
 
-    {
-      const int target_fps = view_state.preferences_state.target_fps;
-      const auto target_frame_time =
-          std::chrono::microseconds(1'000'000 / target_fps);
-      std::this_thread::sleep_until(frame_start + target_frame_time);
-    }
+    std::this_thread::sleep_until(frame_start +
+                                  style_control_target_framerate());
   }
 
   // Cleanup
