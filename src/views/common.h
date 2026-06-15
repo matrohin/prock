@@ -105,7 +105,8 @@ inline void draw_last_updated(const double last_updated) {
 }
 
 inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
-                                         const size_t filter_text_size) {
+                                         const size_t filter_text_size,
+                                         const char *hint = "Filter") {
   if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
     ImGui::SetKeyboardFocusHere();
   }
@@ -142,7 +143,7 @@ inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
     }
   }
 
-  ImGui::InputTextWithHint(id, "Filter", filter_text, filter_text_size);
+  ImGui::InputTextWithHint(id, hint, filter_text, filter_text_size);
 
   ImGuiTextFilter filter;
   if (filter_text[0] != '\0') {

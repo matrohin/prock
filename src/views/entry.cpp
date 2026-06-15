@@ -65,4 +65,7 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   ports_viewer_draw(ctx, view_state);
   brief_table_draw(ctx, view_state, state);
   notifications_draw(ctx, view_state.notifications);
+
+  command_dispatch(view_state);
+  command_palette_draw(view_state);
 }

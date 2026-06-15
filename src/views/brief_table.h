@@ -55,6 +55,7 @@ struct BriefTableState {
   bool show_affinity_popup;
   bool show_priority_popup;
   bool tree_mode = true;
+  bool focus_filter_requested = false; // set by the "Filter processes" command
   char type_search[32]; // Current search string
 };
 

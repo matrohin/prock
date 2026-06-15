@@ -624,8 +624,19 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   const String title = String::sprintf(
       ctx.frame_arena, "Process Table (%u processes)###ProcessTable",
       my_state.lines.size);
+  // Bring the table to front (selecting its tab if docked, uncollapsing it)
+  // before Begin, otherwise a hidden window skips its body and the filter
+  // input below is never submitted to receive focus.
+  if (my_state.focus_filter_requested) {
+    ImGui::SetNextWindowFocus();
+    ImGui::SetNextWindowCollapsed(false);
+  }
   ImGui::Begin(title.data, nullptr, COMMON_VIEW_FLAGS);
 
+  if (my_state.focus_filter_requested) {
+    ImGui::SetKeyboardFocusHere(); // targets the filter input below
+    my_state.focus_filter_requested = false;
+  }
   const ImGuiTextFilter filter = draw_filter_input(
       "##ProcessFilter", my_state.filter_text, sizeof(my_state.filter_text));
   ImGui::SameLine();

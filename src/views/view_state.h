@@ -2,6 +2,7 @@
 
 #include "base/const_string.h"
 #include "views/brief_table.h"
+#include "views/command_palette.h"
 #include "views/common_charts.h"
 #include "views/cpu_chart.h"
 #include "views/environ_viewer.h"
@@ -86,6 +87,7 @@ struct ViewState {
   CascadeLayout cascade;
 
   PreferencesState preferences_state;
+  CommandState command_state;
   BriefTableState brief_table_state;
   ProcessHostState process_host_state;
   CpuChartState cpu_chart_state;

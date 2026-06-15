@@ -45,6 +45,7 @@ void notify_data_ready(Sync &sync) {
 #include "tracy/Tracy.hpp"
 #include "views/brief_table.cpp"
 #include "views/brief_table_logic.cpp"
+#include "views/command_palette.cpp"
 #include "views/cpu_chart.cpp"
 #include "views/entry.cpp"
 #include "views/environ_viewer.cpp"
@@ -435,7 +436,8 @@ int main(int, char **) {
     ImGui::LoadIniSettingsFromDisk(io.IniFilename);
   }
 
-  style_control_init(view_state.preferences_state.theme, main_scale, view_state.preferences_state.target_fps);
+  style_control_init(view_state.preferences_state.theme, main_scale,
+                     view_state.preferences_state.target_fps);
   style_control_rebuild(view_state.preferences_state.zoom_scale_pct,
                         view_state.preferences_state.window_opacity_pct);
   style_control_load_fonts(view_state.preferences_state.font_path);
@@ -491,18 +493,6 @@ int main(int, char **) {
         }
       }
       break;
-    }
-
-    // F3 toggles debug FPS display
-    if (ImGui::IsKeyPressed(ImGuiKey_F3, false)) {
-      view_state.preferences_state.show_debug_fps =
-          !view_state.preferences_state.show_debug_fps;
-    }
-    // Space toggles Auto-Follow on all charts
-    if (ImGui::IsKeyPressed(ImGuiKey_Space, false) &&
-        !ImGui::GetIO().WantTextInput) {
-      view_state.preferences_state.auto_follow =
-          !view_state.preferences_state.auto_follow;
     }
 
     auto frame_start = SteadyClock::now();

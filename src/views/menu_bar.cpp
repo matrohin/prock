@@ -395,6 +395,9 @@ void menu_bar_draw(ViewState &view_state) {
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Edit")) {
+      if (ImGui::MenuItem("Command Palette...", "Ctrl+P")) {
+        view_state.command_state.show_palette = true;
+      }
       if (ImGui::MenuItem("Preferences...")) {
         view_state.preferences_state.show_preferences_modal = true;
       }
