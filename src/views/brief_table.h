@@ -56,7 +56,7 @@ struct BriefTableState {
   bool show_priority_popup;
   bool tree_mode = true;
   bool focus_filter_requested = false; // set by the "Filter processes" command
-  char type_search[32]; // Current search string
+  char type_search[32];                // Current search string
 };
 
 void brief_table_update(BriefTableState &my_state, InternTable &string_interner,

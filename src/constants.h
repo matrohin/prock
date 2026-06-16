@@ -9,4 +9,3 @@ inline constexpr int TARGET_FPS_MIN = 15;
 
 // Unscaled UI font size; the live font is this times monitor scale * zoom.
 inline constexpr float BASE_FONT_SIZE = 15.0f;
-
