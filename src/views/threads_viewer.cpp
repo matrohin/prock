@@ -129,7 +129,7 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
   ZoneScoped;
 
   const long page_size = state_data.system.mem_page_size;
-  const double ticks_in_second = state_data.system.ticks_in_second;
+  const double per_core_ticks = state_data.snapshot.per_core_ticks;
 
   // Process thread snapshots from the current update
   const Array<ThreadSnapshot> &snapshots = state_data.snapshot.thread_snapshots;
@@ -156,16 +156,10 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
     state.wasted_bytes += win.lines.size * sizeof(ThreadLine) +
                           win.prev_threads.size * sizeof(ThreadCpuSample);
 
-    SteadyTimePoint prev_at{SteadyClock::duration{win.prev_at_ns}};
     const Array<ThreadCpuSample> prev_threads = win.prev_threads;
 
     // Build ThreadLine array from snapshot
     win.lines = Array<ThreadLine>::create(state.cur_arena, snap->threads.size);
-
-    const SteadyTimePoint now = state_data.snapshot.at;
-    const double time_delta =
-        std::chrono::duration_cast<Seconds>(now - prev_at).count();
-    const double ticks_passed = ticks_in_second * time_delta;
 
     uint32_t prev_idx = 0;
     for (uint32_t i = 0; i < snap->threads.size; ++i) {
@@ -187,15 +181,12 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       }
 
       if (prev_idx < prev_threads.size &&
-          prev_threads.data[prev_idx].pid == thread.pid && ticks_passed > 0) {
+          prev_threads.data[prev_idx].pid == thread.pid && per_core_ticks > 0) {
         const ThreadCpuSample &prev = prev_threads.data[prev_idx];
-        if (thread.utime >= prev.utime) {
-          line.cpu_user_perc = (thread.utime - prev.utime) / ticks_passed * 100;
-        }
-        if (thread.stime >= prev.stime) {
-          line.cpu_kernel_perc =
-              (thread.stime - prev.stime) / ticks_passed * 100;
-        }
+        line.cpu_user_perc =
+            counter_rate(thread.utime, prev.utime, 100.0, per_core_ticks);
+        line.cpu_kernel_perc =
+            counter_rate(thread.stime, prev.stime, 100.0, per_core_ticks);
       }
     }
 
@@ -206,7 +197,6 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       const ProcessStat &t = snap->threads.data[i];
       win.prev_threads.data[i] = {t.pid, t.utime, t.stime};
     }
-    win.prev_at_ns = now.time_since_epoch().count();
 
     // Apply current sorting
     if (win.sorted_order != ImGuiSortDirection_None) {

@@ -52,7 +52,6 @@ struct ThreadsViewerWindow {
   // Stored in TID-sorted order (as returned by read_process_threads)
   // for linear-scan delta matching
   Array<ThreadCpuSample> prev_threads;
-  int64_t prev_at_ns; // nanoseconds since steady_clock epoch
 
   // UI state
   int selected_tid;

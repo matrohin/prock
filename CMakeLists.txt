@@ -94,7 +94,7 @@ if(BUILD_TESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/tests
     third-party/imgui
   )
-  target_link_libraries(${PROJECT_NAME} PRIVATE project_warnings)
+  target_link_libraries(prock_tests PRIVATE tracy project_warnings)
 
   enable_testing()
   add_test(NAME prock_tests COMMAND prock_tests WORKING_DIRECTORY ${UNIT_TEST_BIN_OUTPUT_DIR})

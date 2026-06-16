@@ -242,10 +242,19 @@ TEST_CASE("state_snapshot_update") {
 
     ProcessDerivedStat old_derived = {};
 
+    // /proc/stat: [0]=aggregate, [1]=single core. Per-process CPU% is
+    // normalized by the aggregate jiffy delta divided by the core count, so a
+    // 100-jiffy delta over 1 core gives a per-core budget of 100 ticks.
+    CpuCoreStat old_cpu[2] = {};
+    CpuCoreStat new_cpu[2] = {};
+    new_cpu[0].idle = 100; // aggregate gains 100 jiffies over the interval
+
     old_state.snapshot.stats.data = &old_proc;
     old_state.snapshot.stats.size = 1;
     old_state.snapshot.derived_stats.data = &old_derived;
     old_state.snapshot.derived_stats.size = 1;
+    old_state.snapshot.cpu_stats.data = old_cpu;
+    old_state.snapshot.cpu_stats.size = 2;
     old_state.snapshot.at = SteadyTimePoint{};
 
     // New snapshot: 1100 user ticks, 550 kernel ticks after 1 second
@@ -258,14 +267,16 @@ TEST_CASE("state_snapshot_update") {
 
     update.stats.data = &new_proc;
     update.stats.size = 1;
+    update.cpu_stats.data = new_cpu;
+    update.cpu_stats.size = 2;
     update.at = old_state.snapshot.at + std::chrono::seconds(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
     REQUIRE(result.derived_stats.size == 1);
-    // 100 ticks in 1 second = 100% user CPU (100 ticks / 100 ticks_in_second)
+    // 100 process ticks against a 100-tick per-core budget = 100% user CPU
     CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(100.0));
-    // 50 ticks in 1 second = 50% kernel CPU
+    // 50 ticks = 50% kernel CPU
     CHECK(result.derived_stats.data[0].cpu_kernel_perc ==
           doctest::Approx(50.0));
   }

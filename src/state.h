@@ -11,6 +11,17 @@ struct SystemInfo {
   uint64_t mem_page_size;
 };
 
+// Rate between two samples of a monotonically increasing kernel counter. A
+// "current" below "previous" means the counter was reset (e.g. a network
+// interface bouncing or a reboot), so clamp the delta to zero instead of
+// letting the unsigned subtraction wrap into a huge spike. The caller
+// guarantees divisor > 0.
+inline double counter_rate(const ulonglong cur, const ulonglong prev,
+                           const double scale, const double divisor) {
+  const ulonglong delta = cur >= prev ? cur - prev : 0;
+  return static_cast<double>(delta) * scale / divisor;
+}
+
 struct ProcessDerivedStat {
   double cpu_user_perc;
   double cpu_kernel_perc;
@@ -53,6 +64,9 @@ struct StateSnapshot {
   NetIoRate net_io_rate;
   Array<ThreadSnapshot> thread_snapshots;
   SteadyTimePoint at;
+  // /proc/stat jiffy budget for one core over this interval; the basis for
+  // per-process and per-thread CPU% (see state_snapshot_update).
+  double per_core_ticks;
 };
 
 struct State {

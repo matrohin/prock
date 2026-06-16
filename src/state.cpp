@@ -1,17 +1,6 @@
 #include "state.h"
 #include "sources/sync.h"
 
-// Per-second rate between two samples of a monotonically increasing kernel
-// counter. A "current" below "previous" means the counter was reset (e.g. a
-// network interface bouncing or a reboot), so clamp the delta to zero instead
-// of letting the unsigned subtraction wrap into a huge spike. The caller
-// guarantees divisor > 0.
-static double counter_rate(const ulonglong cur, const ulonglong prev,
-                           const double scale, const double divisor) {
-  const ulonglong delta = cur >= prev ? cur - prev : 0;
-  return static_cast<double>(delta) * scale / divisor;
-}
-
 StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
                                     const UpdateSnapshot &snapshot) {
   const StateSnapshot &old = old_state.snapshot;
@@ -20,7 +9,18 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
 
   const double time_delta =
       std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
-  const double ticks_passed = old_state.system.ticks_in_second * time_delta;
+
+  // Normalize per-process CPU% against the /proc/stat jiffy budget for one core
+  // (same unit as utime/stime), not wall-clock time. This matches system CPU%
+  // below and stays accurate when the gathering interval jitters under load.
+  double per_core_ticks = 0.0;
+  if (snapshot.cpu_stats.size > 1 && old.cpu_stats.size > 1) {
+    const ulong cur_total = snapshot.cpu_stats.data[0].total();
+    const ulong prev_total = old.cpu_stats.data[0].total();
+    const ulong total_delta = cur_total >= prev_total ? cur_total - prev_total : 0;
+    const uint32_t num_cores = snapshot.cpu_stats.size - 1;
+    per_core_ticks = static_cast<double>(total_delta) / num_cores;
+  }
 
   uint32_t old_state_idx = 0;
   for (uint32_t i = 0; i < derived_stats.size; ++i) {
@@ -38,22 +38,26 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
       ++old_state_idx;
     }
 
-    // CPU and I/O are rates: they need both a matching previous sample and a
-    // positive interval (which keeps ticks_passed > 0). Without those the
-    // zero-initialized result stands.
+    // CPU and I/O are rates: they need a matching previous sample and a
+    // positive divisor. Without those the zero-initialized result stands. CPU
+    // is normalized by jiffies (per_core_ticks); I/O is a wall-clock byte rate.
     if (old_state_idx < old.stats.size &&
-        new_stat.pid == old.stats.data[old_state_idx].pid && time_delta > 0) {
+        new_stat.pid == old.stats.data[old_state_idx].pid) {
       const ProcessStat &old_stat = old.stats.data[old_state_idx];
-      result.cpu_user_perc =
-          counter_rate(new_stat.utime, old_stat.utime, 100.0, ticks_passed);
-      result.cpu_kernel_perc =
-          counter_rate(new_stat.stime, old_stat.stime, 100.0, ticks_passed);
-      result.io_read_kb_per_sec =
-          counter_rate(new_stat.io_read_bytes, old_stat.io_read_bytes,
-                       1.0 / 1024.0, time_delta);
-      result.io_write_kb_per_sec =
-          counter_rate(new_stat.io_write_bytes, old_stat.io_write_bytes,
-                       1.0 / 1024.0, time_delta);
+      if (per_core_ticks > 0) {
+        result.cpu_user_perc =
+            counter_rate(new_stat.utime, old_stat.utime, 100.0, per_core_ticks);
+        result.cpu_kernel_perc =
+            counter_rate(new_stat.stime, old_stat.stime, 100.0, per_core_ticks);
+      }
+      if (time_delta > 0) {
+        result.io_read_kb_per_sec =
+            counter_rate(new_stat.io_read_bytes, old_stat.io_read_bytes,
+                         1.0 / 1024.0, time_delta);
+        result.io_write_kb_per_sec =
+            counter_rate(new_stat.io_write_bytes, old_stat.io_write_bytes,
+                         1.0 / 1024.0, time_delta);
+      }
     }
   }
 
@@ -111,5 +115,5 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
                        snapshot.mem_info,  snapshot.disk_io_stats,
                        disk_io_rate,       snapshot.net_io_stats,
                        net_io_rate,        snapshot.thread_snapshots,
-                       snapshot.at};
+                       snapshot.at,        per_core_ticks};
 }
