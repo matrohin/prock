@@ -2,16 +2,15 @@
 
 The tool is still in development. I'm improving my Linux desktop experience.
 
-![Screenshot](./images/screenshot.png)
+![Screenshot (Light theme)](./images/shot-light.png)
 
-*My configuration: Default font, Nord theme, 86% Opacity.*
+![Screenshot (Nord theme)](./images/shot-nord.png)
 
 ## Features
 
 ### Process Monitoring
 - Tree view (default) or flat list showing parent-child relationships
-- Filter by name (Ctrl+F) or type to jump to a process
-- Press 'Space' to toggle "Auto-Follow" on all charts
+- Filter by name (Ctrl+Shift+F) or type to jump to a process
 - Sortable and reorderable columns
 - Copy process info or entire table to clipboard
 - Kill (SIGTERM), force kill (SIGKILL), or kill entire process tree
@@ -33,6 +32,23 @@ The tool is still in development. I'm improving my Linux desktop experience.
   - Threads
   - Environment variables
 - Double-click to open all windows at once
+
+### Listening Ports
+- System-wide view of listening ports (protocol, local address, state, owning PID and process)
+- Kill the owning process directly from the table
+
+### Charts & Navigation
+- Toggle "Auto-Follow" on all charts (Space)
+- Toggle continuous Y-axis auto-fit (Shift+Space)
+- Per-core and stacked CPU chart views
+- Zoom the UI in / out (Ctrl++ / Ctrl+-)
+- Command palette for all actions (Ctrl+P)
+- Menu bar, optionally shown only on Alt
+
+### Appearance & Preferences
+- Themes: Dark, Light, Classic, Enemymouse, Nord, OneNord
+- Custom TTF font
+- Adjustable window opacity, UI scale, target FPS, and update interval
 
 ## Runtime Dependencies
 
