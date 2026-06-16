@@ -66,7 +66,7 @@ static const Command g_commands[eCommand_Count] = {
     {"Filter processes in the table",
      ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_F, cmd_focus_process_filter},
     {"Toggle auto-follow", ImGuiKey_Space, cmd_toggle_auto_follow},
-    {"Toggle auto-fit Y axis", ImGuiMod_Ctrl | ImGuiKey_Y,
+    {"Toggle auto-fit Y axis", ImGuiMod_Shift | ImGuiKey_Space,
      cmd_toggle_auto_fit_y},
     {"Zoom in", ImGuiMod_Ctrl | ImGuiKey_Equal, cmd_zoom_in},
     {"Zoom out", ImGuiMod_Ctrl | ImGuiKey_Minus, cmd_zoom_out},
