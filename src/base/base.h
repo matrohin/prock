@@ -16,6 +16,7 @@ using ulonglong = unsigned long long;
 using Pid = int;
 
 constexpr size_t SLAB_SIZE = 256UL * 1024; // 256KB
+constexpr const char *ARENA_SLAB_POOL = "arena slabs";
 
 struct ArenaSlab {
   void *cur;
@@ -102,6 +103,7 @@ inline ArenaSlab *ArenaSlab::create(const size_t size, ArenaSlab *prev) {
   }
 
   res->prev = prev;
+  TracyAllocN(res, res->total_size, ARENA_SLAB_POOL);
   return res;
 }
 
@@ -151,6 +153,7 @@ struct BumpArena {
     cur_slab = nullptr;
     while (it) {
       ArenaSlab *prev = it->prev;
+      TracyFreeN(it, ARENA_SLAB_POOL);
       if (it->total_size == SLAB_SIZE) {
         g_slab_cache.push(it);
       } else {

@@ -42,7 +42,8 @@
       "inherits": ["native"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "ENABLE_TRACY": "ON"
+        "ENABLE_TRACY": "ON",
+        "CMAKE_CXX_FLAGS": "-march=native -DTRACY_CALLSTACK=16"
       }
     },
     {
