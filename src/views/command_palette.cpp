@@ -23,6 +23,9 @@ static void cmd_open_palette(ViewState &vs) {
 static void cmd_toggle_auto_follow(ViewState &vs) {
   vs.preferences_state.auto_follow = !vs.preferences_state.auto_follow;
 }
+static void cmd_toggle_auto_fit_y(ViewState &vs) {
+  vs.preferences_state.y_auto_fit = !vs.preferences_state.y_auto_fit;
+}
 static void cmd_open_preferences(ViewState &vs) {
   vs.preferences_state.show_preferences_modal = true;
 }
@@ -63,6 +66,8 @@ static const Command g_commands[eCommand_Count] = {
     {"Filter processes in the table",
      ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_F, cmd_focus_process_filter},
     {"Toggle auto-follow", ImGuiKey_Space, cmd_toggle_auto_follow},
+    {"Toggle auto-fit Y axis", ImGuiMod_Ctrl | ImGuiKey_Y,
+     cmd_toggle_auto_fit_y},
     {"Zoom in", ImGuiMod_Ctrl | ImGuiKey_Equal, cmd_zoom_in},
     {"Zoom out", ImGuiMod_Ctrl | ImGuiKey_Minus, cmd_zoom_out},
     {"Toggle per-core CPU view", 0, cmd_toggle_per_core_cpu},

@@ -92,7 +92,8 @@ void cpu_chart_draw(ViewState &view_state) {
         }
 
         setup_chart(chart.times[chart.track.last_idx()], format_percent,
-                    view_state.preferences_state.auto_follow);
+                    view_state.preferences_state.auto_follow,
+                    view_state.preferences_state.y_auto_fit);
 
         CpuChartScaledData total_data = {chart.times, chart.cpu_total_perc,
                                          scale, chart.track.head};

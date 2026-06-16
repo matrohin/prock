@@ -66,7 +66,8 @@ void io_chart_draw(ViewState &view_state) {
         }
 
         setup_chart(chart.times[chart.track.last_idx()], format_io_rate_kb,
-                    view_state.preferences_state.auto_follow);
+                    view_state.preferences_state.auto_follow,
+                    view_state.preferences_state.y_auto_fit);
 
         ImPlotSpec spec = {};
         spec.FillAlpha = FILL_ALPHA_LOW;

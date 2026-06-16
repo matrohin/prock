@@ -95,7 +95,9 @@ constexpr float FILL_ALPHA_FULL = 1.00f;
 constexpr ImPlotAxisFlags COMMON_X_FLAGS_FOLLOW =
     ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
 constexpr ImPlotAxisFlags COMMON_X_FLAGS_STATIC = ImPlotAxisFlags_RangeFit;
-constexpr ImPlotAxisFlags COMMON_Y_FLAGS = ImPlotAxisFlags_RangeFit;
+constexpr ImPlotAxisFlags COMMON_Y_FLAGS_AUTO =
+    ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
+constexpr ImPlotAxisFlags COMMON_Y_FLAGS_STATIC = ImPlotAxisFlags_RangeFit;
 
 // Handles delayed Y axis fit: first frame lets X establish its range,
 // second frame fits Y using RangeFit against the established X range.
@@ -112,10 +114,13 @@ inline bool try_initial_y_fit(int y_axis_fitted, uint32_t data_size) {
 
 inline void setup_chart(const double last_time,
                         const ImPlotFormatter y_formatter,
-                        const bool auto_follow = true) {
+                        const bool auto_follow = true,
+                        const bool y_auto_fit = true) {
   const ImPlotAxisFlags x_flags =
       auto_follow ? COMMON_X_FLAGS_FOLLOW : COMMON_X_FLAGS_STATIC;
-  ImPlot::SetupAxes(nullptr, nullptr, x_flags, COMMON_Y_FLAGS);
+  const ImPlotAxisFlags y_flags =
+      y_auto_fit ? COMMON_Y_FLAGS_AUTO : COMMON_Y_FLAGS_STATIC;
+  ImPlot::SetupAxes(nullptr, nullptr, x_flags, y_flags);
 
   ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
 
@@ -130,10 +135,13 @@ inline void setup_chart(const double last_time,
 
 inline void setup_chart(const GrowingArray<double> &times,
                         const ImPlotFormatter y_formatter,
-                        const bool auto_follow = true) {
+                        const bool auto_follow = true,
+                        const bool y_auto_fit = true) {
   const ImPlotAxisFlags x_flags =
       auto_follow ? COMMON_X_FLAGS_FOLLOW : COMMON_X_FLAGS_STATIC;
-  ImPlot::SetupAxes(nullptr, nullptr, x_flags, COMMON_Y_FLAGS);
+  const ImPlotAxisFlags y_flags =
+      y_auto_fit ? COMMON_Y_FLAGS_AUTO : COMMON_Y_FLAGS_STATIC;
+  ImPlot::SetupAxes(nullptr, nullptr, x_flags, y_flags);
 
   ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
 

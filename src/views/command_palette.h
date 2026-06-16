@@ -7,6 +7,7 @@ struct ViewState;
 enum CommandId {
   eCommand_FocusProcessFilter,
   eCommand_ToggleAutoFollow,
+  eCommand_ToggleAutoFitY,
   eCommand_ZoomIn,
   eCommand_ZoomOut,
   eCommand_TogglePerCoreCpu,

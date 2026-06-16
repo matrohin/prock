@@ -39,7 +39,8 @@ void system_net_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
         my_state.y_axis_fitted++;
       }
       setup_chart(my_state.times[my_state.track.last_idx()], format_io_rate_mb,
-                  view_state.preferences_state.auto_follow);
+                  view_state.preferences_state.auto_follow,
+                  view_state.preferences_state.y_auto_fit);
 
       ImPlotSpec spec = {};
       spec.FillAlpha = FILL_ALPHA_LOW;

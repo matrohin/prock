@@ -8,7 +8,7 @@ struct PreferencesState {
   int target_fps = 60;
   int zoom_scale_pct = 100;
   int window_opacity_pct = 100;
-  char font_path[512] = {};    // Custom TTF font path, empty = default
+  char font_path[512] = {}; // Custom TTF font path, empty = default
   Theme theme = Theme::Light;
   bool show_preferences_modal = false;
   bool show_about_modal = false;
@@ -19,6 +19,7 @@ struct PreferencesState {
   bool cpu_per_core =
       false; // CPU % as per-core (can exceed 100%) vs normalized
   bool auto_follow = true;
+  bool y_auto_fit = true; // continuously auto-fit chart Y axes to data
   bool font_list_requested = false;
   bool font_list_received = false;
   bool font_scroll_to_selected = false;
