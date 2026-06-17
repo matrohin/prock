@@ -430,6 +430,54 @@ TEST_CASE("state_snapshot_update") {
     CHECK(result.cpu_perc.kernel.data[0] == doctest::Approx(25.0));
   }
 
+  SUBCASE("old process absent from new snapshot is skipped during alignment") {
+    // Old snapshot has PIDs 50 and 100 (sorted); PID 50 has since died, so the
+    // new snapshot only has PID 100. Aligning to PID 100 must skip past the
+    // stale PID 50 entry and still match utime/stime correctly.
+    State old_state = {};
+    old_state.system.ticks_in_second = 100;
+    old_state.system.mem_page_size = 4096;
+    old_state.snapshot.at = SteadyTimePoint{};
+
+    ProcessStat old_procs[2] = {};
+    old_procs[0].pid = 50; // dead by the new snapshot
+    old_procs[0].utime = 999;
+    old_procs[1].pid = 100;
+    old_procs[1].utime = 1000;
+    old_procs[1].stime = 500;
+    ProcessDerivedStat old_derived[2] = {};
+
+    CpuCoreStat old_cpu[2] = {};
+    CpuCoreStat new_cpu[2] = {};
+    new_cpu[0].idle = 100; // 100-jiffy aggregate delta over 1 core
+
+    old_state.snapshot.stats.data = old_procs;
+    old_state.snapshot.stats.size = 2;
+    old_state.snapshot.derived_stats.data = old_derived;
+    old_state.snapshot.derived_stats.size = 2;
+    old_state.snapshot.cpu_stats.data = old_cpu;
+    old_state.snapshot.cpu_stats.size = 2;
+
+    UpdateSnapshot update = {};
+    ProcessStat new_proc = {};
+    new_proc.pid = 100;
+    new_proc.utime = 1100; // +100 ticks
+    new_proc.stime = 550;  // +50 ticks
+
+    update.stats.data = &new_proc;
+    update.stats.size = 1;
+    update.cpu_stats.data = new_cpu;
+    update.cpu_stats.size = 2;
+    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+
+    StateSnapshot result = state_snapshot_update(arena, old_state, update);
+
+    REQUIRE(result.derived_stats.size == 1);
+    // Matched against PID 100 (not the skipped PID 50): 100% user, 50% kernel.
+    CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(100.0));
+    CHECK(result.derived_stats.data[0].cpu_kernel_perc == doctest::Approx(50.0));
+  }
+
   SUBCASE("disk I/O rate calculation") {
     State old_state = {};
     old_state.system.ticks_in_second = 100;
@@ -793,6 +841,156 @@ TEST_CASE("sort_brief_table_lines by columns") {
 
     CHECK(my_state.lines.data[0].pid == 2); // 200 KB/s
     CHECK(my_state.lines.data[1].pid == 1); // 5 KB/s
+  }
+
+  SUBCASE("sort by state") {
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_State;
+    my_state.sorted_order = ImGuiSortDirection_Ascending;
+    my_state.lines = Array<BriefTableLine>::create(arena, 3);
+    my_state.lines.data[0] = {.name = "z", .pid = 1, .ppid = 0, .state = 'Z'};
+    my_state.lines.data[1] = {.name = "r", .pid = 2, .ppid = 0, .state = 'R'};
+    my_state.lines.data[2] = {.name = "s", .pid = 3, .ppid = 0, .state = 'S'};
+
+    sort_brief_table_lines(my_state);
+
+    CHECK(my_state.lines.data[0].pid == 2); // 'R'
+    CHECK(my_state.lines.data[1].pid == 3); // 'S'
+    CHECK(my_state.lines.data[2].pid == 1); // 'Z'
+  }
+
+  SUBCASE("sort by thread count descending") {
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_Threads;
+    my_state.sorted_order = ImGuiSortDirection_Descending;
+    my_state.lines = Array<BriefTableLine>::create(arena, 3);
+    my_state.lines.data[0] = {.name = "a", .pid = 1, .ppid = 0};
+    my_state.lines.data[0].num_threads = 4;
+    my_state.lines.data[1] = {.name = "b", .pid = 2, .ppid = 0};
+    my_state.lines.data[1].num_threads = 16;
+    my_state.lines.data[2] = {.name = "c", .pid = 3, .ppid = 0};
+    my_state.lines.data[2].num_threads = 1;
+
+    sort_brief_table_lines(my_state);
+
+    CHECK(my_state.lines.data[0].pid == 2); // 16
+    CHECK(my_state.lines.data[1].pid == 1); // 4
+    CHECK(my_state.lines.data[2].pid == 3); // 1
+  }
+
+  SUBCASE("sort by CPU user perc") {
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_CpuUserPerc;
+    my_state.sorted_order = ImGuiSortDirection_Descending;
+    my_state.lines = Array<BriefTableLine>::create(arena, 2);
+    my_state.lines.data[0] = {.name = "low", .pid = 1, .ppid = 0};
+    my_state.lines.data[0].derived_stat = {.cpu_user_perc = 10.0,
+                                           .cpu_kernel_perc = 90.0};
+    my_state.lines.data[1] = {.name = "high", .pid = 2, .ppid = 0};
+    my_state.lines.data[1].derived_stat = {.cpu_user_perc = 70.0,
+                                           .cpu_kernel_perc = 1.0};
+
+    sort_brief_table_lines(my_state);
+
+    // Ranks by user% only, ignoring kernel%.
+    CHECK(my_state.lines.data[0].pid == 2); // 70% user
+    CHECK(my_state.lines.data[1].pid == 1); // 10% user
+  }
+
+  SUBCASE("sort by CPU kernel perc") {
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_CpuKernelPerc;
+    my_state.sorted_order = ImGuiSortDirection_Descending;
+    my_state.lines = Array<BriefTableLine>::create(arena, 2);
+    my_state.lines.data[0] = {.name = "low", .pid = 1, .ppid = 0};
+    my_state.lines.data[0].derived_stat = {.cpu_user_perc = 90.0,
+                                           .cpu_kernel_perc = 10.0};
+    my_state.lines.data[1] = {.name = "high", .pid = 2, .ppid = 0};
+    my_state.lines.data[1].derived_stat = {.cpu_user_perc = 1.0,
+                                           .cpu_kernel_perc = 70.0};
+
+    sort_brief_table_lines(my_state);
+
+    CHECK(my_state.lines.data[0].pid == 2); // 70% kernel
+    CHECK(my_state.lines.data[1].pid == 1); // 10% kernel
+  }
+
+  SUBCASE("sort by virtual memory") {
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_MemVirtBytes;
+    my_state.sorted_order = ImGuiSortDirection_Descending;
+    my_state.lines = Array<BriefTableLine>::create(arena, 3);
+    my_state.lines.data[0] = {.name = "small", .pid = 1, .ppid = 0};
+    my_state.lines.data[0].derived_stat = {.mem_virtual_bytes = 1024.0};
+    my_state.lines.data[1] = {.name = "large", .pid = 2, .ppid = 0};
+    my_state.lines.data[1].derived_stat = {.mem_virtual_bytes = 1048576.0};
+    my_state.lines.data[2] = {.name = "medium", .pid = 3, .ppid = 0};
+    my_state.lines.data[2].derived_stat = {.mem_virtual_bytes = 65536.0};
+
+    sort_brief_table_lines(my_state);
+
+    CHECK(my_state.lines.data[0].pid == 2);
+    CHECK(my_state.lines.data[1].pid == 3);
+    CHECK(my_state.lines.data[2].pid == 1);
+  }
+
+  SUBCASE("sort by command line") {
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_CmdLine;
+    my_state.sorted_order = ImGuiSortDirection_Ascending;
+    my_state.lines = Array<BriefTableLine>::create(arena, 3);
+    my_state.lines.data[0] = {.name = "c", .pid = 1, .ppid = 0};
+    my_state.lines.data[0].cmdline = "/usr/bin/zsh";
+    my_state.lines.data[1] = {.name = "a", .pid = 2, .ppid = 0};
+    my_state.lines.data[1].cmdline = "/usr/bin/bash";
+    my_state.lines.data[2] = {.name = "b", .pid = 3, .ppid = 0};
+    my_state.lines.data[2].cmdline = "/usr/bin/fish";
+
+    sort_brief_table_lines(my_state);
+
+    CHECK(my_state.lines.data[0].pid == 2); // bash
+    CHECK(my_state.lines.data[1].pid == 3); // fish
+    CHECK(my_state.lines.data[2].pid == 1); // zsh
+  }
+
+  arena.destroy();
+}
+
+// ============================================================================
+// cmdline_display_name Tests
+// ============================================================================
+
+TEST_CASE("cmdline_display_name") {
+  BumpArena arena = BumpArena::create();
+  InternTable interner = InternTable::create(&arena);
+
+  SUBCASE("null and empty return nullptr") {
+    CHECK(cmdline_display_name(nullptr, interner).data == nullptr);
+    CHECK(cmdline_display_name("", interner).data == nullptr);
+  }
+
+  SUBCASE("strips leading directories") {
+    ConstString name = cmdline_display_name("/usr/bin/bash", interner);
+    REQUIRE(name.data != nullptr);
+    CHECK(strcmp(name.data, "bash") == 0);
+  }
+
+  SUBCASE("stops at first argument separator") {
+    ConstString name = cmdline_display_name("/usr/bin/python3 script.py -v",
+                                            interner);
+    REQUIRE(name.data != nullptr);
+    CHECK(strcmp(name.data, "python3") == 0);
+  }
+
+  SUBCASE("plain basename with no path") {
+    ConstString name = cmdline_display_name("cat", interner);
+    REQUIRE(name.data != nullptr);
+    CHECK(strcmp(name.data, "cat") == 0);
+  }
+
+  SUBCASE("trailing slash leaves no basename") {
+    // base advances past the last '/' to end-of-token, so base == end.
+    CHECK(cmdline_display_name("/usr/bin/", interner).data == nullptr);
   }
 
   arena.destroy();
