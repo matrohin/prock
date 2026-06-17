@@ -133,6 +133,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
 
             ImPlot::PlotShaded(label, my_state.times, prev.data, curr.data, n,
                                fill);
+            ImPlot::PlotLine(label, my_state.times, curr.data, n, fill);
 
             std::swap(prev.data, curr.data);
           }
