@@ -391,6 +391,7 @@ int main(int, char **) {
   io.ConfigFlags |=
       ImGuiConfigFlags_NavEnableKeyboard;           // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
+  io.ConfigInputTextCursorBlink = false;
 
   // Set up config path: PROCK_CONFIG_DIR or $HOME/.config/prock/
   static char ini_path[PATH_MAX] = {};
@@ -535,6 +536,16 @@ int main(int, char **) {
     }
 
     draw(window, io, state, view_state);
+
+    // The modal / Ctrl+Tab dim background fades via ImGui's DimBgRatio over
+    // several frames. Because we render on demand, keep requesting frames while
+    // that fade is mid-flight (0 < ratio < 1) so the dim doesn't stall until
+    // the next input event. A saturated (1.0) or cleared (0.0) ratio needs no
+    // redraw, so the loop goes back to blocking once the fade settles.
+    const float dim_ratio = ImGui::GetCurrentContext()->DimBgRatio;
+    if (dim_ratio > 0.0f && dim_ratio < 1.0f && g_needs_updates < 1) {
+      g_needs_updates = 1;
+    }
 
     glfwSwapBuffers(window);
     FrameMarkEnd(MAIN_FRAME);
