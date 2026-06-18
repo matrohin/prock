@@ -203,14 +203,34 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       if (win.status == eOnDemandViewerStatus_Error) {
         draw_error_with_pkexec(win.error_code);
       } else if (win.entries.size > 0) {
-        ImGuiTextFilter filter = draw_filter_input(
-            "##EnvFilter", win.filter_text, sizeof(win.filter_text));
-        ImGui::SameLine();
-        if (draw_refresh_button()) {
-          win.status = eOnDemandViewerStatus_Loading;
-          send_environ_request(*view_state.sync, win.pid);
+        ImGuiTextFilter filter;
+        if (ImGui::BeginTable("Header", 4, ImGuiTableFlags_SizingStretchSame)) {
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
+                                  HEADER_SPACER_WEIGHT);
+          ImGui::TableNextRow();
+
+          ImGui::TableNextColumn();
+          ImGui::SetNextItemWidth(-FLT_MIN);
+          filter = draw_filter_input("##EnvFilter", win.filter_text,
+                                     sizeof(win.filter_text));
+
+          ImGui::TableNextColumn();
+          if (draw_refresh_button()) {
+            win.status = eOnDemandViewerStatus_Loading;
+            send_environ_request(*view_state.sync, win.pid);
+          }
+
+          ImGui::TableNextColumn();
+          draw_last_updated(win.last_updated);
+
+          ImGui::TableNextColumn(); // spacer
+
+          ImGui::EndTable();
         }
-        draw_last_updated(win.last_updated);
+
         if (ImGui::BeginTable("Environment", eEnvironViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {
           ImGui::TableSetupScrollFreeze(0, 1);

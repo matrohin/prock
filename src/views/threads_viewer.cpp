@@ -254,8 +254,22 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
       if (win.status == eOnDemandViewerStatus_Error) {
         ImGui::TextWrapped("%s", win.error_message);
       } else if (win.lines.size > 0) {
-        ImGuiTextFilter filter = draw_filter_input(
-            "##ThreadFilter", win.filter_text, sizeof(win.filter_text));
+        ImGuiTextFilter filter;
+        if (ImGui::BeginTable("Header", 2, ImGuiTableFlags_SizingStretchSame)) {
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
+                                  HEADER_SPACER_WEIGHT);
+          ImGui::TableNextRow();
+
+          ImGui::TableNextColumn();
+          ImGui::SetNextItemWidth(-FLT_MIN);
+          filter = draw_filter_input("##ThreadFilter", win.filter_text,
+                                     sizeof(win.filter_text));
+
+          ImGui::TableNextColumn(); // spacer
+
+          ImGui::EndTable();
+        }
 
         if (ImGui::BeginTable("Threads", eThreadsViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {

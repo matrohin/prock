@@ -158,29 +158,54 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     return;
   }
 
-  if (state.focus_filter) {
-    ImGui::SetKeyboardFocusHere();
-    state.focus_filter = false;
-  }
-  const ImGuiTextFilter filter = draw_filter_input(
-      "##PortsFilter", state.filter_text, sizeof(state.filter_text));
-  ImGui::SameLine();
-  if (draw_refresh_button(state.status == ePortsViewerStatus_Loading)) {
-    state.status = ePortsViewerStatus_Loading;
-    send_port_scan_request(*view_state.sync);
-  }
-  if (state.permission_limited) {
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_MD_SHIELD " Run with privileges")) {
-      restart_with_pkexec();
+  ImGuiTextFilter filter;
+  if (ImGui::BeginTable("Header", state.permission_limited ? 5 : 4,
+                        ImGuiTableFlags_SizingStretchSame)) {
+    ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+    if (state.permission_limited) {
+      ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
     }
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip(
-          "Some processes are owned by other users; restart with pkexec to "
-          "see them.");
+    ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
+                            HEADER_SPACER_WEIGHT);
+    ImGui::TableNextRow();
+
+    if (state.focus_filter) {
+      ImGui::SetKeyboardFocusHere();
+      state.focus_filter = false;
     }
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    filter = draw_filter_input("##PortsFilter", state.filter_text,
+                               sizeof(state.filter_text));
+
+    if (state.permission_limited) {
+      ImGui::TableNextColumn();
+      if (ImGui::Button(ICON_MD_SHIELD " Run with privileges")) {
+        restart_with_pkexec();
+      }
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(
+            "Some processes are owned by other users; restart with pkexec to "
+            "see them.");
+      }
+    }
+
+    ImGui::TableNextColumn();
+    if (draw_refresh_button(state.status == ePortsViewerStatus_Loading)) {
+      state.status = ePortsViewerStatus_Loading;
+      send_port_scan_request(*view_state.sync);
+    }
+
+    ImGui::TableNextColumn();
+    draw_last_updated(state.last_updated);
+
+    ImGui::TableNextColumn(); // spacer
+
+    ImGui::EndTable();
   }
-  draw_last_updated(state.last_updated);
 
   if (state.scan_error_code != 0) {
     draw_error_with_pkexec(state.scan_error_code);

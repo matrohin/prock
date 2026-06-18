@@ -270,18 +270,39 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       if (win.status == eOnDemandViewerStatus_Error) {
         draw_error_with_pkexec(win.error_code);
       } else if (win.status == eOnDemandViewerStatus_Ready) {
-        ImGuiTextFilter filter = draw_filter_input(
-            "##SmapsFilter", win.filter_text, sizeof(win.filter_text));
-        ImGui::SameLine();
-        if (draw_refresh_button(win.refresh_pending)) {
-          win.refresh_pending = true;
-          send_smaps_request(*view_state.sync, win.pid);
+        ImGuiTextFilter filter;
+        if (ImGui::BeginTable("Header", 5, ImGuiTableFlags_SizingStretchSame)) {
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
+                                  HEADER_SPACER_WEIGHT);
+          ImGui::TableNextRow();
+
+          ImGui::TableNextColumn();
+          ImGui::SetNextItemWidth(-FLT_MIN);
+          filter = draw_filter_input("##SmapsFilter", win.filter_text,
+                                     sizeof(win.filter_text));
+
+          ImGui::TableNextColumn();
+          if (ImGui::Checkbox("Group", &win.grouped)) {
+            win.selected_index = -1;
+          }
+
+          ImGui::TableNextColumn();
+          if (draw_refresh_button(win.refresh_pending)) {
+            win.refresh_pending = true;
+            send_smaps_request(*view_state.sync, win.pid);
+          }
+
+          ImGui::TableNextColumn();
+          draw_last_updated(win.last_updated);
+
+          ImGui::TableNextColumn(); // spacer
+
+          ImGui::EndTable();
         }
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Group", &win.grouped)) {
-          win.selected_index = -1;
-        }
-        draw_last_updated(win.last_updated);
 
         // Pre-pass: compute totals over filtered segments (used by both modes)
         ulong total_pss = 0, total_rss = 0, total_private = 0;

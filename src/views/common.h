@@ -68,6 +68,11 @@ template <class T> void common_views_sort_added(GrowingArray<T> &views) {
       [](const auto &left, const auto &right) { return left.pid < right.pid; });
 }
 
+// Stretch weight for the trailing spacer column in viewer header toolbars.
+// Small relative to the filter column (default weight 1.0) so the spacer is a
+// thin gap at the right edge that keeps the controls left-aligned.
+constexpr float HEADER_SPACER_WEIGHT = 0.25f;
+
 // Standard table flags used by most viewer tables
 constexpr ImGuiTableFlags COMMON_TABLE_FLAGS =
     ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
@@ -92,7 +97,6 @@ inline bool draw_refresh_button(const bool pending = false) {
 inline void draw_last_updated(const double last_updated) {
   if (last_updated <= 0.0) return;
   const double secs = ImGui::GetTime() - last_updated;
-  ImGui::SameLine();
   if (secs < 1.0) {
     ImGui::TextDisabled("Updated just now");
   } else if (secs < 60.0) {

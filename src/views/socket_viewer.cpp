@@ -187,14 +187,33 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         draw_error_with_pkexec(win.error_code);
       } else if (win.sockets.size > 0 ||
                  win.status == eOnDemandViewerStatus_Ready) {
-        ImGuiTextFilter filter = draw_filter_input(
-            "##SockFilter", win.filter_text, sizeof(win.filter_text));
-        ImGui::SameLine();
-        if (draw_refresh_button()) {
-          win.status = eOnDemandViewerStatus_Loading;
-          send_socket_request(*view_state.sync, win.pid);
+        ImGuiTextFilter filter;
+        if (ImGui::BeginTable("Header", 4, ImGuiTableFlags_SizingStretchSame)) {
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
+                                  HEADER_SPACER_WEIGHT);
+          ImGui::TableNextRow();
+
+          ImGui::TableNextColumn();
+          ImGui::SetNextItemWidth(-FLT_MIN);
+          filter = draw_filter_input("##SockFilter", win.filter_text,
+                                     sizeof(win.filter_text));
+
+          ImGui::TableNextColumn();
+          if (draw_refresh_button()) {
+            win.status = eOnDemandViewerStatus_Loading;
+            send_socket_request(*view_state.sync, win.pid);
+          }
+
+          ImGui::TableNextColumn();
+          draw_last_updated(win.last_updated);
+
+          ImGui::TableNextColumn(); // spacer
+
+          ImGui::EndTable();
         }
-        draw_last_updated(win.last_updated);
 
         if (win.sockets.size == 0) {
           ImGui::TextDisabled("No sockets");

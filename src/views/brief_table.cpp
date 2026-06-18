@@ -706,18 +706,36 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     ImGui::SetKeyboardFocusHere(); // targets the filter input below
     my_state.focus_filter_requested = false;
   }
-  const ImGuiTextFilter filter = draw_filter_input(
-      "##ProcessFilter", my_state.filter_text, sizeof(my_state.filter_text));
-  ImGui::SameLine();
+
   const int num_cpus = static_cast<int>(state.snapshot.cpu_stats.size) - 1;
   const bool cpu_per_core = view_state.preferences_state.cpu_per_core;
   bool reset_sort_to_pid = false;
-  if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {
-    // Reset to PID sorting when entering tree mode
-    my_state.sorted_by = eBriefTableColumnId_Pid;
-    my_state.sorted_order = ImGuiSortDirection_Ascending;
-    reset_sort_to_pid = true;
-    sort_brief_table_tree(my_state, ctx.frame_arena);
+
+  ImGuiTextFilter filter;
+  if (ImGui::BeginTable("Header", 3, ImGuiTableFlags_SizingStretchSame)) {
+    ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
+                            HEADER_SPACER_WEIGHT);
+    ImGui::TableNextRow();
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    filter = draw_filter_input("##ProcessFilter", my_state.filter_text,
+                               sizeof(my_state.filter_text));
+
+    ImGui::TableNextColumn();
+    if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {
+      // Reset to PID sorting when entering tree mode
+      my_state.sorted_by = eBriefTableColumnId_Pid;
+      my_state.sorted_order = ImGuiSortDirection_Ascending;
+      reset_sort_to_pid = true;
+      sort_brief_table_tree(my_state, ctx.frame_arena);
+    }
+
+    ImGui::TableNextColumn(); // spacer
+
+    ImGui::EndTable();
   }
 
   constexpr ImGuiTableFlags flags =
