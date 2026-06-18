@@ -26,14 +26,17 @@ static void apply_window_opacity(ImGuiStyle &style, const float opacity) {
     return;
   }
   static constexpr ImGuiCol bg_colors[] = {
-      ImGuiCol_WindowBg,      ImGuiCol_ChildBg,        ImGuiCol_MenuBarBg,
-      ImGuiCol_PopupBg,       ImGuiCol_TitleBg,        ImGuiCol_TitleBgActive,
-      ImGuiCol_TitleBgCollapsed, ImGuiCol_ScrollbarBg, ImGuiCol_TableHeaderBg,
-      ImGuiCol_TableRowBg,    ImGuiCol_TableRowBgAlt,  ImGuiCol_Tab,
-      ImGuiCol_TabHovered,    ImGuiCol_TabSelected,    ImGuiCol_TabDimmed,
-      ImGuiCol_TabDimmedSelected, ImGuiCol_FrameBg,    ImGuiCol_FrameBgHovered,
-      ImGuiCol_FrameBgActive, ImGuiCol_Button,         ImGuiCol_ButtonHovered,
-      ImGuiCol_ButtonActive,
+      ImGuiCol_WindowBg,         ImGuiCol_ChildBg,
+      ImGuiCol_MenuBarBg,        ImGuiCol_PopupBg,
+      ImGuiCol_TitleBg,          ImGuiCol_TitleBgActive,
+      ImGuiCol_TitleBgCollapsed, ImGuiCol_ScrollbarBg,
+      ImGuiCol_TableHeaderBg,    ImGuiCol_TableRowBg,
+      ImGuiCol_TableRowBgAlt,    ImGuiCol_Tab,
+      ImGuiCol_TabHovered,       ImGuiCol_TabSelected,
+      ImGuiCol_TabDimmed,        ImGuiCol_TabDimmedSelected,
+      ImGuiCol_FrameBg,          ImGuiCol_FrameBgHovered,
+      ImGuiCol_FrameBgActive,    ImGuiCol_Button,
+      ImGuiCol_ButtonHovered,    ImGuiCol_ButtonActive,
   };
   for (const ImGuiCol col : bg_colors) {
     style.Colors[col].w *= opacity;

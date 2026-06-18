@@ -31,6 +31,7 @@ void notify_data_ready(Sync &sync) {
 
 // UNITY BUILD:
 #include "base/base.cpp"
+#include "sources/dump_writer.cpp"
 #include "sources/environ_reader.cpp"
 #include "sources/font_list_reader.cpp"
 #include "sources/library_reader.cpp"
@@ -130,6 +131,12 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     if (len < sizeof(view_state->preferences_state.font_path)) {
       memcpy(view_state->preferences_state.font_path, path, len + 1);
     }
+  } else if (strncmp(line, "DumpDir=", 8) == 0) {
+    const char *path = line + 8;
+    const uint32_t len = static_cast<uint32_t>(strlen(path));
+    if (len < sizeof(view_state->preferences_state.dump_dir)) {
+      memcpy(view_state->preferences_state.dump_dir, path, len + 1);
+    }
   }
 }
 
@@ -161,6 +168,9 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
                view_state->preferences_state.window_opacity_pct);
   if (view_state->preferences_state.font_path[0] != '\0') {
     buf->appendf("FontPath=%s\n", view_state->preferences_state.font_path);
+  }
+  if (view_state->preferences_state.dump_dir[0] != '\0') {
+    buf->appendf("DumpDir=%s\n", view_state->preferences_state.dump_dir);
   }
   buf->append("\n");
 
@@ -434,6 +444,14 @@ int main(int, char **) {
     ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
   } else {
     ImGui::LoadIniSettingsFromDisk(io.IniFilename);
+  }
+
+  // Seed the dump folder on first run (while $HOME still points at the real
+  // user) so it persists in settings; an elevated relaunch then reads it back
+  // instead of defaulting to /root.
+  if (view_state.preferences_state.dump_dir[0] == '\0') {
+    default_dump_dir(view_state.preferences_state.dump_dir,
+                     sizeof(view_state.preferences_state.dump_dir));
   }
 
   style_control_init(view_state.preferences_state.theme, main_scale,

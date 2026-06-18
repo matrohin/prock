@@ -18,6 +18,7 @@ void on_demand_reader_loop(Sync &sync) {
     SmapsRequest smaps_request;
     PortScanRequest port_scan_request;
     FontListRequest font_list_request;
+    DumpRequest dump_request;
     {
       std::unique_lock<std::mutex> lock(sync.quit_mutex);
       my_sync.request_read_cv.wait(lock, [&] {
@@ -27,7 +28,8 @@ void on_demand_reader_loop(Sync &sync) {
                my_sync.socket_request_queue.peek(sock_request) ||
                my_sync.smaps_request_queue.peek(smaps_request) ||
                my_sync.port_scan_request_queue.peek(port_scan_request) ||
-               my_sync.font_list_request_queue.peek(font_list_request);
+               my_sync.font_list_request_queue.peek(font_list_request) ||
+               my_sync.dump_request_queue.peek(dump_request);
       });
     }
     if (sync.quit.load()) break;
@@ -83,6 +85,15 @@ void on_demand_reader_loop(Sync &sync) {
       if (!my_sync.font_list_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
+    }
+
+    while (my_sync.dump_request_queue.pop(dump_request)) {
+      ZoneScopedN("dump_request");
+      ZoneValue(dump_request.pid);
+      DumpResponse response = write_process_dump(dump_request, sync.quit);
+      // Can't drop: the response queue capacity matches the request queue and
+      // dumps run serially, so every popped request leaves room for its reply.
+      my_sync.dump_response_queue.push(response);
     }
 
     notify_data_ready(sync);

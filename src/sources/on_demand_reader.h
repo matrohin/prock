@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/channel.h"
+#include "sources/dump_writer.h"
 #include "sources/environ_reader.h"
 #include "sources/font_list_reader.h"
 #include "sources/library_reader.h"
@@ -23,6 +24,8 @@ struct OnDemandReaderSync {
   Channel<PortScanResponse, 2> port_scan_response_queue;
   Channel<FontListRequest, 2> font_list_request_queue;
   Channel<FontListResponse, 2> font_list_response_queue;
+  Channel<DumpRequest, 4> dump_request_queue;
+  Channel<DumpResponse, 4> dump_response_queue;
   std::condition_variable request_read_cv;
 };
 

@@ -7,8 +7,10 @@
 #include "imgui.h"
 
 struct FrameContext;
+struct Notifications;
 struct State;
 struct StateSnapshot;
+struct Sync;
 struct ViewState;
 
 enum BriefTableColumnId {
@@ -64,6 +66,9 @@ void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
 
 void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state);
+
+// Drain core-dump results from the on-demand reader and surface them as toasts.
+void brief_table_dump_update(Notifications &notifications, Sync &sync);
 
 // Pure logic functions (exposed for testing)
 uint32_t binary_search_pid(const Array<ProcessStat> &stats, int pid);

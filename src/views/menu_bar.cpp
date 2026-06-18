@@ -196,6 +196,14 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     }
 
     ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::SeparatorText("Dumps");
+    ImGui::SetNextItemWidth(FONT_PATH_WIDTH * scale);
+    ImGui::InputTextWithHint("##DumpDir", "Folder for core dumps",
+                             prefs.dump_dir, sizeof(prefs.dump_dir));
+
+    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 

@@ -12,6 +12,7 @@
 #include "views/threads_viewer.h"
 #include "views/view_state.h"
 
+#include "sources/sync.h"
 #include "state.h"
 #include "themes.h"
 
@@ -22,9 +23,11 @@
 #include <cerrno>
 #include <chrono>
 #include <cstring>
+#include <ctime>
 #include <sched.h>
 #include <signal.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 // Highlight durations (must match brief_table_logic.cpp)
 static constexpr int64_t NEW_PROCESS_HIGHLIGHT_NS = 2'000'000'000; // 2 seconds
@@ -220,6 +223,67 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
       });
 }
 
+// Ask the on-demand reader to run gcore. dump_dir is the configured folder;
+// when empty (the user cleared the preference) it falls back to
+// default_dump_dir(). The dump lands at "<out_path>.<pid>" because gcore
+// appends the pid to its -o base.
+static void send_dump_request(Sync &sync, const char *dump_dir, const Pid pid,
+                              const char *comm) {
+  char default_dir[512];
+  if (!dump_dir || dump_dir[0] == '\0') {
+    default_dump_dir(default_dir, sizeof(default_dir));
+    dump_dir = default_dir;
+  }
+
+  char safe_comm[64];
+  uint32_t si = 0;
+  for (const char *c = comm; c && *c && si < sizeof(safe_comm) - 1; ++c) {
+    const char ch = *c;
+    safe_comm[si++] =
+        (ch == '/' || ch == ' ' || ch == '\t' || ch == ':') ? '_' : ch;
+  }
+  safe_comm[si] = '\0';
+
+  char timestamp[32];
+  const time_t now = time(nullptr);
+  struct tm tm_now;
+  localtime_r(&now, &tm_now);
+  strftime(timestamp, sizeof(timestamp), "%Y%m%d-%H%M%S", &tm_now);
+
+  DumpRequest req = {};
+  req.pid = pid;
+  snprintf(req.out_path, sizeof(req.out_path), "%s/core.%s.%s", dump_dir,
+           safe_comm, timestamp);
+
+  {
+    std::lock_guard<std::mutex> lock(sync.quit_mutex);
+    sync.on_demand_reader.dump_request_queue.push(req);
+  }
+  sync.on_demand_reader.request_read_cv.notify_one();
+}
+
+// Drain gcore results pushed by the on-demand reader and report each as a
+// toast.
+void brief_table_dump_update(Notifications &notifications, Sync &sync) {
+  DumpResponse r;
+  while (sync.on_demand_reader.dump_response_queue.pop(r)) {
+    if (r.error_code == 0 && !r.gcore_missing && r.exit_status == 0) {
+      notify_info(notifications, "Wrote core to %s.%d", r.out_path, r.pid);
+    } else if (r.gcore_missing) {
+      notify_error(notifications, 0,
+                   "gcore not found - install gdb to enable core dumps");
+    } else if (r.error_code != 0) {
+      notify_error(notifications, r.error_code, "Failed to dump %d: %s", r.pid,
+                   strerror(r.error_code));
+    } else {
+      // gcore ran but failed: most likely ptrace permission. Offer pkexec when
+      // we are not already root.
+      notify_error(notifications, geteuid() == 0 ? 0 : EPERM,
+                   "gcore failed for PID %d (exit %d)", r.pid, r.exit_status);
+    }
+  }
+}
+
 static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                                     BriefTableState &my_state,
                                     const BriefTableLine &line,
@@ -308,6 +372,11 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
         notify_error(view_state.notifications, err, "Failed to resume %d: %s",
                      pid, strerror(err));
       }
+    }
+    if (ImGui::MenuItem("Create Dump File")) {
+      send_dump_request(*view_state.sync, view_state.preferences_state.dump_dir,
+                        pid, line.name.data);
+      ImGui::CloseCurrentPopup();
     }
     ImGui::Separator();
     if (ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del") ||

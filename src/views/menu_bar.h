@@ -9,6 +9,7 @@ struct PreferencesState {
   int zoom_scale_pct = 100;
   int window_opacity_pct = 100;
   char font_path[512] = {}; // Custom TTF font path, empty = default
+  char dump_dir[512] = {};  // Core dump folder, empty = ~/prock-dumps
   Theme theme = Theme::Light;
   bool show_preferences_modal = false;
   bool show_about_modal = false;

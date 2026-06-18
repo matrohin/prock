@@ -17,7 +17,8 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   if (snapshot.cpu_stats.size > 1 && old.cpu_stats.size > 1) {
     const ulong cur_total = snapshot.cpu_stats.data[0].total();
     const ulong prev_total = old.cpu_stats.data[0].total();
-    const ulong total_delta = cur_total >= prev_total ? cur_total - prev_total : 0;
+    const ulong total_delta =
+        cur_total >= prev_total ? cur_total - prev_total : 0;
     const uint32_t num_cores = snapshot.cpu_stats.size - 1;
     per_core_ticks = static_cast<double>(total_delta) / num_cores;
   }

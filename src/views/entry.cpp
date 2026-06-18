@@ -43,6 +43,7 @@ void views_on_demand_update(ViewState &view_state) {
   socket_viewer_update(view_state.socket_viewer_state, *view_state.sync);
   smaps_viewer_update(view_state.smaps_viewer_state, *view_state.sync);
   ports_viewer_update(view_state.ports_viewer_state, *view_state.sync);
+  brief_table_dump_update(view_state.notifications, *view_state.sync);
   notifications_update(view_state.notifications);
 }
 
