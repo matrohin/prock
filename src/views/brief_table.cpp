@@ -82,7 +82,7 @@ static FilterResult imgui_filter_pass_filter_ext(const ImGuiTextFilter &filter,
 }
 
 const char *PROCESS_COPY_HEADER =
-    "PID\tName\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
+    "PID\tName\tUser\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
     "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tCommand Line\n";
 
 static void open_all_windows(const Pid pid, const char *comm,
@@ -115,6 +115,8 @@ static String process_cell_text(BumpArena &arena, const BriefTableLine &line,
     return String::sprintf(arena, "%d", line.pid);
   case eBriefTableColumnId_Name:
     return String::static_string(line.name.data);
+  case eBriefTableColumnId_Username:
+    return String::static_string(line.username.data);
   case eBriefTableColumnId_State:
     return String::sprintf(arena, "%c", line.state);
   case eBriefTableColumnId_Threads:
@@ -145,8 +147,9 @@ static void copy_process_row(Notifications &notifications, BumpArena &arena,
                              const BriefTableLine &line) {
   const ProcessDerivedStat &derived = line.derived_stat;
   const String str = String::sprintf(
-      arena, "%s%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
-      PROCESS_COPY_HEADER, line.pid, line.name.data, line.state,
+      arena, "%s%d\t%s\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
+      PROCESS_COPY_HEADER, line.pid, line.name.data, line.username.data,
+      line.state,
       line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
       derived.cpu_user_perc, derived.cpu_kernel_perc,
       derived.mem_resident_bytes / 1024.0, derived.mem_virtual_bytes / 1024.0,
@@ -213,8 +216,9 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
         const ProcessDerivedStat &derived = line.derived_stat;
         return snprintf(
             ptr, rem,
-            "%d\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
-            line.pid, line.name.data, line.state, line.num_threads,
+            "%d\t%s\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
+            line.pid, line.name.data, line.username.data, line.state,
+            line.num_threads,
             derived.cpu_user_perc + derived.cpu_kernel_perc,
             derived.cpu_user_perc, derived.cpu_kernel_perc,
             derived.mem_resident_bytes / 1024.0,
@@ -504,6 +508,9 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
     if (line.cmdline[0] != '\0' && ImGui::IsItemHovered())
       ImGui::SetItemTooltip("%s", line.cmdline);
   }
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Username)) {
+    ImGui::TextUnformatted(line.username.data);
+  }
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_State)) {
     table_item_draw_state(line.state);
   }
@@ -749,6 +756,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                             eBriefTableColumnId_Pid);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f,
                             eBriefTableColumnId_Name);
+    ImGui::TableSetupColumn("User", ImGuiTableColumnFlags_DefaultHide, 0.0f,
+                            eBriefTableColumnId_Username);
     ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 50.0f,
                             eBriefTableColumnId_State);
     ImGui::TableSetupColumn("Threads",

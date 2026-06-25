@@ -23,6 +23,8 @@ static bool table_line_is_less(const BriefTableColumnId sorted_by,
     return left.pid < right.pid;
   case eBriefTableColumnId_Name:
     return strcmp(left.name.data, right.name.data) < 0;
+  case eBriefTableColumnId_Username:
+    return strcmp(left.username.data, right.username.data) < 0;
   case eBriefTableColumnId_State:
     return left.state < right.state;
   case eBriefTableColumnId_Threads:
@@ -153,6 +155,7 @@ static void brief_table_line_init(BriefTableLine &new_line,
   new_line.cmdline = stat.cmdline ? stat.cmdline : "";
   ConstString display = cmdline_display_name(new_line.cmdline, interner);
   new_line.name = display.data ? display : interner.intern(stat.comm);
+  new_line.username = stat.username;
   new_line.state = stat.state;
   new_line.num_threads = stat.num_threads;
 

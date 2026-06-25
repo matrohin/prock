@@ -16,6 +16,7 @@ struct ViewState;
 enum BriefTableColumnId {
   eBriefTableColumnId_Pid,
   eBriefTableColumnId_Name,
+  eBriefTableColumnId_Username,
   eBriefTableColumnId_State,
   eBriefTableColumnId_Threads,
   eBriefTableColumnId_CpuTotalPerc,
@@ -33,6 +34,7 @@ struct BriefTableLine {
   ConstString name;
   long num_threads;
   const char *cmdline;
+  PersistentString username;
   ProcessDerivedStat derived_stat;
   int64_t first_seen_ns;
   int64_t death_time_ns;

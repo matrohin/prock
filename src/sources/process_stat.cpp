@@ -142,6 +142,7 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   ProcessStat &stat = *out;
   stat.pid = tid;
   stat.comm = "";
+  stat.username = PersistentString{""};
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
 
@@ -186,7 +187,8 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   return parse_proc_stat_bufs(stat_buf, statm_buf, out);
 }
 
-static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
+static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
+                         UsernameResolver &usernames) {
   ZoneScoped;
   ZoneValue(pid);
   constexpr size_t PATH_BUF_SIZE = 64;
@@ -204,6 +206,7 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
   stat.pid = pid;
   stat.comm = "";
   stat.cmdline = "";
+  stat.username = PersistentString{""};
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
 
@@ -229,8 +232,23 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
     fclose(stat_file);
     return false;
   }
+
   fclose(statm_file);
   fclose(stat_file);
+
+  // Resolve the owner from the status "Uid:" line (correct for non-dumpable
+  // processes, whose /proc entries are owned by root).
+  char status_filename[PATH_BUF_SIZE];
+  snprintf(status_filename, PATH_BUF_SIZE, "/proc/%d/status", pid);
+  uid_t uid = 0;
+  if (FILE *status_file = fopen(status_filename, "r")) {
+    char status_buf[1024];
+    const size_t n = fread(status_buf, 1, sizeof(status_buf) - 1, status_file);
+    status_buf[n] = '\0';
+    fclose(status_file);
+    parse_proc_status_uid(status_buf, &uid);
+  }
+  stat.username = usernames.resolve(uid);
 
   char comm_buf[64];
   read_proc_comm(pid, comm_buf, sizeof(comm_buf));
@@ -277,7 +295,8 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out) {
   return true;
 }
 
-static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
+static Array<ProcessStat> read_all_processes(BumpArena &result_arena,
+                                             UsernameResolver &usernames) {
   ZoneScoped;
   DIR *proc_dir = opendir("/proc");
   if (!proc_dir) {
@@ -306,7 +325,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena) {
   const LinkedNode<long> *it = pids.head;
   ProcessStat *it_result = result.data;
   while (it) {
-    if (read_process(it->value, result_arena, it_result)) {
+    if (read_process(it->value, result_arena, it_result, usernames)) {
       ++it_result;
     }
     it = it->next;
@@ -638,7 +657,7 @@ void gather(GatheringState &state, Sync &sync) {
 
   ZoneScoped;
   BumpArena arena = BumpArena::create();
-  const auto process_stats = read_all_processes(arena);
+  const auto process_stats = read_all_processes(arena, state.usernames);
   const auto cpu_stats = read_cpu_stats(arena);
   const auto mem_info = read_mem_info();
   const auto disk_io_stats = read_disk_io_stats();

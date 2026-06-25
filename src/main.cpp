@@ -41,6 +41,7 @@ void notify_data_ready(Sync &sync) {
 #include "sources/process_stat.cpp"
 #include "sources/smaps_reader.cpp"
 #include "sources/socket_reader.cpp"
+#include "sources/username.cpp"
 #include "state.cpp"
 #include "style_control.cpp"
 #include "tracy/Tracy.hpp"
@@ -484,6 +485,8 @@ int main(int, char **) {
   std::thread gathering_thread{[&sync] {
     pthread_setname_np(pthread_self(), "gathering");
     GatheringState gathering_state = {};
+    gathering_state.usernames =
+        UsernameResolver::create(&gathering_state.persistent_arena);
     while (!sync.quit.load()) {
       gather(gathering_state, sync);
     }

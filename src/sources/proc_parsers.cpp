@@ -38,6 +38,15 @@ bool parse_proc_stat_bufs(const char *stat_buf, const char *statm_buf,
   return true;
 }
 
+bool parse_proc_status_uid(const char *status_buf, uid_t *out) {
+  const char *line = strstr(status_buf, "Uid:");
+  if (!line) return false;
+  unsigned int real_uid;
+  if (sscanf(line + 4, "%u", &real_uid) != 1) return false;
+  *out = real_uid;
+  return true;
+}
+
 void parse_io_line(const char *line, ProcessStat *out) {
   char key[32];
   ulonglong value;

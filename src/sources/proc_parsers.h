@@ -17,3 +17,7 @@ void parse_io_line(const char *line, ProcessStat *out);
 // Read /proc/[pid]/comm into out (null-terminated, trailing newline stripped).
 // Sets out to an empty string on failure.
 void read_proc_comm(Pid pid, char *out, size_t out_size);
+
+// Parse the real uid from the "Uid:" line of a /proc/[pid]/status buffer.
+// Returns false (leaving *out untouched) if not found.
+bool parse_proc_status_uid(const char *status_buf, uid_t *out);

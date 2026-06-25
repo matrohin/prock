@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/base.h"
+#include "username.h"
 
 #include <climits>
 #include <sys/types.h>
@@ -16,6 +17,7 @@ Fields used from /proc/[pid]/statm:
 struct ProcessStat {
   const char *comm;
   const char *cmdline;
+  PersistentString username;
   ulong utime;
   ulong stime;
   long num_threads;
@@ -77,6 +79,8 @@ struct GatheringState {
   SteadyTimePoint last_update;
   GrowingArray<Pid> watched_pids;
   BumpArena watched_pids_arena;
+  BumpArena persistent_arena; // storage that outlives a single gather cycle
+  UsernameResolver usernames;
 };
 
 struct Sync;

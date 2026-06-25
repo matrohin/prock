@@ -8,12 +8,16 @@ using ImPlotShadedFlags = int;
 
 #include "sources/proc_parsers.h"
 #include "sources/sync.h"
+#include "sources/username.h"
 #include "state.h"
 #include "test_helpers.h"
 #include "views/brief_table.h"
 #include "views/common_charts.h"
 #include "views/common.h"
 #include "views/table_item.h"
+
+#include <pwd.h>
+#include <unistd.h>
 
 // ============================================================================
 // binary_search_pid Tests
@@ -953,6 +957,25 @@ TEST_CASE("sort_brief_table_lines by columns") {
     CHECK(my_state.lines.data[2].pid == 1); // zsh
   }
 
+  SUBCASE("sort by username") {
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_Username;
+    my_state.sorted_order = ImGuiSortDirection_Ascending;
+    my_state.lines = Array<BriefTableLine>::create(arena, 3);
+    my_state.lines.data[0] = {.name = "c", .pid = 1, .ppid = 0};
+    my_state.lines.data[0].username = PersistentString{"root"};
+    my_state.lines.data[1] = {.name = "a", .pid = 2, .ppid = 0};
+    my_state.lines.data[1].username = PersistentString{"daemon"};
+    my_state.lines.data[2] = {.name = "b", .pid = 3, .ppid = 0};
+    my_state.lines.data[2].username = PersistentString{"matrohin"};
+
+    sort_brief_table_lines(my_state);
+
+    CHECK(my_state.lines.data[0].pid == 2); // daemon
+    CHECK(my_state.lines.data[1].pid == 3); // matrohin
+    CHECK(my_state.lines.data[2].pid == 1); // root
+  }
+
   arena.destroy();
 }
 
@@ -1372,4 +1395,110 @@ TEST_CASE("parse_io_line") {
     CHECK(stat.io_read_bytes == 1024);
     CHECK(stat.io_write_bytes == 512);
   }
+}
+
+// ============================================================================
+// parse_proc_status_uid Tests
+// ============================================================================
+
+TEST_CASE("parse_proc_status_uid") {
+  uid_t uid = 12345; // sentinel: must stay untouched on failure
+
+  SUBCASE("reads the real uid from a status buffer") {
+    const char *status = "Name:\tbash\nState:\tS\nPid:\t42\n"
+                         "Uid:\t1000\t1000\t1000\t1000\n"
+                         "Gid:\t1000\t1000\t1000\t1000\n";
+    CHECK(parse_proc_status_uid(status, &uid));
+    CHECK(uid == 1000);
+  }
+
+  SUBCASE("real uid differs from effective (setuid)") {
+    CHECK(parse_proc_status_uid("Uid:\t1000\t0\t0\t0\n", &uid));
+    CHECK(uid == 1000); // real uid, not the effective root
+  }
+
+  SUBCASE("missing Uid line leaves the output untouched") {
+    CHECK_FALSE(parse_proc_status_uid("Name:\tbash\nState:\tS\n", &uid));
+    CHECK(uid == 12345);
+  }
+}
+
+// ============================================================================
+// StringCache Tests
+// ============================================================================
+
+TEST_CASE("StringCache") {
+  BumpArena arena = BumpArena::create();
+  StringCache cache = StringCache::create(&arena);
+
+  SUBCASE("missing key returns a null PersistentString") {
+    CHECK(cache.get(42).data == nullptr);
+  }
+
+  SUBCASE("set copies the value and get returns it") {
+    char src[] = "alice";
+    const PersistentString stored = cache.set(7, src);
+    src[0] = 'X'; // mutate the source to prove the cache copied
+    CHECK(stored.data != src);
+    CHECK(strcmp(stored.data, "alice") == 0);
+    CHECK(cache.get(7).data == stored.data);
+  }
+
+  SUBCASE("repeated set returns the first stored string") {
+    const PersistentString first = cache.set(1, "bob");
+    const PersistentString second = cache.set(1, "carol");
+    CHECK(first.data == second.data);
+    CHECK(strcmp(cache.get(1).data, "bob") == 0);
+  }
+
+  SUBCASE("growth preserves all entries") {
+    constexpr uint32_t N = 500; // forces several grows past INITIAL_CAP
+    for (uint32_t i = 0; i < N; ++i) {
+      char buf[16];
+      snprintf(buf, sizeof(buf), "u%u", i);
+      cache.set(i, buf);
+    }
+    for (uint32_t i = 0; i < N; ++i) {
+      char buf[16];
+      snprintf(buf, sizeof(buf), "u%u", i);
+      const PersistentString got = cache.get(i);
+      REQUIRE(got.data != nullptr);
+      CHECK(strcmp(got.data, buf) == 0);
+    }
+  }
+
+  cache.destroy();
+  arena.destroy();
+}
+
+// ============================================================================
+// UsernameResolver Tests
+// ============================================================================
+
+TEST_CASE("UsernameResolver") {
+  BumpArena arena = BumpArena::create();
+  UsernameResolver resolver = UsernameResolver::create(&arena);
+
+  SUBCASE("resolves the current uid to its passwd name") {
+    const uid_t uid = geteuid();
+    const passwd *pw = getpwuid(uid);
+    REQUIRE(pw != nullptr);
+    CHECK(strcmp(resolver.resolve(uid).data, pw->pw_name) == 0);
+  }
+
+  SUBCASE("same uid hits the cache") {
+    const PersistentString first = resolver.resolve(geteuid());
+    const PersistentString second = resolver.resolve(geteuid());
+    CHECK(first.data == second.data);
+  }
+
+  SUBCASE("unknown uid falls back to the numeric string") {
+    const uint32_t unknown = 0xFFFFFFFEu;
+    if (getpwuid(unknown) == nullptr) {
+      CHECK(strcmp(resolver.resolve(unknown).data, "4294967294") == 0);
+    }
+  }
+
+  resolver.cache.destroy();
+  arena.destroy();
 }
