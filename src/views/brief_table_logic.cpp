@@ -29,6 +29,8 @@ static bool table_line_is_less(const BriefTableColumnId sorted_by,
     return left.state < right.state;
   case eBriefTableColumnId_Threads:
     return left.num_threads < right.num_threads;
+  case eBriefTableColumnId_StartTime:
+    return left.start_time_epoch_sec < right.start_time_epoch_sec;
   case eBriefTableColumnId_CpuTotalPerc: {
     const double left_val =
         left.derived_stat.cpu_user_perc + left.derived_stat.cpu_kernel_perc;
@@ -149,7 +151,8 @@ void sort_brief_table_lines(BriefTableState &my_state) { sort_flat(my_state); }
 static void brief_table_line_init(BriefTableLine &new_line,
                                   const ProcessStat &stat,
                                   const ProcessDerivedStat &derived_stat,
-                                  InternTable &interner) {
+                                  InternTable &interner,
+                                  const SystemInfo &system) {
   new_line.pid = stat.pid;
   new_line.ppid = stat.ppid;
   new_line.cmdline = stat.cmdline ? stat.cmdline : "";
@@ -158,6 +161,13 @@ static void brief_table_line_init(BriefTableLine &new_line,
   new_line.username = stat.username;
   new_line.state = stat.state;
   new_line.num_threads = stat.num_threads;
+
+  // starttime is in clock ticks since boot; convert to an absolute epoch.
+  new_line.start_time_epoch_sec =
+      (system.boot_time_epoch_sec != 0 && system.ticks_in_second != 0)
+          ? static_cast<int64_t>(system.boot_time_epoch_sec +
+                                 stat.starttime / system.ticks_in_second)
+          : 0;
 
   new_line.derived_stat = derived_stat;
   new_line.filter_state = 0;
@@ -197,7 +207,7 @@ void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[state_index],
                             new_snapshot.derived_stats.data[state_index],
-                            string_interner);
+                            string_interner, state.system);
 
       new_line.first_seen_ns = old_line.first_seen_ns;
       new_line.death_time_ns = 0;
@@ -225,7 +235,7 @@ void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[i],
                             new_snapshot.derived_stats.data[i],
-                            string_interner);
+                            string_interner, state.system);
       new_line.first_seen_ns = new_process_first_seen;
     }
   }

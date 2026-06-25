@@ -23,6 +23,7 @@ struct ProcessStat {
   long num_threads;
   ulong vsize;
   ulong statm_resident;
+  ulonglong starttime; // Clock ticks since boot (/proc/[pid]/stat field 22)
 
   // From /proc/[pid]/io
   ulonglong io_read_bytes;  // Actual bytes read from storage

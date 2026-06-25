@@ -82,8 +82,9 @@ static FilterResult imgui_filter_pass_filter_ext(const ImGuiTextFilter &filter,
 }
 
 const char *PROCESS_COPY_HEADER =
-    "PID\tName\tUser\tState\tThreads\tCPU Total\tCPU User\tCPU Kernel\tRSS "
-    "(KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tCommand Line\n";
+    "PID\tName\tUser\tState\tThreads\tStart Time\tCPU Total\tCPU User\tCPU "
+    "Kernel\tRSS (KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tCommand "
+    "Line\n";
 
 static void open_all_windows(const Pid pid, const char *comm,
                              ViewState &view_state) {
@@ -121,6 +122,11 @@ static String process_cell_text(BumpArena &arena, const BriefTableLine &line,
     return String::sprintf(arena, "%c", line.state);
   case eBriefTableColumnId_Threads:
     return String::sprintf(arena, "%ld", line.num_threads);
+  case eBriefTableColumnId_StartTime: {
+    char buf[32];
+    format_start_time_absolute(line.start_time_epoch_sec, buf, sizeof(buf));
+    return String::sprintf(arena, "%s", buf);
+  }
   case eBriefTableColumnId_CpuTotalPerc:
     return String::sprintf(arena, "%.1f",
                            derived.cpu_user_perc + derived.cpu_kernel_perc);
@@ -146,14 +152,18 @@ static String process_cell_text(BumpArena &arena, const BriefTableLine &line,
 static void copy_process_row(Notifications &notifications, BumpArena &arena,
                              const BriefTableLine &line) {
   const ProcessDerivedStat &derived = line.derived_stat;
+  char start_time[32];
+  format_start_time_absolute(line.start_time_epoch_sec, start_time,
+                             sizeof(start_time));
   const String str = String::sprintf(
-      arena, "%s%d\t%s\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
+      arena,
+      "%s%d\t%s\t%s\t%c\t%ld\t%s\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
       PROCESS_COPY_HEADER, line.pid, line.name.data, line.username.data,
-      line.state,
-      line.num_threads, derived.cpu_user_perc + derived.cpu_kernel_perc,
-      derived.cpu_user_perc, derived.cpu_kernel_perc,
-      derived.mem_resident_bytes / 1024.0, derived.mem_virtual_bytes / 1024.0,
-      derived.io_read_kb_per_sec, derived.io_write_kb_per_sec, line.cmdline);
+      line.state, line.num_threads, start_time,
+      derived.cpu_user_perc + derived.cpu_kernel_perc, derived.cpu_user_perc,
+      derived.cpu_kernel_perc, derived.mem_resident_bytes / 1024.0,
+      derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
+      derived.io_write_kb_per_sec, line.cmdline);
   clipboard_copy_row(notifications, str.data);
 }
 
@@ -214,11 +224,15 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
       2 * 4096 + 256, PROCESS_COPY_HEADER,
       [](char *ptr, size_t rem, const BriefTableLine &line) {
         const ProcessDerivedStat &derived = line.derived_stat;
+        char start_time[32];
+        format_start_time_absolute(line.start_time_epoch_sec, start_time,
+                                   sizeof(start_time));
         return snprintf(
             ptr, rem,
-            "%d\t%s\t%s\t%c\t%ld\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s\n",
+            "%d\t%s\t%s\t%c\t%ld\t%s\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f"
+            "\t%s\n",
             line.pid, line.name.data, line.username.data, line.state,
-            line.num_threads,
+            line.num_threads, start_time,
             derived.cpu_user_perc + derived.cpu_kernel_perc,
             derived.cpu_user_perc, derived.cpu_kernel_perc,
             derived.mem_resident_bytes / 1024.0,
@@ -516,6 +530,8 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
   }
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Threads))
     table_item_draw_long(line.num_threads);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_StartTime))
+    table_item_draw_start_time(line.start_time_epoch_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CpuTotalPerc))
     table_item_draw_percent(scale_cpu_perc(derived_stat.cpu_user_perc +
                                                derived_stat.cpu_kernel_perc,
@@ -765,6 +781,11 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                                 ImGuiTableColumnFlags_DefaultHide |
                                 ImGuiTableColumnFlags_WidthFixed,
                             60.0f, eBriefTableColumnId_Threads);
+    ImGui::TableSetupColumn("Start Time",
+                            ImGuiTableColumnFlags_PreferSortDescending |
+                                ImGuiTableColumnFlags_DefaultHide |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            95.0f, eBriefTableColumnId_StartTime);
     ImGui::TableSetupColumn("CPU Total",
                             ImGuiTableColumnFlags_PreferSortDescending |
                                 ImGuiTableColumnFlags_WidthFixed,

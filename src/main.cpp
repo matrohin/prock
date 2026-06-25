@@ -194,6 +194,20 @@ static bool state_init(State &state) {
   }
   state.system.ticks_in_second = ticks;
   state.system.mem_page_size = page_size;
+
+  // Boot time (epoch seconds) is constant; read it once from /proc/stat "btime".
+  state.system.boot_time_epoch_sec = 0;
+  if (FILE *stat_file = fopen("/proc/stat", "r")) {
+    char line[256];
+    while (fgets(line, sizeof(line), stat_file)) {
+      unsigned long long btime;
+      if (sscanf(line, "btime %llu", &btime) == 1) {
+        state.system.boot_time_epoch_sec = btime;
+        break;
+      }
+    }
+    fclose(stat_file);
+  }
   return true;
 }
 
