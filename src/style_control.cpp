@@ -77,11 +77,39 @@ void style_control_rebuild(const int zoom_pct, const int opacity_pct) {
   g_applied_opacity = opacity_pct;
 }
 
+// Chart colormap registry indices. The palette data lives in themes.h, but
+// registering it returns an ImPlot index and needs the live ImPlot context
+// (created by main() at runtime), so these are filled in by
+// register_chart_colormaps(), not eagerly.
+static ImPlotColormap g_nord_colormap;
+static ImPlotColormap g_onenord_colormap;
+
+static void register_chart_colormaps() {
+  g_nord_colormap =
+      ImPlot::AddColormap("Nord", kNordColormap, IM_ARRAYSIZE(kNordColormap));
+  g_onenord_colormap = ImPlot::AddColormap("OneNord", kOneNordColormap,
+                                           IM_ARRAYSIZE(kOneNordColormap));
+}
+
+static void apply_chart_colormap(const Theme theme) {
+  ImPlotColormap cmap = ImPlotColormap_Deep;
+  if (theme == Theme::Nord)
+    cmap = g_nord_colormap;
+  else if (theme == Theme::Onenord)
+    cmap = g_onenord_colormap;
+
+  ImPlot::GetStyle().Colormap = cmap;
+  // Series colors are cached per item on first draw; drop the cache so any open
+  // plots re-pick from the new colormap after a live theme switch.
+  ImPlot::BustColorCache();
+}
+
 void style_control_select_theme(const Theme theme) {
   if (theme == g_applied_theme) return;
 
   apply_theme(theme, &g_base_style);
   apply_geometry(g_base_style);
+  apply_chart_colormap(theme);
 
   g_applied_theme = theme;
   // The live style is only refreshed from g_base_style by
@@ -93,6 +121,7 @@ void style_control_select_theme(const Theme theme) {
 
 void style_control_init(const Theme theme, const float monitor_scale,
                         int target_fps) {
+  register_chart_colormaps();
   style_control_select_theme(theme);
   style_control_set_target_fps(target_fps);
   g_base_style.AntiAliasedLines = true;

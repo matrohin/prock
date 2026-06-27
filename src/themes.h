@@ -72,6 +72,40 @@ inline void set_app_colors_light() {
   g_app_colors[eAppColor_InfoText] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
 }
 
+// Per-theme chart series palettes. ImPlot picks series colors from its active
+// colormap (not ImGuiCol_PlotLines), so style_control.cpp registers these and
+// selects one per theme; themes without an entry fall back to ImPlot's "Deep".
+//
+// Nord accents (Frost + Aurora), ordered so the leading series read clearly. The
+// tail entries only come into play in the per-core CPU chart, where ImPlot
+// cycles through the colormap (mod its length) once there are more cores than
+// colors. 10 distinct hues matches ImPlot's default "Deep" map.
+inline constexpr ImVec4 kNordColormap[] = {
+    ImVec4(0.53f, 0.75f, 0.82f, 1.0f), // nord8  frost cyan
+    ImVec4(0.64f, 0.75f, 0.55f, 1.0f), // nord14 green
+    ImVec4(0.92f, 0.80f, 0.55f, 1.0f), // nord13 yellow
+    ImVec4(0.71f, 0.56f, 0.68f, 1.0f), // nord15 purple
+    ImVec4(0.75f, 0.38f, 0.42f, 1.0f), // nord11 red
+    ImVec4(0.37f, 0.51f, 0.67f, 1.0f), // nord10 blue
+    ImVec4(0.82f, 0.53f, 0.44f, 1.0f), // nord12 orange
+    ImVec4(0.56f, 0.74f, 0.73f, 1.0f), // nord7  teal
+    ImVec4(0.51f, 0.63f, 0.76f, 1.0f), // nord9  light blue
+    ImVec4(0.85f, 0.87f, 0.91f, 1.0f), // nord4  light gray
+};
+// OneNord: the same structure with One Dark's more saturated syntax accents.
+// Its palette tops out shorter than Nord's, so it wraps a touch sooner.
+inline constexpr ImVec4 kOneNordColormap[] = {
+    ImVec4(0.38f, 0.69f, 0.94f, 1.0f), // blue
+    ImVec4(0.60f, 0.76f, 0.47f, 1.0f), // green
+    ImVec4(0.90f, 0.75f, 0.48f, 1.0f), // yellow
+    ImVec4(0.78f, 0.47f, 0.87f, 1.0f), // magenta
+    ImVec4(0.88f, 0.42f, 0.46f, 1.0f), // red
+    ImVec4(0.34f, 0.71f, 0.76f, 1.0f), // cyan
+    ImVec4(0.82f, 0.60f, 0.40f, 1.0f), // orange
+    ImVec4(0.67f, 0.70f, 0.75f, 1.0f), // gray
+    ImVec4(0.29f, 0.55f, 0.72f, 1.0f), // deep blue
+};
+
 inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
   ImGuiStyle *style = dst ? dst : &ImGui::GetStyle();
   ImVec4 *colors = style->Colors;
@@ -214,10 +248,8 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_TabDimmed] = nord0;
     colors[ImGuiCol_TabDimmedSelected] = nord2;
     colors[ImGuiCol_DockingPreview] = with_alpha(nord8, 0.70f);
-    colors[ImGuiCol_PlotLines] = nord8;
-    colors[ImGuiCol_PlotLinesHovered] = nord11;
-    colors[ImGuiCol_PlotHistogram] = nord14;
-    colors[ImGuiCol_PlotHistogramHovered] = nord13;
+    // Chart series colors come from the ImPlot colormap (see style_control.cpp),
+    // not ImGuiCol_PlotLines, so those are intentionally left at defaults.
     colors[ImGuiCol_TableHeaderBg] = nord1;
     colors[ImGuiCol_TableBorderStrong] = nord2;
     colors[ImGuiCol_TableBorderLight] = with_alpha(nord2, 0.50f);
@@ -295,10 +327,8 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_TabDimmed] = on0;
     colors[ImGuiCol_TabDimmedSelected] = on2;
     colors[ImGuiCol_DockingPreview] = wa(on_cyan, 0.70f);
-    colors[ImGuiCol_PlotLines] = on_cyan;
-    colors[ImGuiCol_PlotLinesHovered] = on_red;
-    colors[ImGuiCol_PlotHistogram] = on_green;
-    colors[ImGuiCol_PlotHistogramHovered] = on_yellow;
+    // Chart series colors come from the ImPlot colormap (see style_control.cpp),
+    // not ImGuiCol_PlotLines, so those are intentionally left at defaults.
     colors[ImGuiCol_TableHeaderBg] = on1;
     colors[ImGuiCol_TableBorderStrong] = on3;
     colors[ImGuiCol_TableBorderLight] = wa(on3, 0.60f);
