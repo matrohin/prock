@@ -18,6 +18,7 @@ struct Notification {
   String text;
   double created_time;
   uint64_t id;
+  bool sticky; // never auto-expires; removed explicitly via notifications_remove
 
   String action_label;
   void (*action_fn)();
@@ -40,6 +41,13 @@ void notifications_vpush_action(Notifications &notifications,
                                 NotificationSeverity severity,
                                 const char *action_label, void (*action_fn)(),
                                 const char *fmt, va_list args);
+
+// Push a sticky "in progress" message that stays until notifications_remove is
+// called with the returned id. Use it to track a long-running action and swap it
+// for a result toast on completion.
+uint64_t notifications_push_progress(Notifications &notifications,
+                                     const char *fmt, ...);
+void notifications_remove(Notifications &notifications, uint64_t id);
 
 void notifications_update(Notifications &notifications);
 void notifications_draw(FrameContext &ctx, Notifications &notifications);

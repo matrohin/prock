@@ -39,6 +39,9 @@ static const char *severity_label(const NotificationSeverity severity) {
 }
 
 static bool is_expired(const Notification &note, const double now) {
+  if (note.sticky) {
+    return false;
+  }
   const double ttl = note.severity == eNotificationSeverity_Info
                          ? NOTIFY_INFO_TTL_SECONDS
                          : NOTIFY_TTL_SECONDS;
@@ -60,6 +63,34 @@ void notifications_vpush_action(Notifications &notifications,
                           ? String::copy_from(notifications.arena, action_label)
                           : String{};
   note.text = String::vsprintf(notifications.arena, fmt, args);
+}
+
+uint64_t notifications_push_progress(Notifications &notifications,
+                                     const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  notifications_vpush_action(notifications, eNotificationSeverity_Info, nullptr,
+                             nullptr, fmt, args);
+  va_end(args);
+  Notification &note = notifications.items[notifications.track.last_idx()];
+  note.sticky = true;
+  return note.id;
+}
+
+void notifications_remove(Notifications &notifications, const uint64_t id) {
+  RingTrack<Notifications::CAP> &track = notifications.track;
+  uint32_t write = 0;
+  for (uint32_t read = 0; read < track.size; ++read) {
+    const Notification &note = notifications.items[track.to_data_idx(read)];
+    if (note.id == id) {
+      continue;
+    }
+    if (write != read) {
+      notifications.items[track.to_data_idx(write)] = note;
+    }
+    ++write;
+  }
+  track.size = write;
 }
 
 void notifications_update(Notifications &notifications) {
@@ -117,15 +148,19 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
       const ImVec2 header_pos = ImGui::GetCursorScreenPos();
       const float header_width = ImGui::GetContentRegionAvail().x;
       ImGui::TextColored(severity_color(note.severity), "%s",
-                         severity_label(note.severity));
+                         note.sticky ? "Working" : severity_label(note.severity));
 
-      const float close_width =
-          ImGui::CalcTextSize("x").x + style.FramePadding.x * 2.0f;
-      ImGui::SameLine();
-      ImGui::SetCursorScreenPos(
-          ImVec2(header_pos.x + header_width - close_width, header_pos.y));
-      if (ImGui::SmallButton("x")) {
-        note.created_time = -100;
+      // Sticky progress entries are removed when their action completes, so they
+      // have no manual close button.
+      if (!note.sticky) {
+        const float close_width =
+            ImGui::CalcTextSize("x").x + style.FramePadding.x * 2.0f;
+        ImGui::SameLine();
+        ImGui::SetCursorScreenPos(
+            ImVec2(header_pos.x + header_width - close_width, header_pos.y));
+        if (ImGui::SmallButton("x")) {
+          note.created_time = -100;
+        }
       }
 
       ImGui::TextWrapped("%s", note.text.data);

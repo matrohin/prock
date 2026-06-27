@@ -2,6 +2,7 @@
 
 #include "base/base.h"
 #include "base/channel.h"
+#include "on_demand_actions.h"
 #include "on_demand_reader.h"
 #include "process_stat.h"
 
@@ -38,6 +39,7 @@ struct Sync {
   Channel<int, 16> thread_unwatch_queue;
 
   OnDemandReaderSync on_demand_reader;
+  OnDemandActionsSync on_demand_actions;
 };
 
 void notify_data_ready(Sync &sync);

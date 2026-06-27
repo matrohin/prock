@@ -35,6 +35,7 @@ void notify_data_ready(Sync &sync) {
 #include "sources/environ_reader.cpp"
 #include "sources/font_list_reader.cpp"
 #include "sources/library_reader.cpp"
+#include "sources/on_demand_actions.cpp"
 #include "sources/on_demand_reader.cpp"
 #include "sources/port_scan_reader.cpp"
 #include "sources/proc_parsers.cpp"
@@ -511,6 +512,11 @@ int main(int, char **) {
     on_demand_reader_loop(sync);
   }};
 
+  std::thread actions_thread{[&sync] {
+    pthread_setname_np(pthread_self(), "od_actions");
+    on_demand_actions_loop(sync);
+  }};
+
   while (!glfwWindowShouldClose(window)) {
     FrameMark;
 
@@ -578,8 +584,10 @@ int main(int, char **) {
   }
   sync.quit_cv.notify_one();
   sync.on_demand_reader.request_read_cv.notify_one();
+  sync.on_demand_actions.request_cv.notify_one();
   gathering_thread.join();
   proc_reader_thread.join();
+  actions_thread.join();
 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();

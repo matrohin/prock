@@ -241,12 +241,14 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
       });
 }
 
-// Ask the on-demand reader to run gcore. dump_dir is the configured folder;
-// when empty (the user cleared the preference) it falls back to
-// default_dump_dir(). The dump lands at "<out_path>.<pid>" because gcore
-// appends the pid to its -o base.
-static void send_dump_request(Sync &sync, const char *dump_dir, const Pid pid,
+// Ask the on-demand actions thread to run gcore. The dump_dir is the configured
+// folder; when empty (the user cleared the preference) it falls back to
+// default_dump_dir(). The dump lands at "<out_path>.<pid>" because gcore appends
+// the pid to its -o base. A sticky toast tracks progress until the reply arrives
+// (correlated by id) and is then swapped for the result toast.
+static void send_dump_request(ViewState &view_state, const Pid pid,
                               const char *comm) {
+  const char *dump_dir = view_state.preferences_state.dump_dir;
   char default_dir[512];
   if (!dump_dir || dump_dir[0] == '\0') {
     default_dump_dir(default_dir, sizeof(default_dir));
@@ -272,19 +274,23 @@ static void send_dump_request(Sync &sync, const char *dump_dir, const Pid pid,
   req.pid = pid;
   snprintf(req.out_path, sizeof(req.out_path), "%s/core.%s.%s", dump_dir,
            safe_comm, timestamp);
+  req.id = notifications_push_progress(view_state.notifications,
+                                       "Dumping %s (%d)...", comm, pid);
 
+  Sync &sync = *view_state.sync;
   {
     std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_reader.dump_request_queue.push(req);
+    sync.on_demand_actions.dump_request_queue.push(req);
   }
-  sync.on_demand_reader.request_read_cv.notify_one();
+  sync.on_demand_actions.request_cv.notify_one();
 }
 
-// Drain gcore results pushed by the on-demand reader and report each as a
-// toast.
+// Drain gcore results pushed by the on-demand actions thread, clear the matching
+// in-progress toast, and report each result as a toast.
 void brief_table_dump_update(Notifications &notifications, Sync &sync) {
   DumpResponse r;
-  while (sync.on_demand_reader.dump_response_queue.pop(r)) {
+  while (sync.on_demand_actions.dump_response_queue.pop(r)) {
+    notifications_remove(notifications, r.id);
     if (r.error_code == 0 && !r.gcore_missing && r.exit_status == 0) {
       notify_info(notifications, "Wrote core to %s.%d", r.out_path, r.pid);
     } else if (r.gcore_missing) {
@@ -392,8 +398,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       }
     }
     if (ImGui::MenuItem("Create Dump File")) {
-      send_dump_request(*view_state.sync, view_state.preferences_state.dump_dir,
-                        pid, line.name.data);
+      send_dump_request(view_state, pid, line.name.data);
       ImGui::CloseCurrentPopup();
     }
     ImGui::Separator();

@@ -6,15 +6,17 @@
 #include <limits.h>
 
 // Creates a core dump of a live process by shelling out to gcore (part of gdb).
-// The dump does not terminate the target. Runs on the on-demand reader thread.
+// The dump does not terminate the target. Runs on the on-demand actions thread.
 
 struct DumpRequest {
   Pid pid;
+  uint64_t id;             // correlates the reply with its in-progress toast
   char out_path[PATH_MAX]; // gcore -o base; final file is "<out_path>.<pid>"
 };
 
 struct DumpResponse {
   Pid pid;
+  uint64_t id;             // echoed from the request
   char out_path[PATH_MAX]; // echoed back for the success message
   int error_code;          // 0 on success; non-zero drives the pkexec button
   bool gcore_missing;      // gcore binary not found on PATH
