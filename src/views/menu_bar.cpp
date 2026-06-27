@@ -126,8 +126,9 @@ static void draw_preferences_modal(PreferencesState &prefs) {
     const float font_list_width = FONT_LIST_WIDTH * scale;
     if (prefs.font_list.size > 0) {
       ImGui::SetNextItemWidth(font_list_width);
-      const ImGuiTextFilter filter = draw_filter_input(
-          "##FontFilter", prefs.font_filter, sizeof(prefs.font_filter));
+      ImGuiTextFilter filter;
+      draw_filter_input(filter, "##FontFilter", prefs.font_filter,
+                        sizeof(prefs.font_filter));
       bool found_in_list = prefs.font_path[0] == '\0';
       if (ImGui::BeginListBox("##FontList",
                               ImVec2(font_list_width, list_height))) {
@@ -176,7 +177,8 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       // size and stays centered while the font list loads.
       ImGui::BeginDisabled();
       ImGui::SetNextItemWidth(font_list_width);
-      draw_filter_input("##FontFilter", prefs.font_filter,
+      ImGuiTextFilter filter;
+      draw_filter_input(filter, "##FontFilter", prefs.font_filter,
                         sizeof(prefs.font_filter));
       if (ImGui::BeginListBox("##FontList",
                               ImVec2(font_list_width, list_height))) {

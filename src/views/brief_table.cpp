@@ -771,8 +771,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
     ImGui::TableNextColumn();
     ImGui::SetNextItemWidth(-FLT_MIN);
-    filter = draw_filter_input("##ProcessFilter", my_state.filter_text,
-                               sizeof(my_state.filter_text));
+    draw_filter_input(filter, "##ProcessFilter", my_state.filter_text,
+                      sizeof(my_state.filter_text));
 
     ImGui::TableNextColumn();
     if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {

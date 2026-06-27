@@ -179,8 +179,8 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
     ImGui::TableNextColumn();
     ImGui::SetNextItemWidth(-FLT_MIN);
-    filter = draw_filter_input("##PortsFilter", state.filter_text,
-                               sizeof(state.filter_text));
+    draw_filter_input(filter, "##PortsFilter", state.filter_text,
+                      sizeof(state.filter_text));
 
     if (state.permission_limited) {
       ImGui::TableNextColumn();

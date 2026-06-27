@@ -108,9 +108,9 @@ inline void draw_last_updated(const double last_updated) {
   }
 }
 
-inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
-                                         const size_t filter_text_size,
-                                         const char *hint = "Filter") {
+inline void draw_filter_input(ImGuiTextFilter &filter, const char *id,
+                              char *filter_text, const size_t filter_text_size,
+                              const char *hint = "Filter") {
   if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F)) {
     ImGui::SetKeyboardFocusHere();
   }
@@ -149,13 +149,11 @@ inline ImGuiTextFilter draw_filter_input(const char *id, char *filter_text,
 
   ImGui::InputTextWithHint(id, hint, filter_text, filter_text_size);
 
-  ImGuiTextFilter filter;
   if (filter_text[0] != '\0') {
     strncpy(filter.InputBuf, filter_text, sizeof(filter.InputBuf));
     filter.InputBuf[sizeof(filter.InputBuf) - 1] = '\0';
     filter.Build();
   }
-  return filter;
 }
 
 // Handle table sort specs, calling sort_fn if sorting changed

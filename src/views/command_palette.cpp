@@ -134,9 +134,9 @@ void command_palette_draw(ViewState &vs) {
     ImGui::SetKeyboardFocusHere();
   }
   ImGui::SetNextItemWidth(-FLT_MIN);
-  const ImGuiTextFilter filter =
-      draw_filter_input("##cmdfilter", cs.filter, sizeof(cs.filter),
-                        "Type to search commands...");
+  ImGuiTextFilter filter;
+  draw_filter_input(filter, "##cmdfilter", cs.filter, sizeof(cs.filter),
+                    "Type to search commands...");
 
   int matches[eCommand_Count];
   int match_count = 0;

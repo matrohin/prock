@@ -183,8 +183,8 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           ImGui::TableNextColumn();
           ImGui::SetNextItemWidth(-FLT_MIN);
-          filter = draw_filter_input("##LibFilter", win.filter_text,
-                                     sizeof(win.filter_text));
+          draw_filter_input(filter, "##LibFilter", win.filter_text,
+                            sizeof(win.filter_text));
 
           ImGui::TableNextColumn();
           if (draw_refresh_button()) {
