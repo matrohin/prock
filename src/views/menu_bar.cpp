@@ -299,6 +299,8 @@ static void draw_about_modal(PreferencesState &prefs) {
 
     ImGui::Text("A process explorer and system monitor for Linux");
     ImGui::Text("Created by Dmitrii Matrokhin");
+    ImGui::SameLine();
+    ImGui::TextDisabled("<matrokhin.d@gmail.com>");
 
     ImGui::Spacing();
 
