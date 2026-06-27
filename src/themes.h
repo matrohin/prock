@@ -38,7 +38,9 @@ inline const char *theme_name(const Theme theme) {
 enum AppColor : uint8_t {
   eAppColor_NewProcessRow,  // new-process row highlight (table bg overlay)
   eAppColor_DeadProcessRow, // dead-process row highlight (table bg overlay)
-  eAppColor_WarningText,    // caution text (e.g. "requires root")
+  eAppColor_ErrorText,      // error severity (notifications)
+  eAppColor_WarningText,    // caution text (e.g. "requires root") + warnings
+  eAppColor_InfoText,       // info severity (notifications)
   eAppColor_COUNT,
 };
 
@@ -57,12 +59,17 @@ inline ImU32 app_color_u32(const AppColor idx) {
 inline void set_app_colors_dark() {
   g_app_colors[eAppColor_NewProcessRow] = ImVec4(0.24f, 0.75f, 0.24f, 0.22f);
   g_app_colors[eAppColor_DeadProcessRow] = ImVec4(0.80f, 0.27f, 0.27f, 0.22f);
+  g_app_colors[eAppColor_ErrorText] = ImVec4(0.92f, 0.36f, 0.32f, 1.00f);
   g_app_colors[eAppColor_WarningText] = ImVec4(1.00f, 0.75f, 0.24f, 1.00f);
+  g_app_colors[eAppColor_InfoText] = ImVec4(0.40f, 0.66f, 0.96f, 1.00f);
 }
 inline void set_app_colors_light() {
   g_app_colors[eAppColor_NewProcessRow] = ImVec4(0.16f, 0.63f, 0.16f, 0.28f);
   g_app_colors[eAppColor_DeadProcessRow] = ImVec4(0.78f, 0.22f, 0.22f, 0.28f);
+  // Darkened so severity labels stay >=4.5:1 on the light window background.
+  g_app_colors[eAppColor_ErrorText] = ImVec4(0.77f, 0.15f, 0.11f, 1.00f);
   g_app_colors[eAppColor_WarningText] = ImVec4(0.67f, 0.35f, 0.00f, 1.00f);
+  g_app_colors[eAppColor_InfoText] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
 }
 
 inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
@@ -166,7 +173,9 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
 
     ImGui::StyleColorsDark(dst);
     colors[ImGuiCol_Text] = nord4;
-    colors[ImGuiCol_TextDisabled] = nord3;
+    // nord3 (the standard "comment" tone) is only ~1.7:1 on nord0 - too faint
+    // for grayed rows and disabled text. Use a lighter Snow-Storm-ward gray.
+    colors[ImGuiCol_TextDisabled] = ImVec4(0.55f, 0.60f, 0.68f, 1.00f);
     colors[ImGuiCol_WindowBg] = nord0;
     colors[ImGuiCol_ChildBg] = with_alpha(nord0, 0.00f);
     colors[ImGuiCol_PopupBg] = with_alpha(nord1, 0.95f);
@@ -218,7 +227,9 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_ModalWindowDimBg] = with_alpha(nord0, 0.73f);
     g_app_colors[eAppColor_NewProcessRow] = with_alpha(nord14, 0.30f);
     g_app_colors[eAppColor_DeadProcessRow] = with_alpha(nord11, 0.30f);
+    g_app_colors[eAppColor_ErrorText] = nord11;
     g_app_colors[eAppColor_WarningText] = nord13;
+    g_app_colors[eAppColor_InfoText] = nord8;
     break;
   }
 
@@ -297,7 +308,9 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_ModalWindowDimBg] = wa(on0, 0.73f);
     g_app_colors[eAppColor_NewProcessRow] = wa(on_green, 0.30f);
     g_app_colors[eAppColor_DeadProcessRow] = wa(on_red, 0.30f);
+    g_app_colors[eAppColor_ErrorText] = on_red;
     g_app_colors[eAppColor_WarningText] = on_yellow;
+    g_app_colors[eAppColor_InfoText] = on_blue;
     break;
   }
 

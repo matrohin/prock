@@ -1,5 +1,6 @@
 #include "views/notifications.h"
 
+#include "themes.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -16,12 +17,12 @@ constexpr float NOTIFY_STACK_GAP = 8.0f;
 static ImVec4 severity_color(const NotificationSeverity severity) {
   switch (severity) {
   case eNotificationSeverity_Error:
-    return ImVec4(0.92f, 0.36f, 0.32f, 1.0f);
+    return g_app_colors[eAppColor_ErrorText];
   case eNotificationSeverity_Warning:
-    return ImVec4(0.95f, 0.73f, 0.25f, 1.0f);
+    return g_app_colors[eAppColor_WarningText];
   case eNotificationSeverity_Info:
   default:
-    return ImVec4(0.40f, 0.66f, 0.96f, 1.0f);
+    return g_app_colors[eAppColor_InfoText];
   }
 }
 
