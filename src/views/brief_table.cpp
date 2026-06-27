@@ -174,7 +174,7 @@ static bool get_process_affinity(const Pid pid, uint64_t &mask,
   if (sched_getaffinity(pid, sizeof(cpu_set), &cpu_set) != 0) return false;
   mask = 0;
   for (int i = 0; i < num_cpus && i < 64; ++i) {
-    if (CPU_ISSET(i, &cpu_set)) mask |= (1ULL << i);
+    if (CPU_ISSET(i, &cpu_set)) mask |= 1ULL << i;
   }
   return true;
 }
@@ -222,7 +222,7 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
   copy_all_to_clipboard(
       notifications, arena, my_state.lines.data, my_state.lines.size,
       2 * 4096 + 256, PROCESS_COPY_HEADER,
-      [](char *ptr, size_t rem, const BriefTableLine &line) {
+      [](char *ptr, const size_t rem, const BriefTableLine &line) {
         const ProcessDerivedStat &derived = line.derived_stat;
         char start_time[32];
         format_start_time_absolute(line.start_time_epoch_sec, start_time,
@@ -243,9 +243,9 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
 
 // Ask the on-demand actions thread to run gcore. The dump_dir is the configured
 // folder; when empty (the user cleared the preference) it falls back to
-// default_dump_dir(). The dump lands at "<out_path>.<pid>" because gcore appends
-// the pid to its -o base. A sticky toast tracks progress until the reply arrives
-// (correlated by id) and is then swapped for the result toast.
+// default_dump_dir(). The dump lands at "<out_path>.<pid>" because gcore
+// appends the pid to its -o base. A sticky toast tracks progress until the
+// reply arrives (correlated by id) and is then swapped for the result toast.
 static void send_dump_request(ViewState &view_state, const Pid pid,
                               const char *comm) {
   const char *dump_dir = view_state.preferences_state.dump_dir;
@@ -260,13 +260,13 @@ static void send_dump_request(ViewState &view_state, const Pid pid,
   for (const char *c = comm; c && *c && si < sizeof(safe_comm) - 1; ++c) {
     const char ch = *c;
     safe_comm[si++] =
-        (ch == '/' || ch == ' ' || ch == '\t' || ch == ':') ? '_' : ch;
+        ch == '/' || ch == ' ' || ch == '\t' || ch == ':' ? '_' : ch;
   }
   safe_comm[si] = '\0';
 
   char timestamp[32];
   const time_t now = time(nullptr);
-  struct tm tm_now;
+  tm tm_now;
   localtime_r(&now, &tm_now);
   strftime(timestamp, sizeof(timestamp), "%Y%m%d-%H%M%S", &tm_now);
 
@@ -299,8 +299,8 @@ static void copy_path_action_fn(const void *user_data) {
   clipboard_copy_cell(*action->notifications, action->text);
 }
 
-// Drain gcore results pushed by the on-demand actions thread, clear the matching
-// in-progress toast, and report each result as a toast.
+// Drain gcore results pushed by the on-demand actions thread, clear the
+// matching in-progress toast, and report each result as a toast.
 void brief_table_dump_update(Notifications &notifications, Sync &sync) {
   DumpResponse r;
   while (sync.on_demand_actions.dump_response_queue.pop(r)) {
@@ -312,8 +312,8 @@ void brief_table_dump_update(Notifications &notifications, Sync &sync) {
       action->notifications = &notifications;
       action->text =
           String::sprintf(notifications.arena, "%s.%d", r.out_path, r.pid);
-      notify_info_action(notifications, "Copy path", copy_path_action_fn, action,
-                         "Wrote core to %s", action->text.data);
+      notify_info_action(notifications, "Copy path", copy_path_action_fn,
+                         action, "Wrote core to %s", action->text.data);
     } else if (r.gcore_missing) {
       notify_error(notifications, 0,
                    "gcore not found - install gdb to enable core dumps");
@@ -449,7 +449,8 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
         for (uint32_t li = 0; li < my_state.lines.size; ++li) {
           const BriefTableLine &l = my_state.lines.data[li];
           if (l.ppid == parent && l.pid != parent &&
-              tree_count < (int)(sizeof(tree_pids) / sizeof(tree_pids[0]))) {
+              tree_count <
+                  static_cast<int>(sizeof(tree_pids) / sizeof(tree_pids[0]))) {
             tree_pids[tree_count++] = l.pid;
           }
         }
@@ -597,7 +598,7 @@ static void affinity_popup_draw(FrameContext &ctx, BriefTableState &my_state,
 
     if (ImGui::Button("Select All")) {
       my_state.affinity_edit_mask =
-          (num_cpus >= 64) ? ~0ULL : ((1ULL << num_cpus) - 1);
+          num_cpus >= 64 ? ~0ULL : (1ULL << num_cpus) - 1;
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear All")) {
@@ -613,7 +614,7 @@ static void affinity_popup_draw(FrameContext &ctx, BriefTableState &my_state,
       const String label = String::sprintf(ctx.frame_arena, "CPU %d", i);
       if (ImGui::Checkbox(label.data, &checked)) {
         if (checked)
-          my_state.affinity_edit_mask |= (1ULL << i);
+          my_state.affinity_edit_mask |= 1ULL << i;
         else
           my_state.affinity_edit_mask &= ~(1ULL << i);
       }
@@ -1001,14 +1002,14 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
             }
           }
 
-          ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns |
-                                     ImGuiTreeNodeFlags_DefaultOpen |
-                                     ImGuiTreeNodeFlags_OpenOnArrow |
-                                     ImGuiTreeNodeFlags_NoTreePushOnOpen;
-          if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf;
-          if (is_selected) flags |= ImGuiTreeNodeFlags_Selected;
+          ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAllColumns |
+                                          ImGuiTreeNodeFlags_DefaultOpen |
+                                          ImGuiTreeNodeFlags_OpenOnArrow |
+                                          ImGuiTreeNodeFlags_NoTreePushOnOpen;
+          if (!has_children) node_flags |= ImGuiTreeNodeFlags_Leaf;
+          if (is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
 
-          ImGui::TreeNodeEx(label.data, flags);
+          ImGui::TreeNodeEx(label.data, node_flags);
 
           if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
             my_state.selected_pid = line.pid;

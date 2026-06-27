@@ -106,11 +106,11 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
   int val = 0;
   float fval = 0.0f;
   if (sscanf(line, "CpuPerCore=%d", &val) == 1) {
-    view_state->preferences_state.cpu_per_core = (val != 0);
+    view_state->preferences_state.cpu_per_core = val != 0;
   } else if (sscanf(line, "Stacked=%d", &val) == 1) {
-    view_state->system_cpu_chart_state.stacked = (val != 0);
+    view_state->system_cpu_chart_state.stacked = val != 0;
   } else if (sscanf(line, "ShowMenuOnAlt=%d", &val) == 1) {
-    view_state->preferences_state.show_menu_on_alt = (val != 0);
+    view_state->preferences_state.show_menu_on_alt = val != 0;
   } else if (sscanf(line, "Theme=%d", &val) == 1) {
     if (val >= 0 && val < static_cast<int>(Theme::COUNT)) {
       view_state->preferences_state.theme = static_cast<Theme>(val);
@@ -121,7 +121,7 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     view_state->preferences_state.target_fps =
         std::clamp(val, TARGET_FPS_MIN, TARGET_FPS_MAX);
   } else if (sscanf(line, "TreeMode=%d", &val) == 1) {
-    view_state->brief_table_state.tree_mode = (val != 0);
+    view_state->brief_table_state.tree_mode = val != 0;
   } else if (sscanf(line, "ZoomScalePct=%d", &val) == 1) {
     view_state->preferences_state.zoom_scale_pct =
         std::clamp(val, ZOOM_MIN_PCT, ZOOM_MAX_PCT);
@@ -196,7 +196,8 @@ static bool state_init(State &state) {
   state.system.ticks_in_second = ticks;
   state.system.mem_page_size = page_size;
 
-  // Boot time (epoch seconds) is constant; read it once from /proc/stat "btime".
+  // Boot time (epoch seconds) is constant; read it once from /proc/stat
+  // "btime".
   state.system.boot_time_epoch_sec = 0;
   if (FILE *stat_file = fopen("/proc/stat", "r")) {
     char line[256];
@@ -303,7 +304,7 @@ static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-const char *DEFAULT_INI = R"(
+static const char *DEFAULT_INI = R"(
 [Window][prock]
 Pos=0,0
 Size=1280,692

@@ -31,12 +31,13 @@ static void copy_path_segment(Notifications &notifications, BumpArena &arena,
 
 static void copy_all_environ(Notifications &notifications, BumpArena &arena,
                              const EnvironViewerWindow &win) {
-  copy_all_to_clipboard(notifications, arena, win.entries.data,
-                        win.entries.size, 4400, ENVIRON_COPY_HEADER,
-                        [](char *ptr, size_t rem, const EnvironEntry &entry) {
-                          return snprintf(ptr, rem, "%s\t%s\n", entry.name.data,
-                                          entry.value.data);
-                        });
+  copy_all_to_clipboard(
+      notifications, arena, win.entries.data, win.entries.size, 4400,
+      ENVIRON_COPY_HEADER,
+      [](char *ptr, const size_t rem, const EnvironEntry &entry) {
+        return snprintf(ptr, rem, "%s\t%s\n", entry.name.data,
+                        entry.value.data);
+      });
 }
 
 // Context menu shared by expandable and plain rows; the last submitted item

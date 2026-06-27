@@ -300,7 +300,7 @@ inline int table_context_column(const int column_count) {
   if (ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
       ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup)) {
     const int hovered = ImGui::TableGetHoveredColumn();
-    captured = (hovered >= 0 && hovered < column_count) ? hovered : 0;
+    captured = hovered >= 0 && hovered < column_count ? hovered : 0;
   }
   return captured;
 }
@@ -327,13 +327,14 @@ inline bool popup_close_on_escape() {
 // Returns CPU percentage scaled for display:
 // - per_core=true: raw value (can exceed 100% on multi-core)
 // - per_core=false: normalized to 0-100% range
-inline double scale_cpu_perc(double value, int num_cores, bool per_core) {
+inline double scale_cpu_perc(const double value, const int num_cores,
+                             const bool per_core) {
   if (per_core || num_cores <= 0) return value;
   return value / num_cores;
 }
 
 template <typename T, typename Compare>
-void sort_bidirectional(T *data, uint32_t size, ImGuiSortDirection dir,
+void sort_bidirectional(T *data, uint32_t size, const ImGuiSortDirection dir,
                         Compare cmp) {
   if (size == 0) return;
   if (dir == ImGuiSortDirection_Ascending) {
@@ -346,8 +347,8 @@ void sort_bidirectional(T *data, uint32_t size, ImGuiSortDirection dir,
 
 template <typename T, typename FormatFn>
 void copy_all_to_clipboard(Notifications &notifications, BumpArena &arena,
-                           const T *data, uint32_t count,
-                           size_t per_item_estimate, const char *header,
+                           const T *data, const uint32_t count,
+                           const size_t per_item_estimate, const char *header,
                            FormatFn fmt) {
   const size_t buf_size = 128 + count * per_item_estimate;
   char *buf = arena.alloc_string(buf_size);

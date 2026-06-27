@@ -117,8 +117,8 @@ String format_ipv6(BumpArena &arena, const unsigned char *ip,
 
 String format_address(BumpArena &arena, const SocketEntry &sock,
                       const bool local) {
-  const bool is_ipv6 = (sock.protocol == eSocketProtocol_TCP6 ||
-                        sock.protocol == eSocketProtocol_UDP6);
+  const bool is_ipv6 = sock.protocol == eSocketProtocol_TCP6 ||
+                       sock.protocol == eSocketProtocol_UDP6;
   if (is_ipv6) {
     return format_ipv6(arena, local ? sock.local_ip6 : sock.remote_ip6,
                        local ? sock.local_port : sock.remote_port);

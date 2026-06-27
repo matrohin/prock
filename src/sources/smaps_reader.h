@@ -2,7 +2,6 @@
 
 #include "base/base.h"
 #include "base/string.h"
-#include "sources/process_stat.h"
 
 struct SmapsSegment {
   String path;

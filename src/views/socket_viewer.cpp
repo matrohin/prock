@@ -55,7 +55,7 @@ static void copy_all_sockets(Notifications &notifications, BumpArena &arena,
   copy_all_to_clipboard(
       notifications, arena, win.sockets.data, win.sockets.size, 256,
       SOCKET_COPY_HEADER,
-      [&arena](char *ptr, size_t rem, const SocketEntry &sock) {
+      [&arena](char *ptr, const size_t rem, const SocketEntry &sock) {
         const String local_addr = format_address(arena, sock, true);
         const String remote_addr = format_address(arena, sock, false);
         return snprintf(ptr, rem, "%s\t%s\t%s\t%s\t%u\t%u\n",
@@ -256,8 +256,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 socket_state_name(sock.protocol, sock.state));
             if (!filter.PassFilter(filter_str.data)) continue;
 
-            const bool is_selected =
-                (win.selected_index == static_cast<int>(j));
+            const bool is_selected = win.selected_index == static_cast<int>(j);
             ImGui::PushID(static_cast<int>(j));
             ImGui::TableNextRow();
 

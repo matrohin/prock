@@ -9,15 +9,15 @@
 #include <strings.h>
 #include <sys/stat.h>
 
-static void filename_to_name(const char *path, char *out, size_t out_sz) {
+static void filename_to_name(const char *path, char *out, const size_t out_sz) {
   const char *base = strrchr(path, '/');
   base = base ? base + 1 : path;
   const char *dot = strrchr(base, '.');
-  const size_t raw_len = dot ? (size_t)(dot - base) : strlen(base);
+  const size_t raw_len = dot ? static_cast<size_t>(dot - base) : strlen(base);
   const size_t len = raw_len < out_sz - 1 ? raw_len : out_sz - 1;
   for (size_t i = 0; i < len; i++) {
     const char c = base[i];
-    out[i] = (c == '_' || c == '-') ? ' ' : c;
+    out[i] = c == '_' || c == '-' ? ' ' : c;
   }
   out[len] = '\0';
 }
@@ -27,7 +27,7 @@ static void scan_dir(const char *dir_path, BumpArena &temp_arena,
   DIR *dir = opendir(dir_path);
   if (!dir) return;
 
-  struct dirent *ent;
+  dirent *ent;
   while ((ent = readdir(dir)) != nullptr) {
     if (ent->d_name[0] == '.') continue;
 
@@ -97,7 +97,7 @@ FontListResponse read_font_list(BumpArena &temp_arena) {
 
   const char *xdg_dirs = getenv("XDG_DATA_DIRS");
   const char *dirs_str =
-      (xdg_dirs && xdg_dirs[0]) ? xdg_dirs : "/usr/local/share:/usr/share";
+      xdg_dirs && xdg_dirs[0] ? xdg_dirs : "/usr/local/share:/usr/share";
   char dirs_buf[4096];
   snprintf(dirs_buf, sizeof(dirs_buf), "%s", dirs_str);
   char *token = strtok(dirs_buf, ":");

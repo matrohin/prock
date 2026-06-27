@@ -13,7 +13,7 @@ inline void *vm_alloc(const size_t size) {
   return p;
 }
 
-inline void vm_free(void *ptr, size_t size) {
+inline void vm_free(void *ptr, const size_t size) {
   if (ptr) {
     TracyFree(ptr);
     munmap(ptr, size);

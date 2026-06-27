@@ -23,7 +23,7 @@ void process_window_handle_docking_and_pos(ViewState &view_state,
                                            ProcessWindowFlags &flags,
                                            const char *label) {
   if (dock_id != 0) {
-    const ImGuiCond cond = (flags & eProcessWindowFlags_RedockRequested)
+    const ImGuiCond cond = flags & eProcessWindowFlags_RedockRequested
                                ? ImGuiCond_Always
                                : ImGuiCond_Once;
     ImGui::SetNextWindowDockID(dock_id, cond);

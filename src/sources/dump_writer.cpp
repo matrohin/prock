@@ -17,7 +17,7 @@
 
 extern char **environ;
 
-void default_dump_dir(char *out, uint32_t size) {
+void default_dump_dir(char *out, const uint32_t size) {
   const char *home = getenv("HOME");
   snprintf(out, size, "%s/prock-dumps", home ? home : "/tmp");
 }

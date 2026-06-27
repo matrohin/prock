@@ -72,16 +72,16 @@ inline int format_start_time(const int64_t epoch_sec, char *buff,
                              const int size) {
   if (epoch_sec <= 0) return snprintf(buff, size, "-");
   const time_t t = static_cast<time_t>(epoch_sec);
-  struct tm tm_start;
-  struct tm tm_now;
+  tm tm_start;
+  tm tm_now;
   const time_t now = time(nullptr);
   localtime_r(&t, &tm_start);
   localtime_r(&now, &tm_now);
   if (tm_start.tm_year == tm_now.tm_year &&
       tm_start.tm_yday == tm_now.tm_yday) {
-    return (int)strftime(buff, size, "%H:%M:%S", &tm_start);
+    return static_cast<int>(strftime(buff, size, "%H:%M:%S", &tm_start));
   }
-  return (int)strftime(buff, size, "%b %d %H:%M", &tm_start);
+  return static_cast<int>(strftime(buff, size, "%b %d %H:%M", &tm_start));
 }
 
 // Full absolute timestamp, e.g. "2026-06-26 14:23:05". Used for copy/paste.
@@ -89,9 +89,9 @@ inline int format_start_time_absolute(const int64_t epoch_sec, char *buff,
                                       const int size) {
   if (epoch_sec <= 0) return snprintf(buff, size, "Unknown");
   const time_t t = static_cast<time_t>(epoch_sec);
-  struct tm tm_start;
+  tm tm_start;
   localtime_r(&t, &tm_start);
-  return (int)strftime(buff, size, "%Y-%m-%d %H:%M:%S", &tm_start);
+  return static_cast<int>(strftime(buff, size, "%Y-%m-%d %H:%M:%S", &tm_start));
 }
 
 // Absolute timestamp plus relative elapsed time, for the on-hover tooltip:
@@ -102,21 +102,24 @@ inline int format_start_time_full(const int64_t epoch_sec, char *buff,
   char ts[32];
   format_start_time_absolute(epoch_sec, ts, sizeof(ts));
 
-  int64_t elapsed = (int64_t)time(nullptr) - epoch_sec;
+  int64_t elapsed = time(nullptr) - epoch_sec;
   if (elapsed < 0) elapsed = 0;
   const int64_t days = elapsed / 86400;
-  const int64_t hours = (elapsed % 86400) / 3600;
-  const int64_t mins = (elapsed % 3600) / 60;
+  const int64_t hours = elapsed % 86400 / 3600;
+  const int64_t mins = elapsed % 3600 / 60;
   const int64_t secs = elapsed % 60;
   char ago[32];
   if (days > 0) {
-    snprintf(ago, sizeof(ago), "%lldd %lldh", (long long)days, (long long)hours);
+    snprintf(ago, sizeof(ago), "%lldd %lldh", static_cast<long long>(days),
+             static_cast<long long>(hours));
   } else if (hours > 0) {
-    snprintf(ago, sizeof(ago), "%lldh %lldm", (long long)hours, (long long)mins);
+    snprintf(ago, sizeof(ago), "%lldh %lldm", static_cast<long long>(hours),
+             static_cast<long long>(mins));
   } else if (mins > 0) {
-    snprintf(ago, sizeof(ago), "%lldm %llds", (long long)mins, (long long)secs);
+    snprintf(ago, sizeof(ago), "%lldm %llds", static_cast<long long>(mins),
+             static_cast<long long>(secs));
   } else {
-    snprintf(ago, sizeof(ago), "%llds", (long long)secs);
+    snprintf(ago, sizeof(ago), "%llds", static_cast<long long>(secs));
   }
   return snprintf(buff, size, "%s (%s ago)", ts, ago);
 }

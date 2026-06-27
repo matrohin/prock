@@ -47,12 +47,12 @@ struct SlabCache {
   static constexpr uintptr_t TAG_MASK = 0xFFF;
   std::atomic<uintptr_t> head{0};
 
-  static uintptr_t pack(ArenaSlab *slab, uintptr_t tag) {
+  static uintptr_t pack(ArenaSlab *slab, const uintptr_t tag) {
     const uintptr_t bits = reinterpret_cast<uintptr_t>(slab);
     assert((bits & TAG_MASK) == 0);
     return bits | (tag & TAG_MASK);
   }
-  static ArenaSlab *ptr_of(uintptr_t value) {
+  static ArenaSlab *ptr_of(const uintptr_t value) {
     // Tagged-pointer stack: this int->ptr round-trip is the whole design.
     // NOLINTNEXTLINE(performance-no-int-to-ptr)
     return reinterpret_cast<ArenaSlab *>(value & ~TAG_MASK);

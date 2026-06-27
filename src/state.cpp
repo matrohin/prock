@@ -77,11 +77,11 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
     const ulong kernel_delta = cur.kernel() - prev.kernel();
     const ulong interrupts_delta = cur.interrupts() - prev.interrupts();
     cpu_perc.total.data[i] =
-        total_delta > 0 ? (busy_delta * 100.0) / total_delta : 0.0;
+        total_delta > 0 ? busy_delta * 100.0 / total_delta : 0.0;
     cpu_perc.kernel.data[i] =
-        total_delta > 0 ? (kernel_delta * 100.0) / total_delta : 0.0;
+        total_delta > 0 ? kernel_delta * 100.0 / total_delta : 0.0;
     cpu_perc.interrupts.data[i] =
-        total_delta > 0 ? (interrupts_delta * 100.0) / total_delta : 0.0;
+        total_delta > 0 ? interrupts_delta * 100.0 / total_delta : 0.0;
   }
 
   // Compute disk I/O rates in MB/s

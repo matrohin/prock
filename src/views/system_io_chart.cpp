@@ -63,7 +63,7 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
         ImPlotPoint mouse = ImPlot::GetPlotMousePos();
         const uint32_t i = lower_bound(
             my_state.track.size,
-            [&](uint32_t k) {
+            [&](const uint32_t k) {
               return my_state.times[my_state.track.to_data_idx(k)];
             },
             mouse.x);

@@ -64,7 +64,7 @@ void cpu_chart_draw(ViewState &view_state) {
   CpuChartState &my_state = view_state.cpu_chart_state;
   const int num_cores = view_state.system_cpu_chart_state.num_cores;
   const bool per_core = view_state.preferences_state.cpu_per_core;
-  const double scale = (per_core || num_cores <= 0) ? 1.0 : 1.0 / num_cores;
+  const double scale = per_core || num_cores <= 0 ? 1.0 : 1.0 / num_cores;
 
   uint32_t last = 0;
 

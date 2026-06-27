@@ -40,8 +40,8 @@ template <class Slot> void probe_free(Slot *slots, const uint32_t cap) {
   vm_free(slots, cap * sizeof(Slot));
 }
 
-// Reinsert all occupied slots into a fresh array of new_cap, free the old array,
-// and return the new one. The caller updates its capacity to new_cap.
+// Reinsert all occupied slots into a fresh array of new_cap, free the old
+// array, and return the new one. The caller updates its capacity to new_cap.
 template <class Slot>
 Slot *probe_rehash(Slot *slots, const uint32_t cap, const uint32_t new_cap) {
   Slot *new_slots = probe_alloc<Slot>(new_cap);

@@ -20,7 +20,7 @@ void show_top_process_tooltip(const ChartTrack &track,
   ImPlotPoint mouse = ImPlot::GetPlotMousePos();
   const uint32_t idx = lower_bound(
       track.size,
-      [&track, times](uint32_t i) { return times[track.to_data_idx(i)]; },
+      [&track, times](const uint32_t i) { return times[track.to_data_idx(i)]; },
       mouse.x);
   const uint32_t data_idx = track.to_data_idx(idx);
 
@@ -54,7 +54,8 @@ void show_top_process_tooltip(const GrowingArray<double> &times,
   }
   ImPlotPoint mouse = ImPlot::GetPlotMousePos();
   uint32_t idx = lower_bound(
-      times.size(), [&times](uint32_t i) { return times.data()[i]; }, mouse.x);
+      times.size(), [&times](const uint32_t i) { return times.data()[i]; },
+      mouse.x);
   if (idx >= times.size()) {
     return;
   }
@@ -102,7 +103,8 @@ constexpr ImPlotAxisFlags COMMON_Y_FLAGS_STATIC = ImPlotAxisFlags_RangeFit;
 // Handles delayed Y axis fit: first frame lets X establish its range,
 // second frame fits Y using RangeFit against the established X range.
 // Returns true if caller should increment y_axis_fitted after BeginPlot.
-inline bool try_initial_y_fit(int y_axis_fitted, uint32_t data_size) {
+inline bool try_initial_y_fit(const int y_axis_fitted,
+                              const uint32_t data_size) {
   if (y_axis_fitted >= 2 || data_size < 3) {
     return false;
   }

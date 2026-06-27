@@ -3,7 +3,6 @@
 #include "base/const_string.h"
 #include "views/brief_table.h"
 #include "views/command_palette.h"
-#include "views/common_charts.h"
 #include "views/cpu_chart.h"
 #include "views/environ_viewer.h"
 #include "views/io_chart.h"

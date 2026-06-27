@@ -4,7 +4,8 @@
 #include <pwd.h>
 
 PersistentString UsernameResolver::resolve(const uint32_t uid) {
-  if (const PersistentString cached = cache.get(uid); cached.data) return cached;
+  if (const PersistentString cached = cache.get(uid); cached.data)
+    return cached;
 
   char buf[32];
   const char *name;

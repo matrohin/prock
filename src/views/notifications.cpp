@@ -151,10 +151,11 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
       const ImVec2 header_pos = ImGui::GetCursorScreenPos();
       const float header_width = ImGui::GetContentRegionAvail().x;
       ImGui::TextColored(severity_color(note.severity), "%s",
-                         note.sticky ? "Working" : severity_label(note.severity));
+                         note.sticky ? "Working"
+                                     : severity_label(note.severity));
 
-      // Sticky progress entries are removed when their action completes, so they
-      // have no manual close button.
+      // Sticky progress entries are removed when their action completes, so
+      // they have no manual close button.
       if (!note.sticky) {
         const float close_width =
             ImGui::CalcTextSize("x").x + style.FramePadding.x * 2.0f;

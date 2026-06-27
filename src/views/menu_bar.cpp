@@ -10,7 +10,6 @@
 #include "imgui.h"
 #include "tracy/Tracy.hpp"
 
-#include <cmath>
 #include <cstring>
 #include <iterator>
 
@@ -129,10 +128,10 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       ImGui::SetNextItemWidth(font_list_width);
       const ImGuiTextFilter filter = draw_filter_input(
           "##FontFilter", prefs.font_filter, sizeof(prefs.font_filter));
-      bool found_in_list = (prefs.font_path[0] == '\0');
+      bool found_in_list = prefs.font_path[0] == '\0';
       if (ImGui::BeginListBox("##FontList",
                               ImVec2(font_list_width, list_height))) {
-        const bool default_selected = (prefs.font_path[0] == '\0');
+        const bool default_selected = prefs.font_path[0] == '\0';
         if (ImGui::Selectable("Default (built-in)", default_selected)) {
           prefs.font_path[0] = '\0';
           prefs.font_needs_reload = true;
@@ -262,7 +261,7 @@ static void draw_licenses_modal(PreferencesState &prefs) {
     }
     ImGui::EndChild();
 
-    const float button_w = 120.0f;
+    constexpr float button_w = 120.0f;
     if (ImGui::Button("Close", ImVec2(button_w, 0.0f))) {
       ImGui::CloseCurrentPopup();
       prefs.show_licenses_modal = false;
@@ -310,7 +309,7 @@ static void draw_about_modal(PreferencesState &prefs) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    const float button_w = 120.0f;
+    constexpr float button_w = 120.0f;
     if (ImGui::Button("Close", ImVec2(button_w, 0.0f))) {
       ImGui::CloseCurrentPopup();
       prefs.show_about_modal = false;

@@ -55,7 +55,7 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
     request.req.idiag_states = ~0U; // All states
     // Request TCP_INFO for byte counts (only meaningful for TCP)
     if (q.protocol == IPPROTO_TCP) {
-      request.req.idiag_ext |= (1 << (INET_DIAG_INFO - 1));
+      request.req.idiag_ext |= 1 << (INET_DIAG_INFO - 1);
     }
 
     if (send(fd, &request, sizeof(request), 0) < 0) {
@@ -522,7 +522,7 @@ static Array<ProcessStat> read_process_threads(const Pid pid,
     long tid = strtol(entry->d_name, &end, 10);
     if (tid <= 0 || *end != '\0') continue;
 
-    *(tids.emplace_front(arena)) = static_cast<int>(tid);
+    *tids.emplace_front(arena) = static_cast<int>(tid);
   }
   closedir(task_dir);
 

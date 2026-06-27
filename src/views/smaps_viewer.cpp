@@ -15,7 +15,7 @@
 static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SMAPS = 5;
 
 static const char *segment_label(const SmapsSegment &seg) {
-  return (seg.path.data && seg.path.len > 0) ? seg.path.data : "[anon]";
+  return seg.path.data && seg.path.len > 0 ? seg.path.data : "[anon]";
 }
 
 static void format_kb(char *buf, const int size, const ulong kb) {
@@ -98,7 +98,8 @@ static void copy_all_smaps(Notifications &notifications, BumpArena &arena,
                            const SmapsViewerWindow &win) {
   copy_all_to_clipboard(
       notifications, arena, win.segments.data, win.segments.size, 160,
-      SMAPS_COPY_HEADER, [](char *ptr, size_t rem, const SmapsSegment &seg) {
+      SMAPS_COPY_HEADER,
+      [](char *ptr, const size_t rem, const SmapsSegment &seg) {
         return snprintf(ptr, rem, "%lx-%lx\t%s\t%lu\t%lu\t%lu\t%lu\t%lu\t%s\n",
                         seg.start_addr, seg.end_addr, seg.perms, seg.size_kb,
                         seg.rss_kb, seg.pss_kb,
@@ -120,7 +121,7 @@ static void copy_all_smaps_groups(Notifications &notifications,
                                   const uint32_t count) {
   copy_all_to_clipboard(
       notifications, arena, groups, count, 96, SMAPS_GROUP_COPY_HEADER,
-      [](char *ptr, size_t rem, const SmapsGroup &g) {
+      [](char *ptr, const size_t rem, const SmapsGroup &g) {
         return snprintf(ptr, rem, "%u\t%lu\t%lu\t%lu\t%lu\t%lu\t%s\n", g.count,
                         g.size_kb, g.rss_kb, g.pss_kb, g.private_kb, g.swap_kb,
                         g.name);
@@ -142,8 +143,8 @@ static void sort_segments(SmapsViewerWindow &win) {
                        case eSmapsViewerColumnId_Pss:
                          return a.pss_kb < b.pss_kb;
                        case eSmapsViewerColumnId_Private:
-                         return (a.private_clean_kb + a.private_dirty_kb) <
-                                (b.private_clean_kb + b.private_dirty_kb);
+                         return a.private_clean_kb + a.private_dirty_kb <
+                                b.private_clean_kb + b.private_dirty_kb;
                        case eSmapsViewerColumnId_Swap:
                          return a.swap_kb < b.swap_kb;
                        case eSmapsViewerColumnId_Mapping:
@@ -455,7 +456,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             for (uint32_t j = 0; j < groups.size(); ++j) {
               const SmapsGroup &g = groups.data()[j];
               const bool is_selected =
-                  (win.selected_index == static_cast<int>(j));
+                  win.selected_index == static_cast<int>(j);
               ImGui::PushID(static_cast<int>(j));
               ImGui::TableNextRow();
 
@@ -569,7 +570,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (!filter.PassFilter(filter_str.data)) continue;
 
               const bool is_selected =
-                  (win.selected_index == static_cast<int>(j));
+                  win.selected_index == static_cast<int>(j);
               ImGui::PushID(static_cast<int>(j));
               ImGui::TableNextRow();
 

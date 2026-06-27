@@ -120,7 +120,7 @@ void style_control_select_theme(const Theme theme) {
 }
 
 void style_control_init(const Theme theme, const float monitor_scale,
-                        int target_fps) {
+                        const int target_fps) {
   register_chart_colormaps();
   style_control_select_theme(theme);
   style_control_set_target_fps(target_fps);

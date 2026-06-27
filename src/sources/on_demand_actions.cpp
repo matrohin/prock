@@ -25,7 +25,8 @@ void on_demand_actions_loop(Sync &sync) {
       DumpResponse response = write_process_dump(dump_request, sync.quit);
       response.id = dump_request.id;
       // Can't drop: the response queue capacity matches the request queue and
-      // actions run serially, so every popped request leaves room for its reply.
+      // actions run serially, so every popped request leaves room for its
+      // reply.
       my_sync.dump_response_queue.push(response);
     }
 

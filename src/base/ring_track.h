@@ -16,7 +16,7 @@ template <uint32_t N> struct RingTrack {
     return new_item_idx;
   }
 
-  uint32_t to_data_idx(uint32_t idx) const { return (head + idx) & MASK; }
+  uint32_t to_data_idx(const uint32_t idx) const { return (head + idx) & MASK; }
 
   // Note: zero-initialized value can be returned in case of an empty RingBuffer
   uint32_t last_idx() const { return (head + size - 1) & MASK; }

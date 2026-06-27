@@ -88,8 +88,8 @@ struct TreeNode {
 };
 
 static void tree_dfs(const Array<BriefTableLine> &lines, const TreeNode *nodes,
-                     BriefTableLine *dst, uint32_t &dst_idx, uint32_t node_idx,
-                     const int depth) {
+                     BriefTableLine *dst, uint32_t &dst_idx,
+                     const uint32_t node_idx, const int depth) {
   dst[dst_idx] = lines.data[node_idx - 1];
   dst[dst_idx].tree_depth = depth;
   ++dst_idx;
@@ -164,7 +164,7 @@ static void brief_table_line_init(BriefTableLine &new_line,
 
   // starttime is in clock ticks since boot; convert to an absolute epoch.
   new_line.start_time_epoch_sec =
-      (system.boot_time_epoch_sec != 0 && system.ticks_in_second != 0)
+      system.boot_time_epoch_sec != 0 && system.ticks_in_second != 0
           ? static_cast<int64_t>(system.boot_time_epoch_sec +
                                  stat.starttime / system.ticks_in_second)
           : 0;
@@ -234,8 +234,8 @@ void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
     if (!added.data[i]) {
       BriefTableLine &new_line = new_lines.data[new_lines_count++];
       brief_table_line_init(new_line, new_snapshot.stats.data[i],
-                            new_snapshot.derived_stats.data[i],
-                            string_interner, state.system);
+                            new_snapshot.derived_stats.data[i], string_interner,
+                            state.system);
       new_line.first_seen_ns = new_process_first_seen;
     }
   }

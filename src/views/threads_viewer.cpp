@@ -51,7 +51,8 @@ static void copy_all_threads(Notifications &notifications, BumpArena &arena,
                              const ThreadsViewerWindow &win) {
   copy_all_to_clipboard(
       notifications, arena, win.lines.data, win.lines.size, 256,
-      THREAD_COPY_HEADER, [](char *ptr, size_t rem, const ThreadLine &line) {
+      THREAD_COPY_HEADER,
+      [](char *ptr, const size_t rem, const ThreadLine &line) {
         return snprintf(ptr, rem, "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n", line.tid,
                         line.comm, line.state,
                         line.cpu_user_perc + line.cpu_kernel_perc,

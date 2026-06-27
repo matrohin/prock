@@ -41,7 +41,8 @@ static void copy_all_libraries(Notifications &notifications, BumpArena &arena,
                                const LibraryViewerWindow &win) {
   copy_all_to_clipboard(
       notifications, arena, win.libraries.data, win.libraries.size, 320,
-      LIBRARY_COPY_HEADER, [](char *ptr, size_t rem, const LibraryEntry &lib) {
+      LIBRARY_COPY_HEADER,
+      [](char *ptr, const size_t rem, const LibraryEntry &lib) {
         const unsigned long mapped_size = lib.addr_end - lib.addr_start;
         return snprintf(ptr, rem, "%s\t%lu\t%ld\n", lib.path.data, mapped_size,
                         lib.file_size);

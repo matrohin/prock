@@ -39,7 +39,7 @@ struct BriefTableLine {
   ProcessDerivedStat derived_stat;
   int64_t first_seen_ns;
   int64_t death_time_ns;
-  int64_t start_time_epoch_sec; // Process creation wall-clock time (0 if unknown)
+  int64_t start_time_epoch_sec; // 0 if unknown
   Pid pid;
   Pid ppid;
   int tree_depth; // 0 for root, incremented for children (used in tree mode)

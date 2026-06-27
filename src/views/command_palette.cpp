@@ -188,7 +188,7 @@ void command_palette_draw(ViewState &vs) {
     for (int m = 0; m < match_count; ++m) {
       const int idx = matches[m];
       const Command &cmd = g_commands[idx];
-      const bool is_selected = (m == cs.selected);
+      const bool is_selected = m == cs.selected;
 
       ImGui::PushID(idx);
       const ImVec2 row_min = ImGui::GetCursorScreenPos();

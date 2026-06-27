@@ -68,8 +68,8 @@ void ports_viewer_update(PortsViewerState &state, Sync &sync) {
   }
 }
 
-static void kill_selected(PortsViewerState &state, Notifications &notifications,
-                          const int sig) {
+static void kill_selected(const PortsViewerState &state,
+                          Notifications &notifications, const int sig) {
   if (state.selected_index < 0 ||
       state.selected_index >= static_cast<int>(state.entries.size)) {
     return;
@@ -115,7 +115,8 @@ static void copy_all_ports(Notifications &notifications, BumpArena &arena,
                            const PortsViewerState &state) {
   copy_all_to_clipboard(
       notifications, arena, state.entries.data, state.entries.size, 128,
-      PORTS_COPY_HEADER, [&arena](char *ptr, size_t rem, const PortEntry &e) {
+      PORTS_COPY_HEADER,
+      [&arena](char *ptr, const size_t rem, const PortEntry &e) {
         const String local_addr = format_address(arena, e.sock, true);
         return snprintf(ptr, rem, "%s\t%s\t%s\t%d\t%s\n",
                         protocol_name(e.sock.protocol), local_addr.data,
@@ -246,7 +247,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         if (!filter.PassFilter(filter_str)) continue;
       }
 
-      const bool is_selected = (state.selected_index == static_cast<int>(i));
+      const bool is_selected = state.selected_index == static_cast<int>(i);
       if (is_selected) selected_visible = true;
       ImGui::PushID(static_cast<int>(i));
       ImGui::TableNextRow();
