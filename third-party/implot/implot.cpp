@@ -1286,7 +1286,11 @@ void Locator_Time(ImPlotTicker& ticker, const ImPlotRange& range, float pixels, 
         const float fmt1_width = GetDateTimeWidth(fmt1);
         const float fmtf_width = GetDateTimeWidth(fmtf);
         // the maximum number of minor (level 0) labels that can fit between major (level 1) divisions
-        const int   minor_per_major   = (int)(max_density * pix_per_major_div / fmt0_width);
+        const float minor_per_major_f   = (max_density * pix_per_major_div / fmt0_width);
+        const int   minor_per_major = minor_per_major_f <= (float)INT_MAX &&
+                                            minor_per_major_f >= (float)INT_MIN
+                                        ? (int)minor_per_major_f
+                                        : 0;
         // the minor step size (level 0)
         const int step = GetTimeStep(minor_per_major, unit0);
         // generate ticks
