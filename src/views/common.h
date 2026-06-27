@@ -231,10 +231,11 @@ inline void notify_error(Notifications &notifications, const int error_code,
   const bool can_escalate = is_permission_error(error_code);
   va_list args;
   va_start(args, fmt);
-  notifications_vpush_action(notifications, eNotificationSeverity_Error,
-                             can_escalate ? "Restart with pkexec" : nullptr,
-                             can_escalate ? restart_with_pkexec : nullptr, fmt,
-                             args);
+  notifications_vpush_action(
+      notifications, eNotificationSeverity_Error,
+      can_escalate ? "Restart with pkexec" : nullptr,
+      can_escalate ? +[](const void *) { restart_with_pkexec(); } : nullptr,
+      nullptr, fmt, args);
   va_end(args);
 }
 
@@ -242,7 +243,21 @@ inline void notify_info(Notifications &notifications, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   notifications_vpush_action(notifications, eNotificationSeverity_Info, nullptr,
-                             nullptr, fmt, args);
+                             nullptr, nullptr, fmt, args);
+  va_end(args);
+}
+
+// Info notification with a clickable action button. action_fn(action_data) runs
+// on click; action_data must outlive the toast (e.g. allocated in the
+// notifications arena, which lives as long as any notification is shown).
+inline void notify_info_action(Notifications &notifications,
+                               const char *action_label,
+                               void (*action_fn)(const void *user_data),
+                               const void *action_data, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  notifications_vpush_action(notifications, eNotificationSeverity_Info,
+                             action_label, action_fn, action_data, fmt, args);
   va_end(args);
 }
 

@@ -21,7 +21,8 @@ struct Notification {
   bool sticky; // never auto-expires; removed explicitly via notifications_remove
 
   String action_label;
-  void (*action_fn)();
+  void (*action_fn)(const void *user_data);
+  const void *action_data;
 };
 
 struct Notifications {
@@ -36,11 +37,14 @@ struct FrameContext;
 
 // Push a message with an optional action button. A null action_fn degrades to a
 // plain message; otherwise action_label (copied into the arena) invokes
-// action_fn when clicked. See notify_error in common.h for the usual entry.
+// action_fn(action_data) when clicked. See notify_error in common.h for the
+// usual entry.
 void notifications_vpush_action(Notifications &notifications,
                                 NotificationSeverity severity,
-                                const char *action_label, void (*action_fn)(),
-                                const char *fmt, va_list args);
+                                const char *action_label,
+                                void (*action_fn)(const void *user_data),
+                                const void *action_data, const char *fmt,
+                                va_list args);
 
 // Push a sticky "in progress" message that stays until notifications_remove is
 // called with the returned id. Use it to track a long-running action and swap it

@@ -285,6 +285,20 @@ static void send_dump_request(ViewState &view_state, const Pid pid,
   sync.on_demand_actions.request_cv.notify_one();
 }
 
+// Backing data for the "Copy path" toast button. Lives in the notifications
+// arena (which outlives the toast), so the click handler can still read it.
+struct CopyPathAction {
+  Notifications *notifications;
+  String text;
+};
+
+// "Copy path" toast button: copy the dumped file's path, with the usual
+// "Copied" confirmation toast.
+static void copy_path_action_fn(const void *user_data) {
+  const CopyPathAction *action = static_cast<const CopyPathAction *>(user_data);
+  clipboard_copy_cell(*action->notifications, action->text);
+}
+
 // Drain gcore results pushed by the on-demand actions thread, clear the matching
 // in-progress toast, and report each result as a toast.
 void brief_table_dump_update(Notifications &notifications, Sync &sync) {
@@ -292,7 +306,14 @@ void brief_table_dump_update(Notifications &notifications, Sync &sync) {
   while (sync.on_demand_actions.dump_response_queue.pop(r)) {
     notifications_remove(notifications, r.id);
     if (r.error_code == 0 && !r.gcore_missing && r.exit_status == 0) {
-      notify_info(notifications, "Wrote core to %s.%d", r.out_path, r.pid);
+      // The action data outlives the toast in the notifications arena, so the
+      // "Copy path" button can read it on click.
+      CopyPathAction *action = notifications.arena.alloc<CopyPathAction>();
+      action->notifications = &notifications;
+      action->text =
+          String::sprintf(notifications.arena, "%s.%d", r.out_path, r.pid);
+      notify_info_action(notifications, "Copy path", copy_path_action_fn, action,
+                         "Wrote core to %s", action->text.data);
     } else if (r.gcore_missing) {
       notify_error(notifications, 0,
                    "gcore not found - install gdb to enable core dumps");

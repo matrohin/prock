@@ -50,8 +50,10 @@ static bool is_expired(const Notification &note, const double now) {
 
 void notifications_vpush_action(Notifications &notifications,
                                 const NotificationSeverity severity,
-                                const char *action_label, void (*action_fn)(),
-                                const char *fmt, va_list args) {
+                                const char *action_label,
+                                void (*action_fn)(const void *user_data),
+                                const void *action_data, const char *fmt,
+                                va_list args) {
   const uint32_t idx = notifications.track.emplace_back();
   Notification &note = notifications.items[idx];
   note = {};
@@ -59,6 +61,7 @@ void notifications_vpush_action(Notifications &notifications,
   note.created_time = ImGui::GetTime();
   note.id = ++notifications.next_id;
   note.action_fn = action_fn;
+  note.action_data = action_data;
   note.action_label = action_fn
                           ? String::copy_from(notifications.arena, action_label)
                           : String{};
@@ -70,7 +73,7 @@ uint64_t notifications_push_progress(Notifications &notifications,
   va_list args;
   va_start(args, fmt);
   notifications_vpush_action(notifications, eNotificationSeverity_Info, nullptr,
-                             nullptr, fmt, args);
+                             nullptr, nullptr, fmt, args);
   va_end(args);
   Notification &note = notifications.items[notifications.track.last_idx()];
   note.sticky = true;
@@ -166,7 +169,7 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
       ImGui::TextWrapped("%s", note.text.data);
 
       if (note.action_fn && ImGui::SmallButton(note.action_label.data)) {
-        note.action_fn();
+        note.action_fn(note.action_data);
       }
 
       bottom = ImGui::GetWindowPos().y - NOTIFY_STACK_GAP;
