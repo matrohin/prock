@@ -9,7 +9,7 @@
 /*
 Fields used from /proc/[pid]/stat (see man proc_pid_stat):
   (3) state %c, (4) ppid %d, (14) utime %lu, (15) stime %lu,
-  (20) num_threads %ld, (23) vsize %lu
+  (19) nice %ld, (20) num_threads %ld, (22) starttime %llu, (23) vsize %lu
 Fields used from /proc/[pid]/statm:
   (2) resident
 */
@@ -21,6 +21,7 @@ struct ProcessStat {
   ulong utime;
   ulong stime;
   long num_threads;
+  long nice; // Scheduling nice value, -20 (highest prio) .. 19 (lowest)
   ulong vsize;
   ulong statm_resident;
   ulonglong starttime; // Clock ticks since boot (/proc/[pid]/stat field 22)

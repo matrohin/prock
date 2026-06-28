@@ -3,7 +3,8 @@
 #include "process_stat.h"
 
 // Parse /proc/[pid]/stat and /proc/[pid]/statm content.
-// Sets: state, ppid, utime, stime, num_threads, vsize, statm_resident.
+// Sets: state, ppid, utime, stime, nice, num_threads, starttime, vsize,
+// statm_resident.
 // Does NOT set comm, cmdline, pid, or io fields.
 // Returns false if stat_buf is malformed (no closing paren).
 bool parse_proc_stat_bufs(const char *stat_buf, const char *statm_buf,

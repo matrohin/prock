@@ -55,6 +55,8 @@ static bool table_line_is_less(const BriefTableColumnId sorted_by,
   case eBriefTableColumnId_IoWriteKbPerSec:
     return left.derived_stat.io_write_kb_per_sec <
            right.derived_stat.io_write_kb_per_sec;
+  case eBriefTableColumnId_Nice:
+    return left.nice < right.nice;
   case eBriefTableColumnId_CmdLine:
     return strcmp(left.cmdline, right.cmdline) < 0;
   case eBriefTableColumnId_Count:
@@ -161,6 +163,7 @@ static void brief_table_line_init(BriefTableLine &new_line,
   new_line.username = stat.username;
   new_line.state = stat.state;
   new_line.num_threads = stat.num_threads;
+  new_line.nice = stat.nice;
 
   // starttime is in clock ticks since boot; convert to an absolute epoch.
   new_line.start_time_epoch_sec =

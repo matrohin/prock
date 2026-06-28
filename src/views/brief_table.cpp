@@ -83,8 +83,8 @@ static FilterResult imgui_filter_pass_filter_ext(const ImGuiTextFilter &filter,
 
 const char *PROCESS_COPY_HEADER =
     "PID\tName\tUser\tState\tThreads\tStart Time\tCPU Total\tCPU User\tCPU "
-    "Kernel\tRSS (KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write (KB/s)\tCommand "
-    "Line\n";
+    "Kernel\tRSS (KB)\tVirt (KB)\tI/O Read (KB/s)\tI/O Write "
+    "(KB/s)\tNice\tCommand Line\n";
 
 static void open_all_windows(const Pid pid, const char *comm,
                              ViewState &view_state) {
@@ -142,6 +142,8 @@ static String process_cell_text(BumpArena &arena, const BriefTableLine &line,
     return String::sprintf(arena, "%.1f", derived.io_read_kb_per_sec);
   case eBriefTableColumnId_IoWriteKbPerSec:
     return String::sprintf(arena, "%.1f", derived.io_write_kb_per_sec);
+  case eBriefTableColumnId_Nice:
+    return String::sprintf(arena, "%ld", line.nice);
   case eBriefTableColumnId_CmdLine:
     return String::static_string(line.cmdline);
   default:
@@ -157,13 +159,14 @@ static void copy_process_row(Notifications &notifications, BumpArena &arena,
                              sizeof(start_time));
   const String str = String::sprintf(
       arena,
-      "%s%d\t%s\t%s\t%c\t%ld\t%s\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%s",
+      "%s%d\t%s\t%s\t%c\t%ld\t%s\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f\t%ld"
+      "\t%s",
       PROCESS_COPY_HEADER, line.pid, line.name.data, line.username.data,
       line.state, line.num_threads, start_time,
       derived.cpu_user_perc + derived.cpu_kernel_perc, derived.cpu_user_perc,
       derived.cpu_kernel_perc, derived.mem_resident_bytes / 1024.0,
       derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
-      derived.io_write_kb_per_sec, line.cmdline);
+      derived.io_write_kb_per_sec, line.nice, line.cmdline);
   clipboard_copy_row(notifications, str.data);
 }
 
@@ -577,6 +580,8 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
     draw_io_rate(derived_stat.io_read_kb_per_sec);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_IoWriteKbPerSec))
     draw_io_rate(derived_stat.io_write_kb_per_sec);
+  if (ImGui::TableSetColumnIndex(eBriefTableColumnId_Nice))
+    table_item_draw_long(line.nice);
   if (ImGui::TableSetColumnIndex(eBriefTableColumnId_CmdLine)) {
     ImGui::TextUnformatted(line.cmdline);
     if (ImGui::IsItemHovered()) ImGui::SetItemTooltip("%s", line.cmdline);
@@ -844,6 +849,10 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                                 ImGuiTableColumnFlags_DefaultHide |
                                 ImGuiTableColumnFlags_WidthFixed,
                             85.0f, eBriefTableColumnId_IoWriteKbPerSec);
+    ImGui::TableSetupColumn("Nice",
+                            ImGuiTableColumnFlags_DefaultHide |
+                                ImGuiTableColumnFlags_WidthFixed,
+                            45.0f, eBriefTableColumnId_Nice);
     ImGui::TableSetupColumn("Command Line", ImGuiTableColumnFlags_None, 0.0f,
                             eBriefTableColumnId_CmdLine);
     if (reset_sort_to_pid) {

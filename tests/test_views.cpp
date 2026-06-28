@@ -1356,6 +1356,23 @@ TEST_CASE("parse_proc_stat_bufs") {
     CHECK(stat.stime == 0);
     CHECK(stat.ppid == 0);
   }
+
+  SUBCASE("nice and starttime") {
+    // Fields: state ppid pgrp session tty_nr tpgid flags minflt cminflt majflt
+    //   cmajflt utime stime cutime cstime priority nice num_threads itrealvalue
+    //   starttime vsize
+    const char *stat_buf =
+        "1234 (bash) S 100 0 0 0 -1 0 111 50 222 7 5 2 0 0 20 -5 3 0 99 102400";
+    const char *statm_buf = "25600 2500 1000 100 0 3000 0";
+
+    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(stat.nice == -5);
+    CHECK(stat.utime == 5);
+    CHECK(stat.stime == 2);
+    CHECK(stat.num_threads == 3);
+    CHECK(stat.starttime == 99);
+    CHECK(stat.vsize == 102400);
+  }
 }
 
 // ============================================================================
