@@ -1,6 +1,10 @@
 # Prock - Process Explorer for Linux
 
-The tool is still in development. I'm improving my Linux desktop experience.
+Prock is a fast, graphical alternative to htop/btop, inspired by the
+Sysinternals Process Explorer. It shows running processes in a sortable tree,
+live system charts (CPU, memory, I/O, network) and per-process charts (CPU,
+memory, I/O), and detailed inspectors for libraries, sockets, threads, and
+environment — with controls to suspend, kill, or reprioritize processes.
 
 ![Screenshot (Light theme)](./images/shot-light.png)
 
@@ -25,7 +29,7 @@ The tool is still in development. I'm improving my Linux desktop experience.
 
 ### Per-Process Details
 - Right-click any process to open:
-  - Dedicated charts (CPU, memory, I/O, network)
+  - Dedicated charts (CPU, memory, I/O)
   - Loaded libraries with mapped/file sizes
   - Memory maps with address, permissions, RSS/PSS/swap, and grouping by mapping
   - Sockets
