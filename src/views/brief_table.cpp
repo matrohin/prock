@@ -96,6 +96,8 @@ static void open_all_windows(const Pid pid, const char *comm,
   cpu_chart_add(view_state.cpu_chart_state, pid, comm, dock_id);
   mem_chart_add(view_state.mem_chart_state, pid, comm, dock_id, no_focus);
   io_chart_add(view_state.io_chart_state, pid, comm, dock_id, no_focus);
+  properties_viewer_request(view_state.properties_viewer_state,
+                            *view_state.sync, pid, comm, dock_id, no_focus);
   library_viewer_request(view_state.library_viewer_state, *view_state.sync, pid,
                          comm, dock_id, no_focus);
   environ_viewer_request(view_state.environ_viewer_state, *view_state.sync, pid,
@@ -376,7 +378,11 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       io_chart_add(view_state.io_chart_state, pid, line.name.data);
     }
     ImGui::Separator();
-    if (ImGui::MenuItemEx("Loaded Libraries", ICON_MD_SEARCH)) {
+    if (ImGui::MenuItemEx("Properties", ICON_MD_SEARCH)) {
+      properties_viewer_request(view_state.properties_viewer_state,
+                                *view_state.sync, pid, line.name.data);
+    }
+    if (ImGui::MenuItem("Loaded Libraries")) {
       library_viewer_request(view_state.library_viewer_state, *view_state.sync,
                              pid, line.name.data);
     }

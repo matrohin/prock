@@ -12,6 +12,7 @@
 #include "views/notifications.h"
 #include "views/ports_viewer.h"
 #include "views/process_host.h"
+#include "views/properties_viewer.h"
 #include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/system_cpu_chart.h"
@@ -61,23 +62,6 @@ struct FrameContext {
   BumpArena frame_arena;
 };
 
-enum FocusedView {
-  eFocusedView_None,
-  eFocusedView_BriefTable,
-  eFocusedView_SystemCpuChart,
-  eFocusedView_SystemMemChart,
-  eFocusedView_SystemIoChart,
-  eFocusedView_SystemNetChart,
-  eFocusedView_CpuChart,
-  eFocusedView_MemChart,
-  eFocusedView_IoChart,
-  eFocusedView_LibraryViewer,
-  eFocusedView_EnvironViewer,
-  eFocusedView_ThreadsViewer,
-  eFocusedView_SocketViewer,
-  eFocusedView_SmapsViewer,
-};
-
 struct ViewState {
   BumpArena arena;
   InternTable string_interner;
@@ -102,5 +86,6 @@ struct ViewState {
   SmapsViewerState smaps_viewer_state;
   SocketViewerState socket_viewer_state;
   PortsViewerState ports_viewer_state;
+  PropertiesViewerState properties_viewer_state;
   Notifications notifications;
 };

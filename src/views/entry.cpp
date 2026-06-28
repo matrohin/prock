@@ -8,6 +8,7 @@
 #include "views/mem_chart.h"
 #include "views/ports_viewer.h"
 #include "views/process_host.h"
+#include "views/properties_viewer.h"
 #include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/system_cpu_chart.h"
@@ -43,6 +44,8 @@ void views_on_demand_update(ViewState &view_state) {
   socket_viewer_update(view_state.socket_viewer_state, *view_state.sync);
   smaps_viewer_update(view_state.smaps_viewer_state, *view_state.sync);
   ports_viewer_update(view_state.ports_viewer_state, *view_state.sync);
+  properties_viewer_update(view_state.properties_viewer_state,
+                           *view_state.sync);
   brief_table_dump_update(view_state.notifications, *view_state.sync);
   notifications_update(view_state.notifications);
 }
@@ -58,6 +61,9 @@ void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
   system_net_chart_draw(ctx, view_state);
   system_mem_chart_draw(ctx, view_state);
   system_cpu_chart_draw(ctx, view_state);
+  // Drawn right after the per-process charts so it docks as the first tab after
+  // them in the process host.
+  properties_viewer_draw(ctx, view_state, state);
   library_viewer_draw(ctx, view_state);
   environ_viewer_draw(ctx, view_state);
   threads_viewer_draw(ctx, view_state, state);

@@ -18,6 +18,7 @@ void on_demand_reader_loop(Sync &sync) {
     SmapsRequest smaps_request;
     PortScanRequest port_scan_request;
     FontListRequest font_list_request;
+    PropertiesRequest properties_request;
     {
       std::unique_lock<std::mutex> lock(sync.quit_mutex);
       my_sync.request_read_cv.wait(lock, [&] {
@@ -27,7 +28,8 @@ void on_demand_reader_loop(Sync &sync) {
                my_sync.socket_request_queue.peek(sock_request) ||
                my_sync.smaps_request_queue.peek(smaps_request) ||
                my_sync.port_scan_request_queue.peek(port_scan_request) ||
-               my_sync.font_list_request_queue.peek(font_list_request);
+               my_sync.font_list_request_queue.peek(font_list_request) ||
+               my_sync.properties_request_queue.peek(properties_request);
       });
     }
     if (sync.quit.load()) break;
@@ -81,6 +83,16 @@ void on_demand_reader_loop(Sync &sync) {
       ZoneScopedN("font_list_request");
       FontListResponse response = read_font_list(temp_arena);
       if (!my_sync.font_list_response_queue.push(response)) {
+        response.owner_arena.destroy();
+      }
+    }
+
+    while (my_sync.properties_request_queue.pop(properties_request)) {
+      ZoneScopedN("properties_request");
+      ZoneValue(properties_request.pid);
+      PropertiesResponse response =
+          read_process_properties(temp_arena, properties_request);
+      if (!my_sync.properties_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
     }
