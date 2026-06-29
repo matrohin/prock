@@ -9,7 +9,8 @@
 /*
 Fields used from /proc/[pid]/stat (see man proc_pid_stat):
   (3) state %c, (4) ppid %d, (14) utime %lu, (15) stime %lu,
-  (19) nice %ld, (20) num_threads %ld, (22) starttime %llu, (23) vsize %lu
+  (19) nice %ld, (20) num_threads %ld, (22) starttime %llu, (23) vsize %lu,
+  (39) processor %d
 Fields used from /proc/[pid]/statm:
   (2) resident
 */
@@ -17,6 +18,9 @@ Fields used from /proc/[pid]/statm:
 struct ProcessStat {
   const char *comm;
   const char *cmdline;
+  // Symbolic name of the kernel function the task is blocked in
+  // (/proc/.../wchan), "" when running or unknown. Only populated for threads.
+  const char *wchan;
   PersistentString username;
   ulong utime;
   ulong stime;
@@ -32,6 +36,8 @@ struct ProcessStat {
 
   Pid pid;
   Pid ppid;
+  int last_cpu; // Last CPU the task ran on (/proc/.../stat field 39), -1
+                // unknown
   char state;
 };
 

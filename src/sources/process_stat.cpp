@@ -141,6 +141,8 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   ProcessStat &stat = *out;
   stat.pid = tid;
   stat.comm = "";
+  stat.wchan = "";
+  stat.last_cpu = -1;
   stat.username = PersistentString{""};
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
@@ -196,6 +198,8 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
   stat.pid = pid;
   stat.comm = "";
   stat.cmdline = "";
+  stat.wchan = "";
+  stat.last_cpu = -1;
   stat.username = PersistentString{""};
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
@@ -490,6 +494,32 @@ static NetIoStat read_net_io_stats() {
   return result;
 }
 
+// Read the symbolic kernel function a task is blocked in from
+// /proc/<pid>/task/<tid>/wchan. A running task reads back as "0"; map that (and
+// any error) to "" so callers can treat it as "not blocked".
+static const char *read_thread_wchan(const Pid pid, const int tid,
+                                     BumpArena &arena) {
+  char path[128];
+  snprintf(path, sizeof(path), "/proc/%d/task/%d/wchan", pid, tid);
+  FILE *file = fopen(path, "r");
+  if (!file) {
+    return "";
+  }
+  char buf[64];
+  const char *result = "";
+  if (fgets(buf, sizeof(buf), file)) {
+    size_t len = strlen(buf);
+    if (len > 0 && buf[len - 1] == '\n') {
+      --len;
+    }
+    if (len > 0 && !(len == 1 && buf[0] == '0')) {
+      result = arena.alloc_string_copy(buf, len);
+    }
+  }
+  fclose(file);
+  return result;
+}
+
 // Read all threads for a process from /proc/[pid]/task/
 static Array<ProcessStat> read_process_threads(const Pid pid,
                                                BumpArena &arena) {
@@ -527,6 +557,7 @@ static Array<ProcessStat> read_process_threads(const Pid pid,
     snprintf(comm_path, sizeof(comm_path), "/proc/%d/task/%d/comm", pid, tid);
 
     if (read_thread_stat(tid, stat_path, comm_path, arena, it_result)) {
+      it_result->wchan = read_thread_wchan(pid, tid, arena);
       ++it_result;
     }
     it = it->next;

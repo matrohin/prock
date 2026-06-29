@@ -13,7 +13,8 @@
 
 #include <cstring>
 
-const char *THREAD_COPY_HEADER = "TID\tName\tState\tCPU Total\tCPU Kernel\n";
+const char *THREAD_COPY_HEADER =
+    "TID\tName\tState\tWchan\tCPU Total\tCPU Kernel\tLast CPU\n";
 
 static String thread_cell_text(BumpArena &arena, const ThreadLine &line,
                                const int column) {
@@ -24,11 +25,16 @@ static String thread_cell_text(BumpArena &arena, const ThreadLine &line,
     return String::static_string(line.comm);
   case eThreadsViewerColumnId_State:
     return String::sprintf(arena, "%c", line.state);
+  case eThreadsViewerColumnId_Wchan:
+    return String::static_string(line.wchan);
   case eThreadsViewerColumnId_CpuTotal:
     return String::sprintf(arena, "%.1f",
                            line.cpu_user_perc + line.cpu_kernel_perc);
   case eThreadsViewerColumnId_CpuKernel:
     return String::sprintf(arena, "%.1f", line.cpu_kernel_perc);
+  case eThreadsViewerColumnId_LastCpu:
+    return line.last_cpu < 0 ? String::static_string("-")
+                             : String::sprintf(arena, "%d", line.last_cpu);
   default:
     return String::static_string("");
   }
@@ -36,10 +42,11 @@ static String thread_cell_text(BumpArena &arena, const ThreadLine &line,
 
 static void copy_thread_row(Notifications &notifications,
                             BumpArena &frame_arena, const ThreadLine &line) {
-  const String buf = String::sprintf(
-      frame_arena, "%s%d\t%s\t%c\t%.1f\t%.1f", THREAD_COPY_HEADER, line.tid,
-      line.comm, line.state, line.cpu_user_perc + line.cpu_kernel_perc,
-      line.cpu_kernel_perc);
+  const String buf =
+      String::sprintf(frame_arena, "%s%d\t%s\t%c\t%s\t%.1f\t%.1f\t%d",
+                      THREAD_COPY_HEADER, line.tid, line.comm, line.state,
+                      line.wchan, line.cpu_user_perc + line.cpu_kernel_perc,
+                      line.cpu_kernel_perc, line.last_cpu);
   clipboard_copy_row(notifications, buf.data);
 }
 
@@ -49,10 +56,10 @@ static void copy_all_threads(Notifications &notifications, BumpArena &arena,
       notifications, arena, win.lines.data, win.lines.size, 256,
       THREAD_COPY_HEADER,
       [](char *ptr, const size_t rem, const ThreadLine &line) {
-        return snprintf(ptr, rem, "%d\t%s\t%c\t%.1f\t%.1f\n", line.tid,
-                        line.comm, line.state,
+        return snprintf(ptr, rem, "%d\t%s\t%c\t%s\t%.1f\t%.1f\t%d\n", line.tid,
+                        line.comm, line.state, line.wchan,
                         line.cpu_user_perc + line.cpu_kernel_perc,
-                        line.cpu_kernel_perc);
+                        line.cpu_kernel_perc, line.last_cpu);
       });
 }
 
@@ -65,11 +72,15 @@ static bool thread_line_is_less(const ThreadsViewerColumnId sorted_by,
     return strcmp(a.comm, b.comm) < 0;
   case eThreadsViewerColumnId_State:
     return a.state < b.state;
+  case eThreadsViewerColumnId_Wchan:
+    return strcmp(a.wchan, b.wchan) < 0;
   case eThreadsViewerColumnId_CpuTotal:
     return a.cpu_user_perc + a.cpu_kernel_perc <
            b.cpu_user_perc + b.cpu_kernel_perc;
   case eThreadsViewerColumnId_CpuKernel:
     return a.cpu_kernel_perc < b.cpu_kernel_perc;
+  case eThreadsViewerColumnId_LastCpu:
+    return a.last_cpu < b.last_cpu;
   default:
     return false;
   }
@@ -163,7 +174,10 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       line.tid = thread.pid;
       strncpy(line.comm, thread.comm, sizeof(line.comm) - 1);
       line.comm[sizeof(line.comm) - 1] = '\0';
+      strncpy(line.wchan, thread.wchan, sizeof(line.wchan) - 1);
+      line.wchan[sizeof(line.wchan) - 1] = '\0';
       line.state = thread.state;
+      line.last_cpu = thread.last_cpu;
       line.cpu_user_perc = 0;
       line.cpu_kernel_perc = 0;
 
@@ -273,12 +287,16 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                                   eThreadsViewerColumnId_Name);
           ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_None, 0.0f,
                                   eThreadsViewerColumnId_State);
+          ImGui::TableSetupColumn("Wchan", ImGuiTableColumnFlags_None, 0.0f,
+                                  eThreadsViewerColumnId_Wchan);
           ImGui::TableSetupColumn("CPU",
                                   ImGuiTableColumnFlags_PreferSortDescending,
                                   0.0f, eThreadsViewerColumnId_CpuTotal);
           ImGui::TableSetupColumn("Kernel",
                                   ImGuiTableColumnFlags_PreferSortDescending,
                                   0.0f, eThreadsViewerColumnId_CpuKernel);
+          ImGui::TableSetupColumn("CPU#", ImGuiTableColumnFlags_None, 0.0f,
+                                  eThreadsViewerColumnId_LastCpu);
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
@@ -329,6 +347,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_State);
             table_item_draw_state(line.state);
 
+            ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Wchan);
+            table_item_draw_text(line.wchan);
+
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuTotal);
             table_item_draw_percent(
                 scale_cpu_perc(line.cpu_user_perc + line.cpu_kernel_perc,
@@ -337,6 +358,13 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuKernel);
             table_item_draw_percent(
                 scale_cpu_perc(line.cpu_kernel_perc, num_cpus, cpu_per_core));
+
+            ImGui::TableSetColumnIndex(eThreadsViewerColumnId_LastCpu);
+            if (line.last_cpu < 0) {
+              ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "-");
+            } else {
+              table_item_draw_long(line.last_cpu);
+            }
           }
 
           ImGui::EndTable();

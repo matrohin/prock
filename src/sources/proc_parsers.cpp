@@ -29,9 +29,11 @@ bool parse_proc_stat_bufs(const char *stat_buf, const char *statm_buf,
 
   sscanf(after_comm + 1,
          " %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d "
-         "%*d %ld %ld %*d %llu %lu",
+         "%*d %ld %ld %*d %llu %lu "
+         // skip rss..exit_signal (fields 24-38) to reach processor (field 39)
+         "%*d %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*d %d",
          &out->state, &out->ppid, &out->utime, &out->stime, &out->nice,
-         &out->num_threads, &out->starttime, &out->vsize);
+         &out->num_threads, &out->starttime, &out->vsize, &out->last_cpu);
 
   sscanf(statm_buf, "%*u %lu", &out->statm_resident);
 

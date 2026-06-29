@@ -10,7 +10,9 @@ struct ThreadLine {
   double cpu_user_perc;
   double cpu_kernel_perc;
   int tid;
+  int last_cpu; // Last CPU the thread ran on, -1 if unknown
   char comm[64];
+  char wchan[64]; // Kernel function the thread is blocked in, "" if running
   char state;
 };
 
@@ -26,8 +28,10 @@ enum ThreadsViewerColumnId {
   eThreadsViewerColumnId_Tid,
   eThreadsViewerColumnId_Name,
   eThreadsViewerColumnId_State,
+  eThreadsViewerColumnId_Wchan,
   eThreadsViewerColumnId_CpuTotal,
   eThreadsViewerColumnId_CpuKernel,
+  eThreadsViewerColumnId_LastCpu,
   eThreadsViewerColumnId_Count,
 };
 
