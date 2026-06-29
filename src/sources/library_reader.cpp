@@ -34,7 +34,7 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
   GrowingArray<LibraryEntry> entries = {};
   uint32_t wasted = 0;
 
-  char line[512];
+  char line[PATH_MAX + 256];
   while (fgets(line, sizeof(line), file)) {
     // Parse line format: addr_start-addr_end perms offset dev inode pathname
     unsigned long addr_start, addr_end;

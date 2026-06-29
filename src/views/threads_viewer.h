@@ -9,7 +9,6 @@
 struct ThreadLine {
   double cpu_user_perc;
   double cpu_kernel_perc;
-  long mem_resident_bytes;
   int tid;
   char comm[64];
   char state;
@@ -29,7 +28,6 @@ enum ThreadsViewerColumnId {
   eThreadsViewerColumnId_State,
   eThreadsViewerColumnId_CpuTotal,
   eThreadsViewerColumnId_CpuKernel,
-  eThreadsViewerColumnId_Memory,
   eThreadsViewerColumnId_Count,
 };
 

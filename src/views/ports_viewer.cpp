@@ -239,12 +239,11 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       // Only build the filter string when a filter is active; PassFilter on an
       // empty filter trivially matches every row.
       if (filter_active) {
-        char filter_str[320];
-        snprintf(filter_str, sizeof(filter_str), "%s %s %s %d %s",
-                 protocol_name(e.sock.protocol), local_addr.data,
-                 socket_state_name(e.sock.protocol, e.sock.state), e.pid,
-                 e.comm);
-        if (!filter.PassFilter(filter_str)) continue;
+        const String filter_str = String::sprintf(
+            ctx.frame_arena, "%s %s %s %d %s", protocol_name(e.sock.protocol),
+            local_addr.data, socket_state_name(e.sock.protocol, e.sock.state),
+            e.pid, e.comm);
+        if (!filter.PassFilter(filter_str.data)) continue;
       }
 
       const bool is_selected = state.selected_index == static_cast<int>(i);

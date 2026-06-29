@@ -238,14 +238,14 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
         return snprintf(
             ptr, rem,
             "%d\t%s\t%s\t%c\t%ld\t%s\t%.1f\t%.1f\t%.1f\t%.0f\t%.0f\t%.1f\t%.1f"
-            "\t%s\n",
+            "\t%ld\t%s\n",
             line.pid, line.name.data, line.username.data, line.state,
             line.num_threads, start_time,
             derived.cpu_user_perc + derived.cpu_kernel_perc,
             derived.cpu_user_perc, derived.cpu_kernel_perc,
             derived.mem_resident_bytes / 1024.0,
             derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
-            derived.io_write_kb_per_sec, line.cmdline);
+            derived.io_write_kb_per_sec, line.nice, line.cmdline);
       });
 }
 

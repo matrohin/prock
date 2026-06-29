@@ -21,7 +21,6 @@
 Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
   ZoneScoped;
   GrowingArray<SocketEntry> result = {};
-  uint32_t wasted = 0;
 
   const int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_SOCK_DIAG);
   if (fd < 0) {
@@ -82,7 +81,7 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
         const unsigned long inode = diag->idiag_inode;
         if (inode == 0) continue;
 
-        SocketEntry *entry = result.emplace_back(arena, wasted);
+        SocketEntry *entry = result.emplace_back(arena);
         entry->inode = inode;
         entry->protocol = q.socket_protocol;
         entry->state = static_cast<TcpState>(diag->idiag_state);
@@ -137,37 +136,29 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
 
 // Read stat for a thread (or process) given explicit paths
 static bool read_thread_stat(const int tid, const char *stat_path,
-                             const char *statm_path, const char *comm_path,
-                             BumpArena &arena, ProcessStat *out) {
+                             const char *comm_path, BumpArena &arena,
+                             ProcessStat *out) {
   ProcessStat &stat = *out;
   stat.pid = tid;
   stat.comm = "";
   stat.username = PersistentString{""};
   stat.io_read_bytes = 0;
   stat.io_write_bytes = 0;
+  // Per-thread memory is not meaningful (statm is process-wide) and not shown,
+  // so statm is not read here.
+  stat.statm_resident = 0;
 
   FILE *stat_file = fopen(stat_path, "r");
-  FILE *statm_file = fopen(statm_path, "r");
   FILE *comm_file = fopen(comm_path, "r");
-  if (!stat_file || !statm_file || !comm_file) {
+  if (!stat_file || !comm_file) {
     if (stat_file) fclose(stat_file);
-    if (statm_file) fclose(statm_file);
     if (comm_file) fclose(comm_file);
     return false;
   }
 
   char stat_buf[512];
-  char statm_buf[128];
-
   if (!fgets(stat_buf, sizeof(stat_buf), stat_file)) {
     fclose(comm_file);
-    fclose(statm_file);
-    fclose(stat_file);
-    return false;
-  }
-  if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) {
-    fclose(comm_file);
-    fclose(statm_file);
     fclose(stat_file);
     return false;
   }
@@ -181,10 +172,9 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   }
 
   fclose(comm_file);
-  fclose(statm_file);
   fclose(stat_file);
 
-  return parse_proc_stat_bufs(stat_buf, statm_buf, out);
+  return parse_proc_stat_bufs(stat_buf, "", out);
 }
 
 static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
@@ -500,8 +490,6 @@ static NetIoStat read_net_io_stats() {
   return result;
 }
 
-// Reads /proc/meminfo for system-wide memory stats
-// Values are in kB (as reported by /proc/meminfo)
 // Read all threads for a process from /proc/[pid]/task/
 static Array<ProcessStat> read_process_threads(const Pid pid,
                                                BumpArena &arena) {
@@ -534,15 +522,11 @@ static Array<ProcessStat> read_process_threads(const Pid pid,
     const int tid = it->value;
 
     char stat_path[128];
-    char statm_path[128];
     char comm_path[128];
     snprintf(stat_path, sizeof(stat_path), "/proc/%d/task/%d/stat", pid, tid);
-    snprintf(statm_path, sizeof(statm_path), "/proc/%d/statm",
-             pid); // statm is shared across threads
     snprintf(comm_path, sizeof(comm_path), "/proc/%d/task/%d/comm", pid, tid);
 
-    if (read_thread_stat(tid, stat_path, statm_path, comm_path, arena,
-                         it_result)) {
+    if (read_thread_stat(tid, stat_path, comm_path, arena, it_result)) {
       ++it_result;
     }
     it = it->next;
@@ -576,6 +560,8 @@ read_watched_threads(const GrowingArray<Pid> &watched_pids, BumpArena &arena) {
   return result;
 }
 
+// Reads /proc/meminfo for system-wide memory stats
+// Values are in kB (as reported by /proc/meminfo)
 static MemInfo read_mem_info() {
   ZoneScoped;
   FILE *meminfo_file = fopen("/proc/meminfo", "r");

@@ -13,8 +13,7 @@
 
 #include <cstring>
 
-const char *THREAD_COPY_HEADER =
-    "TID\tName\tState\tCPU Total\tCPU Kernel\tMemory\n";
+const char *THREAD_COPY_HEADER = "TID\tName\tState\tCPU Total\tCPU Kernel\n";
 
 static String thread_cell_text(BumpArena &arena, const ThreadLine &line,
                                const int column) {
@@ -30,21 +29,18 @@ static String thread_cell_text(BumpArena &arena, const ThreadLine &line,
                            line.cpu_user_perc + line.cpu_kernel_perc);
   case eThreadsViewerColumnId_CpuKernel:
     return String::sprintf(arena, "%.1f", line.cpu_kernel_perc);
-  case eThreadsViewerColumnId_Memory:
-    return String::sprintf(arena, "%ld", line.mem_resident_bytes);
   default:
     return String::static_string("");
   }
 }
 
 static void copy_thread_row(Notifications &notifications,
-                            const ThreadLine &line) {
-  char buf[512];
-  snprintf(buf, sizeof(buf), "%s%d\t%s\t%c\t%.1f\t%.1f\t%ld",
-           THREAD_COPY_HEADER, line.tid, line.comm, line.state,
-           line.cpu_user_perc + line.cpu_kernel_perc, line.cpu_kernel_perc,
-           line.mem_resident_bytes);
-  clipboard_copy_row(notifications, buf);
+                            BumpArena &frame_arena, const ThreadLine &line) {
+  const String buf = String::sprintf(
+      frame_arena, "%s%d\t%s\t%c\t%.1f\t%.1f", THREAD_COPY_HEADER, line.tid,
+      line.comm, line.state, line.cpu_user_perc + line.cpu_kernel_perc,
+      line.cpu_kernel_perc);
+  clipboard_copy_row(notifications, buf.data);
 }
 
 static void copy_all_threads(Notifications &notifications, BumpArena &arena,
@@ -53,10 +49,10 @@ static void copy_all_threads(Notifications &notifications, BumpArena &arena,
       notifications, arena, win.lines.data, win.lines.size, 256,
       THREAD_COPY_HEADER,
       [](char *ptr, const size_t rem, const ThreadLine &line) {
-        return snprintf(ptr, rem, "%d\t%s\t%c\t%.1f\t%.1f\t%ld\n", line.tid,
+        return snprintf(ptr, rem, "%d\t%s\t%c\t%.1f\t%.1f\n", line.tid,
                         line.comm, line.state,
                         line.cpu_user_perc + line.cpu_kernel_perc,
-                        line.cpu_kernel_perc, line.mem_resident_bytes);
+                        line.cpu_kernel_perc);
       });
 }
 
@@ -74,8 +70,6 @@ static bool thread_line_is_less(const ThreadsViewerColumnId sorted_by,
            b.cpu_user_perc + b.cpu_kernel_perc;
   case eThreadsViewerColumnId_CpuKernel:
     return a.cpu_kernel_perc < b.cpu_kernel_perc;
-  case eThreadsViewerColumnId_Memory:
-    return a.mem_resident_bytes < b.mem_resident_bytes;
   default:
     return false;
   }
@@ -129,7 +123,6 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
 void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
   ZoneScoped;
 
-  const long page_size = state_data.system.mem_page_size;
   const double per_core_ticks = state_data.snapshot.per_core_ticks;
 
   // Process thread snapshots from the current update
@@ -171,7 +164,6 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       strncpy(line.comm, thread.comm, sizeof(line.comm) - 1);
       line.comm[sizeof(line.comm) - 1] = '\0';
       line.state = thread.state;
-      line.mem_resident_bytes = thread.statm_resident * page_size;
       line.cpu_user_perc = 0;
       line.cpu_kernel_perc = 0;
 
@@ -287,9 +279,6 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
           ImGui::TableSetupColumn("Kernel",
                                   ImGuiTableColumnFlags_PreferSortDescending,
                                   0.0f, eThreadsViewerColumnId_CpuKernel);
-          ImGui::TableSetupColumn("Memory",
-                                  ImGuiTableColumnFlags_PreferSortDescending,
-                                  0.0f, eThreadsViewerColumnId_Memory);
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
@@ -324,7 +313,8 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                 clipboard_copy_cell(view_state.notifications, cell);
               }
               if (ImGui::MenuItem("Copy Row", "Ctrl+C")) {
-                copy_thread_row(view_state.notifications, line);
+                copy_thread_row(view_state.notifications, ctx.frame_arena,
+                                line);
               }
               if (ImGui::MenuItem("Copy All")) {
                 copy_all_threads(view_state.notifications, ctx.frame_arena,
@@ -347,9 +337,6 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             ImGui::TableSetColumnIndex(eThreadsViewerColumnId_CpuKernel);
             table_item_draw_percent(
                 scale_cpu_perc(line.cpu_kernel_perc, num_cpus, cpu_per_core));
-
-            ImGui::TableSetColumnIndex(eThreadsViewerColumnId_Memory);
-            table_item_draw_memory(line.mem_resident_bytes);
           }
 
           ImGui::EndTable();
@@ -360,7 +347,8 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
           for (uint32_t j = 0; j < win.lines.size; ++j) {
             if (win.lines.data[j].tid == win.selected_tid) {
-              copy_thread_row(view_state.notifications, win.lines.data[j]);
+              copy_thread_row(view_state.notifications, ctx.frame_arena,
+                              win.lines.data[j]);
               break;
             }
           }

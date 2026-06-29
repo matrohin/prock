@@ -27,39 +27,46 @@ EnvironResponse read_process_environ(BumpArena &temp_arena,
     return response;
   }
 
-  // Read entire file (environment variables are null-separated)
+  // Read the whole file (environment variables are null-separated) into a
+  // geometrically growing buffer in temp_arena. Growing here keeps the
+  // accumulation O(n) and avoids leaving intermediate copies in owner_arena.
   GrowingArray<EnvironEntry> entries = {};
   uint32_t wasted = 0;
 
   char buf[4096];
-  size_t total_read = 0;
-  const char *accumulated = nullptr;
-  size_t accumulated_size = 0;
+  char *contents = nullptr;
+  size_t contents_size = 0;
+  size_t capacity = 0;
 
-  while ((total_read = fread(buf, 1, sizeof(buf), file)) > 0) {
-    const size_t new_size = accumulated_size + total_read;
-    char *new_buf = response.owner_arena.alloc_string(new_size + 1);
-    if (accumulated) {
-      memcpy(new_buf, accumulated, accumulated_size);
+  for (;;) {
+    const size_t n = fread(buf, 1, sizeof(buf), file);
+    if (n > 0) {
+      if (contents_size + n + 1 > capacity) {
+        capacity = std::max(capacity * 2, contents_size + n + 1);
+        char *grown = temp_arena.alloc_string(capacity);
+        if (contents) memcpy(grown, contents, contents_size);
+        contents = grown;
+      }
+      memcpy(contents + contents_size, buf, n);
+      contents_size += n;
     }
-    memcpy(new_buf + accumulated_size, buf, total_read);
-    // new_buf spans new_size + 1 bytes; alloc_string's size is opaque to the
-    // analyzer. NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
-    new_buf[new_size] = '\0';
-    accumulated = new_buf;
-    accumulated_size = new_size;
+    if (n < sizeof(buf)) break; // short read: EOF or error, don't re-read
   }
   fclose(file);
 
-  if (!accumulated || accumulated_size == 0) {
+  if (!contents || contents_size == 0) {
     response.error_code = 0;
     response.entries = {};
     return response;
   }
+  // contents spans `capacity` >= contents_size + 1 bytes (see growth
+  // condition), so this terminator is in bounds; the index taint is opaque to
+  // the analyzer. NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
+  contents[contents_size] = '\0'; // guard strlen on a non-null-terminated tail
 
   // Parse null-separated entries
-  const char *ptr = accumulated;
-  const char *end = accumulated + accumulated_size;
+  const char *ptr = contents;
+  const char *end = contents + contents_size;
 
   while (ptr < end) {
     const size_t len = strlen(ptr);
