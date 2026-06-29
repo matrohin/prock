@@ -6,7 +6,7 @@ live system charts (CPU, memory, I/O, network) and per-process charts (CPU,
 memory, I/O), and detailed inspectors for libraries, sockets, threads, and
 environment — with controls to suspend, kill, or reprioritize processes.
 
-![Screenshot (Everforest Light theme)](./images/shot-everforest-light.png)
+![Screenshot (Light theme)](./images/shot-light.png)
 
 ![Screenshot (Nord theme)](./images/shot-nord.png)
 
