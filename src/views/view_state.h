@@ -10,6 +10,7 @@
 #include "views/mem_chart.h"
 #include "views/menu_bar.h"
 #include "views/notifications.h"
+#include "views/open_files_viewer.h"
 #include "views/ports_viewer.h"
 #include "views/process_host.h"
 #include "views/properties_viewer.h"
@@ -85,6 +86,7 @@ struct ViewState {
   ThreadsViewerState threads_viewer_state;
   SmapsViewerState smaps_viewer_state;
   SocketViewerState socket_viewer_state;
+  OpenFilesViewerState open_files_viewer_state;
   PortsViewerState ports_viewer_state;
   PropertiesViewerState properties_viewer_state;
   Notifications notifications;

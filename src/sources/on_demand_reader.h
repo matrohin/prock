@@ -4,6 +4,7 @@
 #include "sources/environ_reader.h"
 #include "sources/font_list_reader.h"
 #include "sources/library_reader.h"
+#include "sources/open_files_reader.h"
 #include "sources/port_scan_reader.h"
 #include "sources/properties_reader.h"
 #include "sources/smaps_reader.h"
@@ -18,6 +19,8 @@ struct OnDemandReaderSync {
   Channel<EnvironResponse, 8> environ_response_queue;
   Channel<SocketRequest, 8> socket_request_queue;
   Channel<SocketResponse, 8> socket_response_queue;
+  Channel<OpenFilesRequest, 8> open_files_request_queue;
+  Channel<OpenFilesResponse, 8> open_files_response_queue;
   Channel<SmapsRequest, 8> smaps_request_queue;
   Channel<SmapsResponse, 8> smaps_response_queue;
   Channel<PortScanRequest, 2> port_scan_request_queue;

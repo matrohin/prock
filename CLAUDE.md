@@ -39,5 +39,6 @@ Arena allocation (`BumpArena`) for per-frame data. `snapshot_arena` is destroyed
 
 - Use custom containers from `base.h` (`Array`, `GrowingArray`, `LinkedList`)
 - All dynamic allocations through `BumpArena` - no raw `new`/`malloc`
+- To build formatted strings (e.g. `/proc/<pid>/...` paths), use `String::sprintf(temp_arena, ...)` instead of local `char buf[N]` + `snprintf`. Keep fixed local buffers only for syscall output (e.g. `readlink`, `fgets`)
 - Only modify `src/` - do not touch vendored libraries (`imgui/`, `implot/`, `glfw-3.4/`) or build configuration
 - Do not add co-authored-by to commits

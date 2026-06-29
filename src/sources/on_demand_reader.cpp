@@ -15,6 +15,7 @@ void on_demand_reader_loop(Sync &sync) {
     LibraryRequest lib_request;
     EnvironRequest env_request;
     SocketRequest sock_request;
+    OpenFilesRequest open_files_request;
     SmapsRequest smaps_request;
     PortScanRequest port_scan_request;
     FontListRequest font_list_request;
@@ -26,6 +27,7 @@ void on_demand_reader_loop(Sync &sync) {
                my_sync.library_request_queue.peek(lib_request) ||
                my_sync.environ_request_queue.peek(env_request) ||
                my_sync.socket_request_queue.peek(sock_request) ||
+               my_sync.open_files_request_queue.peek(open_files_request) ||
                my_sync.smaps_request_queue.peek(smaps_request) ||
                my_sync.port_scan_request_queue.peek(port_scan_request) ||
                my_sync.font_list_request_queue.peek(font_list_request) ||
@@ -58,6 +60,16 @@ void on_demand_reader_loop(Sync &sync) {
       ZoneValue(sock_request.pid);
       SocketResponse response = read_process_sockets(temp_arena, sock_request);
       if (!my_sync.socket_response_queue.push(response)) {
+        response.owner_arena.destroy();
+      }
+    }
+
+    while (my_sync.open_files_request_queue.pop(open_files_request)) {
+      ZoneScopedN("open_files_request");
+      ZoneValue(open_files_request.pid);
+      OpenFilesResponse response =
+          read_process_open_files(temp_arena, open_files_request);
+      if (!my_sync.open_files_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
     }
