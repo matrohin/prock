@@ -2,6 +2,18 @@
 
 #include "base/base.h"
 #include "state.h"
+#include "views/brief_table.h"
+
+// Helper to create a BriefTableLine with the fields the tests care about
+inline BriefTableLine make_brief_table_line(const char *name, Pid pid, Pid ppid,
+                                            char state = 0) {
+  BriefTableLine line = {};
+  line.name = ConstString{name};
+  line.pid = pid;
+  line.ppid = ppid;
+  line.state = state;
+  return line;
+}
 
 // Helper to create a ProcessStat with minimal required fields
 inline ProcessStat make_process_stat(BumpArena &arena, Pid pid, Pid ppid,

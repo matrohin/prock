@@ -89,7 +89,8 @@ TEST_CASE("SlabCache tagged pointer") {
 
   SUBCASE("pack/unpack recovers the pointer for any tag") {
     ArenaSlab *slab = test_alloc_slab();
-    CHECK(SlabCache::ptr_of(SlabCache::pack(slab, SlabCache::TAG_MASK)) == slab);
+    CHECK(SlabCache::ptr_of(SlabCache::pack(slab, SlabCache::TAG_MASK)) ==
+          slab);
     CHECK(SlabCache::ptr_of(SlabCache::pack(nullptr, 7)) == nullptr);
     vm_free(slab, SLAB_SIZE);
   }
@@ -573,7 +574,7 @@ TEST_CASE("InternTable interning") {
   SUBCASE("content-addressed, not pointer-addressed") {
     char buf1[] = "process";
     char buf2[] = "process";
-    REQUIRE(buf1 != buf2); // distinct source buffers
+    REQUIRE(&buf1[0] != &buf2[0]); // distinct source buffers
     ConstString a = t.intern(buf1);
     ConstString b = t.intern(buf2);
     CHECK(a.data == b.data);
