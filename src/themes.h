@@ -1,6 +1,12 @@
 // Theme implementations adapted from:
 // - Enemymouse theme from
-// https://gist.github.com/enemymouse/c8aa24e247a1d7b9fc33d45091cbb8f0
+//   https://gist.github.com/enemymouse/c8aa24e247a1d7b9fc33d45091cbb8f0
+// - Nord (MIT, (c) Sven Greb) https://github.com/nordtheme/nord
+// - OneNord blends Nord with Atom One Dark (MIT, (c) GitHub Inc.)
+// - Everforest (MIT, (c) sainnhe) https://github.com/sainnhe/everforest
+// The palettes below are color values; the full upstream license texts ship in
+// the in-app "Third-Party Licenses" dialog (scripts/gen_licenses.py ->
+// src/views/licenses.h).
 
 #pragma once
 
@@ -13,6 +19,8 @@ enum class Theme : uint8_t {
   Enemymouse,
   Nord,
   Onenord,
+  EverforestDark,
+  EverforestLight,
   COUNT
 };
 
@@ -30,6 +38,10 @@ inline const char *theme_name(const Theme theme) {
     return "Nord";
   case Theme::Onenord:
     return "OneNord";
+  case Theme::EverforestDark:
+    return "Everforest Dark";
+  case Theme::EverforestLight:
+    return "Everforest Light";
   default:
     return "Unknown";
   }
@@ -104,6 +116,26 @@ inline constexpr ImVec4 kOneNordColormap[] = {
     ImVec4(0.82f, 0.60f, 0.40f, 1.0f), // orange
     ImVec4(0.67f, 0.70f, 0.75f, 1.0f), // gray
     ImVec4(0.29f, 0.55f, 0.72f, 1.0f), // deep blue
+};
+// Everforest dark accents (pastel, tuned for the dark background).
+inline constexpr ImVec4 kEverforestDarkColormap[] = {
+    ImVec4(0.498f, 0.733f, 0.702f, 1.0f), // blue   #7fbbb3
+    ImVec4(0.655f, 0.753f, 0.502f, 1.0f), // green  #a7c080
+    ImVec4(0.859f, 0.737f, 0.498f, 1.0f), // yellow #dbbc7f
+    ImVec4(0.902f, 0.596f, 0.459f, 1.0f), // orange #e69875
+    ImVec4(0.902f, 0.494f, 0.502f, 1.0f), // red    #e67e80
+    ImVec4(0.839f, 0.600f, 0.714f, 1.0f), // purple #d699b6
+    ImVec4(0.514f, 0.753f, 0.573f, 1.0f), // aqua   #83c092
+};
+// Everforest light accents (deeper, so series read on the cream background).
+inline constexpr ImVec4 kEverforestLightColormap[] = {
+    ImVec4(0.227f, 0.580f, 0.773f, 1.0f), // blue   #3a94c5
+    ImVec4(0.553f, 0.631f, 0.004f, 1.0f), // green  #8da101
+    ImVec4(0.875f, 0.627f, 0.000f, 1.0f), // yellow #dfa000
+    ImVec4(0.961f, 0.490f, 0.149f, 1.0f), // orange #f57d26
+    ImVec4(0.973f, 0.333f, 0.322f, 1.0f), // red    #f85552
+    ImVec4(0.875f, 0.412f, 0.729f, 1.0f), // purple #df69ba
+    ImVec4(0.208f, 0.655f, 0.486f, 1.0f), // aqua   #35a77c
 };
 
 inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
@@ -345,6 +377,152 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     g_app_colors[eAppColor_ErrorText] = on_red;
     g_app_colors[eAppColor_WarningText] = on_yellow;
     g_app_colors[eAppColor_InfoText] = on_blue;
+    break;
+  }
+
+  case Theme::EverforestDark: {
+    // Everforest (sainnhe), dark medium. Soft, low-glare forest palette.
+    constexpr ImVec4 bg0(0.176f, 0.208f, 0.231f, 1.00f);    // #2d353b
+    constexpr ImVec4 bg1(0.204f, 0.247f, 0.267f, 1.00f);    // #343f44
+    constexpr ImVec4 bg2(0.239f, 0.282f, 0.302f, 1.00f);    // #3d484d
+    constexpr ImVec4 bg3(0.278f, 0.322f, 0.345f, 1.00f);    // #475258
+    constexpr ImVec4 fg(0.827f, 0.776f, 0.667f, 1.00f);     // #d3c6aa
+    constexpr ImVec4 grey(0.522f, 0.573f, 0.537f, 1.00f);   // #859289
+    constexpr ImVec4 red(0.902f, 0.494f, 0.502f, 1.00f);    // #e67e80
+    constexpr ImVec4 yellow(0.859f, 0.737f, 0.498f, 1.00f); // #dbbc7f
+    constexpr ImVec4 green(0.655f, 0.753f, 0.502f, 1.00f);  // #a7c080
+    constexpr ImVec4 aqua(0.514f, 0.753f, 0.573f, 1.00f);   // #83c092
+    constexpr ImVec4 blue(0.498f, 0.733f, 0.702f, 1.00f);   // #7fbbb3
+
+    auto wa = [](const ImVec4 c, const float a) {
+      return ImVec4(c.x, c.y, c.z, a);
+    };
+
+    ImGui::StyleColorsDark(dst);
+    colors[ImGuiCol_Text] = fg;
+    colors[ImGuiCol_TextDisabled] = grey;
+    colors[ImGuiCol_WindowBg] = bg0;
+    colors[ImGuiCol_ChildBg] = wa(bg0, 0.00f);
+    colors[ImGuiCol_PopupBg] = wa(bg1, 0.97f);
+    colors[ImGuiCol_Border] = wa(bg3, 0.90f);
+    colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_FrameBg] = bg2;
+    colors[ImGuiCol_FrameBgHovered] = bg3;
+    colors[ImGuiCol_FrameBgActive] = wa(bg3, 0.70f);
+    colors[ImGuiCol_TitleBg] = bg0;
+    colors[ImGuiCol_TitleBgActive] = bg1;
+    colors[ImGuiCol_TitleBgCollapsed] = wa(bg0, 0.75f);
+    colors[ImGuiCol_MenuBarBg] = bg1;
+    colors[ImGuiCol_ScrollbarBg] = bg0;
+    colors[ImGuiCol_ScrollbarGrab] = bg3;
+    colors[ImGuiCol_ScrollbarGrabHovered] = wa(green, 0.60f);
+    colors[ImGuiCol_ScrollbarGrabActive] = green;
+    colors[ImGuiCol_CheckMark] = green;
+    colors[ImGuiCol_SliderGrab] = aqua;
+    colors[ImGuiCol_SliderGrabActive] = green;
+    colors[ImGuiCol_Button] = wa(green, 0.45f);
+    colors[ImGuiCol_ButtonHovered] = wa(green, 0.65f);
+    colors[ImGuiCol_ButtonActive] = wa(aqua, 0.85f);
+    colors[ImGuiCol_Header] = wa(green, 0.35f);
+    colors[ImGuiCol_HeaderHovered] = wa(green, 0.50f);
+    colors[ImGuiCol_HeaderActive] = wa(aqua, 0.70f);
+    colors[ImGuiCol_Separator] = wa(bg3, 0.80f);
+    colors[ImGuiCol_SeparatorHovered] = wa(green, 0.78f);
+    colors[ImGuiCol_SeparatorActive] = aqua;
+    colors[ImGuiCol_ResizeGrip] = wa(green, 0.40f);
+    colors[ImGuiCol_ResizeGripHovered] = wa(green, 0.67f);
+    colors[ImGuiCol_ResizeGripActive] = wa(aqua, 0.95f);
+    colors[ImGuiCol_Tab] = bg1;
+    colors[ImGuiCol_TabHovered] = wa(green, 0.70f);
+    colors[ImGuiCol_TabSelected] = wa(green, 0.55f);
+    colors[ImGuiCol_TabSelectedOverline] = aqua;
+    colors[ImGuiCol_TabDimmed] = bg0;
+    colors[ImGuiCol_TabDimmedSelected] = bg2;
+    colors[ImGuiCol_DockingPreview] = wa(aqua, 0.70f);
+    colors[ImGuiCol_TableHeaderBg] = bg1;
+    colors[ImGuiCol_TableBorderStrong] = bg3;
+    colors[ImGuiCol_TableBorderLight] = wa(bg3, 0.60f);
+    colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt] = wa(bg1, 0.40f);
+    colors[ImGuiCol_TextSelectedBg] = wa(green, 0.35f);
+    colors[ImGuiCol_ModalWindowDimBg] = wa(bg0, 0.73f);
+    g_app_colors[eAppColor_NewProcessRow] = wa(green, 0.30f);
+    g_app_colors[eAppColor_DeadProcessRow] = wa(red, 0.30f);
+    g_app_colors[eAppColor_ErrorText] = red;
+    g_app_colors[eAppColor_WarningText] = yellow;
+    g_app_colors[eAppColor_InfoText] = blue;
+    break;
+  }
+
+  case Theme::EverforestLight: {
+    // Everforest light medium. Deeper accents than the dark variant so they
+    // read on the cream background.
+    constexpr ImVec4 bg0(0.992f, 0.965f, 0.890f, 1.00f);   // #fdf6e3
+    constexpr ImVec4 bg1(0.957f, 0.941f, 0.851f, 1.00f);   // #f4f0d9
+    constexpr ImVec4 bg2(0.937f, 0.922f, 0.831f, 1.00f);   // #efebd4
+    constexpr ImVec4 bg3(0.902f, 0.886f, 0.800f, 1.00f);   // #e6e2cc
+    constexpr ImVec4 fg(0.361f, 0.416f, 0.447f, 1.00f);    // #5c6a72
+    constexpr ImVec4 grey(0.576f, 0.624f, 0.569f, 1.00f);  // #939f91
+    constexpr ImVec4 red(0.973f, 0.333f, 0.322f, 1.00f);   // #f85552
+    constexpr ImVec4 green(0.553f, 0.631f, 0.004f, 1.00f); // #8da101
+
+    auto wa = [](const ImVec4 c, const float a) {
+      return ImVec4(c.x, c.y, c.z, a);
+    };
+
+    ImGui::StyleColorsLight(dst);
+    colors[ImGuiCol_Text] = fg;
+    colors[ImGuiCol_TextDisabled] = grey;
+    colors[ImGuiCol_WindowBg] = bg0;
+    colors[ImGuiCol_ChildBg] = wa(bg0, 0.00f);
+    colors[ImGuiCol_PopupBg] = wa(bg1, 0.98f);
+    colors[ImGuiCol_Border] = wa(bg3, 0.90f);
+    colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_FrameBg] = bg2;
+    colors[ImGuiCol_FrameBgHovered] = bg3;
+    colors[ImGuiCol_FrameBgActive] = wa(bg3, 0.70f);
+    colors[ImGuiCol_TitleBg] = bg2;
+    colors[ImGuiCol_TitleBgActive] = bg3;
+    colors[ImGuiCol_TitleBgCollapsed] = wa(bg2, 0.75f);
+    colors[ImGuiCol_MenuBarBg] = bg1;
+    colors[ImGuiCol_ScrollbarBg] = bg1;
+    colors[ImGuiCol_ScrollbarGrab] = bg3;
+    colors[ImGuiCol_ScrollbarGrabHovered] = wa(green, 0.60f);
+    colors[ImGuiCol_ScrollbarGrabActive] = wa(green, 0.85f);
+    colors[ImGuiCol_CheckMark] = green;
+    colors[ImGuiCol_SliderGrab] = wa(green, 0.75f);
+    colors[ImGuiCol_SliderGrabActive] = green;
+    colors[ImGuiCol_Button] = wa(green, 0.35f);
+    colors[ImGuiCol_ButtonHovered] = wa(green, 0.55f);
+    colors[ImGuiCol_ButtonActive] = wa(green, 0.75f);
+    colors[ImGuiCol_Header] = wa(green, 0.30f);
+    colors[ImGuiCol_HeaderHovered] = wa(green, 0.45f);
+    colors[ImGuiCol_HeaderActive] = wa(green, 0.65f);
+    colors[ImGuiCol_Separator] = wa(bg3, 0.90f);
+    colors[ImGuiCol_SeparatorHovered] = wa(green, 0.60f);
+    colors[ImGuiCol_SeparatorActive] = green;
+    colors[ImGuiCol_ResizeGrip] = wa(green, 0.40f);
+    colors[ImGuiCol_ResizeGripHovered] = wa(green, 0.55f);
+    colors[ImGuiCol_ResizeGripActive] = wa(green, 0.75f);
+    colors[ImGuiCol_Tab] = bg2;
+    colors[ImGuiCol_TabHovered] = wa(green, 0.45f);
+    colors[ImGuiCol_TabSelected] = bg0;
+    colors[ImGuiCol_TabSelectedOverline] = green;
+    colors[ImGuiCol_TabDimmed] = wa(bg2, 0.60f);
+    colors[ImGuiCol_TabDimmedSelected] = bg2;
+    colors[ImGuiCol_DockingPreview] = wa(green, 0.70f);
+    colors[ImGuiCol_TableHeaderBg] = bg2;
+    colors[ImGuiCol_TableBorderStrong] = bg3;
+    colors[ImGuiCol_TableBorderLight] = wa(bg3, 0.60f);
+    colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt] = wa(bg2, 0.55f);
+    colors[ImGuiCol_TextSelectedBg] = wa(green, 0.30f);
+    colors[ImGuiCol_ModalWindowDimBg] = wa(grey, 0.40f);
+    // Row tints from the palette; severity text keeps the validated
+    // high-contrast light values (see set_app_colors_light).
+    set_app_colors_light();
+    g_app_colors[eAppColor_NewProcessRow] = wa(green, 0.30f);
+    g_app_colors[eAppColor_DeadProcessRow] = wa(red, 0.30f);
     break;
   }
 

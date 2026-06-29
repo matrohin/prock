@@ -83,12 +83,20 @@ void style_control_rebuild(const int zoom_pct, const int opacity_pct) {
 // register_chart_colormaps(), not eagerly.
 static ImPlotColormap g_nord_colormap;
 static ImPlotColormap g_onenord_colormap;
+static ImPlotColormap g_everforest_dark_colormap;
+static ImPlotColormap g_everforest_light_colormap;
 
 static void register_chart_colormaps() {
   g_nord_colormap =
       ImPlot::AddColormap("Nord", kNordColormap, IM_ARRAYSIZE(kNordColormap));
   g_onenord_colormap = ImPlot::AddColormap("OneNord", kOneNordColormap,
                                            IM_ARRAYSIZE(kOneNordColormap));
+  g_everforest_dark_colormap =
+      ImPlot::AddColormap("EverforestDark", kEverforestDarkColormap,
+                          IM_ARRAYSIZE(kEverforestDarkColormap));
+  g_everforest_light_colormap =
+      ImPlot::AddColormap("EverforestLight", kEverforestLightColormap,
+                          IM_ARRAYSIZE(kEverforestLightColormap));
 }
 
 static void apply_chart_colormap(const Theme theme) {
@@ -97,6 +105,10 @@ static void apply_chart_colormap(const Theme theme) {
     cmap = g_nord_colormap;
   else if (theme == Theme::Onenord)
     cmap = g_onenord_colormap;
+  else if (theme == Theme::EverforestDark)
+    cmap = g_everforest_dark_colormap;
+  else if (theme == Theme::EverforestLight)
+    cmap = g_everforest_light_colormap;
 
   ImPlot::GetStyle().Colormap = cmap;
   // Series colors are cached per item on first draw; drop the cache so any open

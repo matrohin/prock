@@ -6,12 +6,14 @@ Run::
     python3 scripts/gen_licenses.py
 
 Reads the verbatim LICENSE file shipped with each third-party library and font
-bundled into the binary and emits them as raw string literals in
-src/views/licenses.h. The "Third-Party Licenses" dialog (src/views/menu_bar.cpp)
-renders these, so the portable binary carries its own attribution and satisfies
-the MIT (Dear ImGui, ImPlot), SIL OFL 1.1 (Inter), and Apache-2.0 (Material
-Symbols) notice requirements. GLFW's zlib license is included for consistency,
-though it only appreciates (does not require) acknowledgment.
+bundled into the binary, plus the upstream LICENSE for each theme palette adapted
+into src/themes.h, and emits them as raw string literals in src/views/licenses.h.
+The "Third-Party Licenses" dialog (src/views/menu_bar.cpp) renders these, so the
+portable binary carries its own attribution and satisfies the MIT (Dear ImGui,
+ImPlot, and the Everforest/Nord/Atom One Dark theme palettes), SIL OFL 1.1
+(Inter), and Apache-2.0 (Material Symbols) notice requirements. GLFW's zlib
+license is included for consistency, though it only appreciates (does not require)
+acknowledgment.
 
 Tracy is intentionally omitted: the publish preset builds with ENABLE_TRACY=OFF,
 so its code is not present in the distributed binary.
@@ -37,11 +39,12 @@ def font_copyright(header_rel):
 
 
 # (display name, LICENSE path relative to third-party/, copyright notice or None),
-# in display order: libraries first, then fonts. Tracy is omitted on purpose (see
-# module docstring). The MIT/zlib/OFL texts already lead with their copyright
-# line, so they need no prefix. The Apache-2.0 text, however, is a generic
-# template that names no holder, so Material Symbols' notice is prepended from the
-# font name table (Apache-2.0 sec. 4 keeps the attribution with the work).
+# in display order: libraries first, then fonts, then theme palettes. Tracy is
+# omitted on purpose (see module docstring). The MIT/zlib/OFL texts already lead
+# with their copyright line, so they need no prefix. The Apache-2.0 text, however,
+# is a generic template that names no holder, so Material Symbols' notice is
+# prepended from the font name table (Apache-2.0 sec. 4 keeps the attribution with
+# the work).
 LIBRARIES = [
     ("Dear ImGui", "imgui/LICENSE.txt", None),
     ("ImPlot", "implot/LICENSE", None),
@@ -49,6 +52,13 @@ LIBRARIES = [
     ("Inter", "inter/LICENSE", None),
     ("Material Symbols", "material-symbols/LICENSE",
      font_copyright("material-symbols/material_symbols_font.h")),
+    # Theme palettes reimplemented as color values in src/themes.h. The values
+    # themselves are data, but we ship the upstream MIT notice to credit each
+    # palette's authors. Nord covers OneNord's structure; Atom One Dark covers its
+    # accents.
+    ("Everforest", "everforest/LICENSE", None),
+    ("Nord", "nord/LICENSE", None),
+    ("Atom One Dark", "atom-one-dark/LICENSE", None),
 ]
 
 # Raw-string delimiter; chosen so it cannot collide with license body text.
