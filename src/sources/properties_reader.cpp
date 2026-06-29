@@ -58,12 +58,11 @@ static const char *CAP_NAMES[] = {"cap_chown",
                                   "cap_bpf",
                                   "cap_checkpoint_restore"};
 
-static String read_proc_link(BumpArena &arena, const Pid pid, const char *name,
-                             bool &ok) {
-  char path[64];
-  snprintf(path, sizeof(path), "/proc/%d/%s", pid, name);
+static String read_proc_link(BumpArena &temp_arena, BumpArena &arena,
+                             const Pid pid, const char *name, bool &ok) {
+  const String path = String::sprintf(temp_arena, "/proc/%d/%s", pid, name);
   char buf[PATH_MAX];
-  const ssize_t n = readlink(path, buf, sizeof(buf) - 1);
+  const ssize_t n = readlink(path.data, buf, sizeof(buf) - 1);
   if (n < 0) {
     ok = false;
     return String::static_string("");
@@ -142,10 +141,10 @@ static String build_groups(BumpArena &arena, const char *gids) {
 
 // The cgroup the process belongs to: the unified (v2, hierarchy 0) path when
 // present, otherwise the first hierarchy's path.
-static String read_cgroup(BumpArena &arena, const Pid pid) {
-  char path[64];
-  snprintf(path, sizeof(path), "/proc/%d/cgroup", pid);
-  FILE *file = fopen(path, "r");
+static String read_cgroup(BumpArena &temp_arena, BumpArena &arena,
+                          const Pid pid) {
+  const String path = String::sprintf(temp_arena, "/proc/%d/cgroup", pid);
+  FILE *file = fopen(path.data, "r");
   if (!file) return String::static_string("");
 
   char best[1024] = "";
@@ -173,10 +172,10 @@ static String read_cgroup(BumpArena &arena, const Pid pid) {
                          : String::static_string("");
 }
 
-static String read_security_label(BumpArena &arena, const Pid pid) {
-  char path[64];
-  snprintf(path, sizeof(path), "/proc/%d/attr/current", pid);
-  FILE *file = fopen(path, "r");
+static String read_security_label(BumpArena &temp_arena, BumpArena &arena,
+                                  const Pid pid) {
+  const String path = String::sprintf(temp_arena, "/proc/%d/attr/current", pid);
+  FILE *file = fopen(path.data, "r");
   if (!file) return String::static_string("");
   char buf[256];
   size_t n = fread(buf, 1, sizeof(buf) - 1, file);
@@ -188,7 +187,7 @@ static String read_security_label(BumpArena &arena, const Pid pid) {
   return String::copy_from(arena, buf, static_cast<uint32_t>(n));
 }
 
-PropertiesResponse read_process_properties(BumpArena & /*temp_arena*/,
+PropertiesResponse read_process_properties(BumpArena &temp_arena,
                                            const PropertiesRequest &request) {
   ZoneScoped;
   ZoneValue(request.pid);
@@ -206,12 +205,10 @@ PropertiesResponse read_process_properties(BumpArena & /*temp_arena*/,
   props.seccomp = -1;
   props.groups = String::static_string("");
 
-  char path[64];
-
   // /proc/<pid>/stat is required; statm is read only to satisfy the shared
   // parser (its memory output is unused here).
-  snprintf(path, sizeof(path), "/proc/%d/stat", pid);
-  FILE *stat_file = fopen(path, "r");
+  const String stat_path = String::sprintf(temp_arena, "/proc/%d/stat", pid);
+  FILE *stat_file = fopen(stat_path.data, "r");
   if (!stat_file) {
     response.error_code = errno;
     return response;
@@ -225,8 +222,8 @@ PropertiesResponse read_process_properties(BumpArena & /*temp_arena*/,
   }
 
   char statm_buf[128] = "";
-  snprintf(path, sizeof(path), "/proc/%d/statm", pid);
-  if (FILE *statm_file = fopen(path, "r")) {
+  const String statm_path = String::sprintf(temp_arena, "/proc/%d/statm", pid);
+  if (FILE *statm_file = fopen(statm_path.data, "r")) {
     if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) statm_buf[0] = '\0';
     fclose(statm_file);
   }
@@ -258,8 +255,9 @@ PropertiesResponse read_process_properties(BumpArena & /*temp_arena*/,
   // line because the capability/seccomp lines sit near the end of the file.
   unsigned int ruid = 0, euid = 0, suid = 0;
   unsigned int rgid = 0, egid = 0, sgid = 0;
-  snprintf(path, sizeof(path), "/proc/%d/status", pid);
-  if (FILE *status_file = fopen(path, "r")) {
+  const String status_path =
+      String::sprintf(temp_arena, "/proc/%d/status", pid);
+  if (FILE *status_file = fopen(status_path.data, "r")) {
     char line[512];
     // Decode a "CapXxx:\t<hex>" line into dst; returns true if the prefix
     // matched (so the else-if chain stops).
@@ -305,18 +303,19 @@ PropertiesResponse read_process_properties(BumpArena & /*temp_arena*/,
   props.username = resolve_user(arena, ruid);
   props.groupname = resolve_group(arena, rgid);
 
-  props.exe = read_proc_link(arena, pid, "exe", props.exe_ok);
-  props.cwd = read_proc_link(arena, pid, "cwd", props.cwd_ok);
-  props.root = read_proc_link(arena, pid, "root", props.root_ok);
+  props.exe = read_proc_link(temp_arena, arena, pid, "exe", props.exe_ok);
+  props.cwd = read_proc_link(temp_arena, arena, pid, "cwd", props.cwd_ok);
+  props.root = read_proc_link(temp_arena, arena, pid, "root", props.root_ok);
 
-  props.cgroup = read_cgroup(arena, pid);
-  props.security_label = read_security_label(arena, pid);
+  props.cgroup = read_cgroup(temp_arena, arena, pid);
+  props.security_label = read_security_label(temp_arena, arena, pid);
 
   // Full command line: null-separated args joined with spaces, like
   // read_process() in process_stat.cpp.
   props.cmdline = String::static_string("");
-  snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
-  if (FILE *cmdline_file = fopen(path, "r")) {
+  const String cmdline_path =
+      String::sprintf(temp_arena, "/proc/%d/cmdline", pid);
+  if (FILE *cmdline_file = fopen(cmdline_path.data, "r")) {
     char cmdline_buf[4096];
     const size_t nread =
         fread(cmdline_buf, 1, sizeof(cmdline_buf) - 1, cmdline_file);

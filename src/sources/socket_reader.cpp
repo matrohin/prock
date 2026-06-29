@@ -1,5 +1,6 @@
 #include "socket_reader.h"
 
+#include "base/string.h"
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
@@ -11,10 +12,9 @@
 Array<unsigned long> collect_socket_inodes(BumpArena &arena, const Pid pid,
                                            int &out_errno) {
   GrowingArray<unsigned long> inodes = {};
-  char fd_dir_path[64];
-  snprintf(fd_dir_path, sizeof(fd_dir_path), "/proc/%d/fd", pid);
+  const String fd_dir_path = String::sprintf(arena, "/proc/%d/fd", pid);
 
-  DIR *fd_dir = opendir(fd_dir_path);
+  DIR *fd_dir = opendir(fd_dir_path.data);
   if (!fd_dir) {
     out_errno = errno;
     return inodes.to_array();
@@ -24,12 +24,12 @@ Array<unsigned long> collect_socket_inodes(BumpArena &arena, const Pid pid,
   while ((entry = readdir(fd_dir))) {
     if (entry->d_name[0] == '.') continue;
 
-    char link_path[PATH_MAX];
-    snprintf(link_path, sizeof(link_path), "%s/%s", fd_dir_path, entry->d_name);
+    const String link_path =
+        String::sprintf(arena, "%s/%s", fd_dir_path.data, entry->d_name);
 
     char link_target[128];
     const ssize_t len =
-        readlink(link_path, link_target, sizeof(link_target) - 1);
+        readlink(link_path.data, link_target, sizeof(link_target) - 1);
     if (len <= 0) continue;
     link_target[len] = '\0';
 

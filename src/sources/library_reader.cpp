@@ -22,10 +22,9 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
   response.pid = pid;
   response.owner_arena = BumpArena::create();
 
-  char path[64];
-  snprintf(path, sizeof(path), "/proc/%d/maps", pid);
+  const String path = String::sprintf(temp_arena, "/proc/%d/maps", pid);
 
-  FILE *file = fopen(path, "r");
+  FILE *file = fopen(path.data, "r");
   if (!file) {
     response.error_code = errno;
     return response;
@@ -71,10 +70,10 @@ LibraryResponse read_process_libraries(BumpArena &temp_arena,
     entry->addr_end = addr_end;
 
     // Get file size via /proc/<pid>/root to handle different mount namespaces
-    char proc_path[64 + PATH_MAX];
-    snprintf(proc_path, sizeof(proc_path), "/proc/%d/root%s", pid, pathname);
+    const String proc_path =
+        String::sprintf(temp_arena, "/proc/%d/root%s", pid, pathname);
     struct stat st;
-    if (stat(proc_path, &st) == 0) {
+    if (stat(proc_path.data, &st) == 0) {
       entry->file_size = st.st_size;
     } else {
       entry->file_size = -1;

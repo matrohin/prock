@@ -1,7 +1,7 @@
 #include "environ_reader.h"
 
 #include "base/base.h"
-
+#include "base/string.h"
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
@@ -19,10 +19,9 @@ EnvironResponse read_process_environ(BumpArena &temp_arena,
   response.pid = pid;
   response.owner_arena = BumpArena::create();
 
-  char path[64];
-  snprintf(path, sizeof(path), "/proc/%d/environ", pid);
+  const String path = String::sprintf(temp_arena, "/proc/%d/environ", pid);
 
-  FILE *file = fopen(path, "r");
+  FILE *file = fopen(path.data, "r");
   if (!file) {
     response.error_code = errno;
     return response;

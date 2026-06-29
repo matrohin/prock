@@ -1,5 +1,6 @@
 #include "smaps_reader.h"
 
+#include "base/string.h"
 #include "tracy/Tracy.hpp"
 
 #include <cerrno>
@@ -15,9 +16,8 @@ SmapsResponse read_process_smaps(BumpArena &temp_arena,
   response.pid = pid;
   response.owner_arena = BumpArena::create();
 
-  char path[64];
-  snprintf(path, sizeof(path), "/proc/%d/smaps", pid);
-  FILE *f = fopen(path, "r");
+  const String path = String::sprintf(temp_arena, "/proc/%d/smaps", pid);
+  FILE *f = fopen(path.data, "r");
   if (!f) {
     response.error_code = errno;
     return response;
