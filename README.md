@@ -6,7 +6,7 @@ live system charts (CPU, memory, I/O, network) and per-process charts (CPU,
 memory, I/O), and detailed inspectors for libraries, sockets, threads, and
 environment — with controls to suspend, kill, or reprioritize processes.
 
-![Screenshot (Light theme)](./images/shot-light.png)
+![Screenshot (Everforest Light theme)](./images/shot-everforest-light.png)
 
 ![Screenshot (Nord theme)](./images/shot-nord.png)
 
@@ -20,6 +20,7 @@ environment — with controls to suspend, kill, or reprioritize processes.
 - Kill (SIGTERM), force kill (SIGKILL), or kill entire process tree
 - Suspend / resume processes
 - Set CPU affinity and nice priority
+- Create a core dump (via gcore) without terminating the process
 
 ### System Charts
 - CPU usage (total, kernel, interrupts) with optional per-core and stacked views
@@ -30,10 +31,12 @@ environment — with controls to suspend, kill, or reprioritize processes.
 ### Per-Process Details
 - Right-click any process to open:
   - Dedicated charts (CPU, memory, I/O)
+  - Properties
   - Loaded libraries with mapped/file sizes
   - Memory maps with address, permissions, RSS/PSS/swap, and grouping by mapping
   - Sockets
   - Threads
+  - Open files (fd, type, access, size, path)
   - Environment variables
 - Double-click to open all windows at once
 
@@ -50,7 +53,7 @@ environment — with controls to suspend, kill, or reprioritize processes.
 - Menu bar, optionally shown only on Alt
 
 ### Appearance & Preferences
-- Themes: Dark, Light, Classic, Enemymouse, Nord, OneNord
+- Themes: Dark, Light, Classic, Enemymouse, Nord, OneNord, Everforest Dark, Everforest Light
 - Custom TTF font
 - Adjustable window opacity, UI scale, target FPS, and update interval
 
@@ -64,6 +67,9 @@ It dynamically loads the libraries below, which are already present on a standar
 - **A display backend**, one of:
   - **X11** — `libX11.so.6` `libXcursor`, `libXi`, `libXrandr`, `libXinerama`
   - **Wayland** — `libwayland-client.so.0`, `libwayland-cursor.so.0`, `libwayland-egl.so.1`, `libxkbcommon.so.0`
+
+Optionally, the "Create Dump File" action shells out to `gcore` (shipped with
+**gdb**); install gdb to enable it.
 
 On a minimal or headless system, install them explicitly:
 
