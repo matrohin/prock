@@ -9,7 +9,7 @@ template <class T, uint32_t N> struct Channel {
   std::atomic<uint32_t> tail;
   T data[N];
 
-  bool push(T item) {
+  bool push(const T &item) {
     uint32_t loaded_tail = tail.load();
     const uint32_t new_tail = (loaded_tail + 1) & MASK;
     if (new_tail == head.load()) return false;

@@ -366,7 +366,7 @@ static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
       continue;
     }
     // Skip "cpu" or "cpuN" prefix
-    char *p = line + 3;
+    const char *p = line + 3;
     while (*p && *p != ' ')
       ++p;
 
@@ -533,7 +533,7 @@ static Array<ProcessStat> read_process_threads(const Pid pid,
   }
 
   LinkedList<int> tids = {};
-  while (dirent *entry = readdir(task_dir)) {
+  while (const dirent *entry = readdir(task_dir)) {
     if (entry->d_type != DT_DIR) continue;
 
     char *end = nullptr;

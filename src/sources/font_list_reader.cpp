@@ -27,7 +27,7 @@ static void scan_dir(const char *dir_path, BumpArena &temp_arena,
   DIR *dir = opendir(dir_path);
   if (!dir) return;
 
-  dirent *ent;
+  const dirent *ent;
   while ((ent = readdir(dir)) != nullptr) {
     if (ent->d_name[0] == '.') continue;
 
@@ -100,13 +100,14 @@ FontListResponse read_font_list(BumpArena &temp_arena) {
       xdg_dirs && xdg_dirs[0] ? xdg_dirs : "/usr/local/share:/usr/share";
   char dirs_buf[4096];
   snprintf(dirs_buf, sizeof(dirs_buf), "%s", dirs_str);
-  char *token = strtok(dirs_buf, ":");
+  char *saveptr;
+  char *token = strtok_r(dirs_buf, ":", &saveptr);
   while (token) {
     size_t tlen = strlen(token);
     while (tlen > 1 && token[tlen - 1] == '/')
       token[--tlen] = '\0';
     scan_xdg_base(token, temp_arena, entries);
-    token = strtok(nullptr, ":");
+    token = strtok_r(nullptr, ":", &saveptr);
   }
 
   if (home) {

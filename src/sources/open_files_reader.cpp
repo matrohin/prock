@@ -36,6 +36,8 @@ static FdAccess read_fd_access(BumpArena &temp_arena, const Pid pid,
     case O_RDWR:
       access = eFdAccess_ReadWrite;
       break;
+    default:
+      break;
     }
     break;
   }

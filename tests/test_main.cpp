@@ -387,51 +387,6 @@ TEST_CASE("Channel basic operations") {
 }
 
 // ============================================================================
-// GrowingArray::last_or Tests
-// ============================================================================
-
-TEST_CASE("GrowingArray::last_or") {
-  BumpArena arena = BumpArena::create();
-
-  SUBCASE("returns default when empty") {
-    GrowingArray<int> arr = {};
-    CHECK(arr.last_or(42) == 42);
-    CHECK(arr.last_or(-1) == -1);
-  }
-
-  SUBCASE("returns last element with single element") {
-    GrowingArray<int> arr = {};
-    uint32_t wasted = 0;
-    *arr.emplace_back(arena, wasted) = 99;
-
-    CHECK(arr.last_or(0) == 99);
-  }
-
-  SUBCASE("returns last element with multiple elements") {
-    GrowingArray<int> arr = {};
-    uint32_t wasted = 0;
-    *arr.emplace_back(arena, wasted) = 10;
-    *arr.emplace_back(arena, wasted) = 20;
-    *arr.emplace_back(arena, wasted) = 30;
-
-    CHECK(arr.last_or(0) == 30);
-  }
-
-  SUBCASE("returns last after shrink") {
-    GrowingArray<int> arr = {};
-    uint32_t wasted = 0;
-    *arr.emplace_back(arena, wasted) = 10;
-    *arr.emplace_back(arena, wasted) = 20;
-    *arr.emplace_back(arena, wasted) = 30;
-
-    arr.shrink_to(2);
-    CHECK(arr.last_or(0) == 20);
-  }
-
-  arena.destroy();
-}
-
-// ============================================================================
 // BumpArena::alloc_string_copy Tests
 // ============================================================================
 

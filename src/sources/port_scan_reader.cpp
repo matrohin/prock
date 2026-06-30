@@ -37,7 +37,7 @@ PortScanResponse read_port_scan(BumpArena &temp_arena,
     return response;
   }
 
-  dirent *proc_entry;
+  const dirent *proc_entry;
   while ((proc_entry = readdir(proc_dir))) {
     if (proc_entry->d_name[0] < '0' || proc_entry->d_name[0] > '9') continue;
     const Pid pid = atoi(proc_entry->d_name);

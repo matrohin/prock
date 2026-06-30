@@ -756,7 +756,6 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
                       const State &state) {
   ZoneScoped;
   BriefTableState &my_state = view_state.brief_table_state;
-  int focus_scroll_to_idx = -1;
 
   const String title = String::sprintf(
       ctx.frame_arena, "Process Table (%u processes)###ProcessTable",
@@ -899,6 +898,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
     const Array<int> visible_indices =
         compute_visible_indices(ctx, my_state, filter_active, ctx.frame_arena);
+
+    int focus_scroll_to_idx = -1;
 
     // Type-to-search: handle keyboard input when table is focused
     if (!ImGui::IsAnyItemActive() &&
@@ -1083,7 +1084,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   if (my_state.selected_pid > 0) {
     // Ctrl+C to copy selected row
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-      for (BriefTableLine &line : my_state.lines) {
+      for (const BriefTableLine &line : my_state.lines) {
         if (line.pid == my_state.selected_pid) {
           copy_process_row(view_state.notifications, ctx.frame_arena, line);
           break;

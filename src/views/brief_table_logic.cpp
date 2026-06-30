@@ -180,7 +180,6 @@ static void brief_table_line_init(BriefTableLine &new_line,
 // for stable sorting.
 void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
                         State &state) {
-
   const StateSnapshot &new_snapshot = state.snapshot;
   const Array<BriefTableLine> &old_lines = my_state.lines;
   const int64_t now_ns = new_snapshot.at.time_since_epoch().count();

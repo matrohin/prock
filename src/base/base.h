@@ -47,7 +47,7 @@ struct SlabCache {
   static constexpr uintptr_t TAG_MASK = 0xFFF;
   std::atomic<uintptr_t> head{0};
 
-  static uintptr_t pack(ArenaSlab *slab, const uintptr_t tag) {
+  static uintptr_t pack(const ArenaSlab *slab, const uintptr_t tag) {
     const uintptr_t bits = reinterpret_cast<uintptr_t>(slab);
     assert((bits & TAG_MASK) == 0);
     return bits | (tag & TAG_MASK);
@@ -260,10 +260,6 @@ template <class T> struct GrowingArray {
   const T *data() const { return inner.data; }
   uint32_t size() const { return cur_size; }
   size_t total_byte_size() const { return inner.size * sizeof(T); }
-
-  T last_or(T def) const {
-    return cur_size > 0 ? inner.data[cur_size - 1] : def;
-  }
 
   T *begin() { return data(); }
   T *end() { return data() + size(); }
