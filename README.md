@@ -1,5 +1,8 @@
 # Prock - Process Explorer for Linux
 
+[![CI](https://github.com/matrohin/prock/actions/workflows/ci.yml/badge.svg)](https://github.com/matrohin/prock/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Prock is a fast, graphical alternative to htop/btop, inspired by the
 Sysinternals Process Explorer. It shows running processes in a sortable tree,
 live system charts (CPU, memory, I/O, network) and per-process charts (CPU,
