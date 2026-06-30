@@ -6,9 +6,9 @@ live system charts (CPU, memory, I/O, network) and per-process charts (CPU,
 memory, I/O), and detailed inspectors for libraries, sockets, threads, and
 environment — with controls to suspend, kill, or reprioritize processes.
 
-![Screenshot (Light theme)](./images/shot-light.png)
+![Prock per-process windows and ports view (Light theme)](./images/shot-light.png)
 
-![Screenshot (Nord theme)](./images/shot-nord.png)
+![Prock process tree with live system charts (Nord theme)](./images/shot-nord.png)
 
 ## Features
 
