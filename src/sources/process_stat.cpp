@@ -164,6 +164,7 @@ static bool read_thread_stat(const int tid, const char *stat_path,
     fclose(stat_file);
     return false;
   }
+  stat.read_time = SteadyClock::now();
   char comm_buf[64];
   if (fgets(comm_buf, sizeof(comm_buf), comm_file)) {
     size_t len = strlen(comm_buf);
@@ -221,6 +222,7 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
     fclose(stat_file);
     return false;
   }
+  stat.read_time = SteadyClock::now();
   if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) {
     fclose(statm_file);
     fclose(stat_file);

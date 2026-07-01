@@ -34,6 +34,8 @@ struct ProcessStat {
   ulonglong io_read_bytes;  // Actual bytes read from storage
   ulonglong io_write_bytes; // Actual bytes written to storage
 
+  SteadyTimePoint read_time; // When utime/stime were sampled
+
   Pid pid;
   Pid ppid;
   int last_cpu; // Last CPU the task ran on (/proc/.../stat field 39), -1

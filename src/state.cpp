@@ -46,10 +46,12 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
         new_stat.pid == old.stats.data[old_state_idx].pid) {
       const ProcessStat &old_stat = old.stats.data[old_state_idx];
       if (per_core_ticks > 0) {
-        result.cpu_user_perc =
-            counter_rate(new_stat.utime, old_stat.utime, 100.0, per_core_ticks);
-        result.cpu_kernel_perc =
-            counter_rate(new_stat.stime, old_stat.stime, 100.0, per_core_ticks);
+        const double effective_ticks = effective_core_ticks(
+            new_stat.read_time, old_stat.read_time, per_core_ticks, time_delta);
+        result.cpu_user_perc = counter_rate(new_stat.utime, old_stat.utime,
+                                            100.0, effective_ticks);
+        result.cpu_kernel_perc = counter_rate(new_stat.stime, old_stat.stime,
+                                              100.0, effective_ticks);
       }
       if (time_delta > 0) {
         result.io_read_kb_per_sec =
@@ -116,5 +118,6 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
                        snapshot.mem_info,  snapshot.disk_io_stats,
                        disk_io_rate,       snapshot.net_io_stats,
                        net_io_rate,        snapshot.thread_snapshots,
-                       snapshot.at,        per_core_ticks};
+                       snapshot.at,        per_core_ticks,
+                       time_delta};
 }

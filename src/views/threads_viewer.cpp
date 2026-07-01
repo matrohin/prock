@@ -135,6 +135,7 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
   ZoneScoped;
 
   const double per_core_ticks = state_data.snapshot.per_core_ticks;
+  const double interval_secs = state_data.snapshot.interval_secs;
 
   // Process thread snapshots from the current update
   const Array<ThreadSnapshot> &snapshots = state_data.snapshot.thread_snapshots;
@@ -190,10 +191,12 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
       if (prev_idx < prev_threads.size &&
           prev_threads.data[prev_idx].pid == thread.pid && per_core_ticks > 0) {
         const ThreadCpuSample &prev = prev_threads.data[prev_idx];
+        const double effective_ticks = effective_core_ticks(
+            thread.read_time, prev.read_time, per_core_ticks, interval_secs);
         line.cpu_user_perc =
-            counter_rate(thread.utime, prev.utime, 100.0, per_core_ticks);
+            counter_rate(thread.utime, prev.utime, 100.0, effective_ticks);
         line.cpu_kernel_perc =
-            counter_rate(thread.stime, prev.stime, 100.0, per_core_ticks);
+            counter_rate(thread.stime, prev.stime, 100.0, effective_ticks);
       }
     }
 
@@ -202,7 +205,7 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
         Array<ThreadCpuSample>::create(state.cur_arena, snap->threads.size);
     for (uint32_t i = 0; i < snap->threads.size; ++i) {
       const ProcessStat &t = snap->threads.data[i];
-      win.prev_threads.data[i] = {t.pid, t.utime, t.stime};
+      win.prev_threads.data[i] = {t.pid, t.utime, t.stime, t.read_time};
     }
 
     // Apply current sorting

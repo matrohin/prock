@@ -23,6 +23,19 @@ inline double counter_rate(const ulonglong cur, const ulonglong prev,
   return static_cast<double>(delta) * scale / divisor;
 }
 
+// Rescale the one-core jiffy budget to a task's own sampling window, since
+// tasks are read at different instants within a gather pass. Falls back to the
+// shared budget when either interval is unusable.
+inline double effective_core_ticks(const SteadyTimePoint cur_read,
+                                   const SteadyTimePoint prev_read,
+                                   const double per_core_ticks,
+                                   const double interval_secs) {
+  const double dt =
+      std::chrono::duration_cast<Seconds>(cur_read - prev_read).count();
+  return dt > 0 && interval_secs > 0 ? per_core_ticks * dt / interval_secs
+                                     : per_core_ticks;
+}
+
 struct ProcessDerivedStat {
   double cpu_user_perc;
   double cpu_kernel_perc;
@@ -68,6 +81,9 @@ struct StateSnapshot {
   // /proc/stat jiffy budget for one core over this interval; the basis for
   // per-process and per-thread CPU% (see state_snapshot_update).
   double per_core_ticks;
+  // Wall-clock seconds per_core_ticks was measured over, so per-task CPU% can
+  // rescale that budget to each task's own sampling interval.
+  double interval_secs;
 };
 
 struct State {
