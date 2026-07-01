@@ -338,13 +338,26 @@ void    ImGui_ImplOpenGL3_NewFrame()
             IM_ASSERT(0 && "ImGui_ImplOpenGL3_CreateDeviceObjects() failed!");
 }
 
+// prock: GL_MAX (0x8008) selects the max blend equation used for the alpha
+// channel below. It's core in desktop GL / GL ES 3, and on GL ES 2 comes from
+// GL_EXT_blend_minmax (present in this driver). Define it by value so it doesn't
+// depend on which GL header is in scope (GL_MAX_EXT is not always included).
+#ifndef GL_MAX
+#define GL_MAX 0x8008
+#endif
+
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_ImplOpenGL3_RenderState* render_state, int fb_width, int fb_height, GLuint vertex_array_object)
 {
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
 
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
     glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
+    // prock: blend the framebuffer alpha channel with GL_MAX (RGB stays over).
+    // Window transparency comes from reduced-alpha background style colors; with
+    // GL_FUNC_ADD the alpha accumulates where windows overlap, so deeper-docked
+    // panels look more opaque. GL_MAX keeps background alpha uniform regardless of
+    // nesting while foreground (alpha 1) stays opaque. Re-apply on imgui upgrades.
+    glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
