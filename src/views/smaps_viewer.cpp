@@ -418,27 +418,27 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ImGui::TableSetupColumn("Segs",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    44.0f, eSmapsViewerColumnId_SegmentCount);
+                                    0.0f, eSmapsViewerColumnId_SegmentCount);
             ImGui::TableSetupColumn("Size",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Size);
+                                    0.0f, eSmapsViewerColumnId_Size);
             ImGui::TableSetupColumn("RSS",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Rss);
+                                    0.0f, eSmapsViewerColumnId_Rss);
             ImGui::TableSetupColumn("PSS",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Pss);
+                                    0.0f, eSmapsViewerColumnId_Pss);
             ImGui::TableSetupColumn("Private",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Private);
+                                    0.0f, eSmapsViewerColumnId_Private);
             ImGui::TableSetupColumn("Swap",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Swap);
+                                    0.0f, eSmapsViewerColumnId_Swap);
             ImGui::TableSetupColumn("Mapping", ImGuiTableColumnFlags_NoHide,
                                     0.0f, eSmapsViewerColumnId_Mapping);
             ImGui::TableHeadersRow();
@@ -538,27 +538,27 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                         ImGuiTableColumnFlags_NoHide,
                                     0.0f, eSmapsViewerColumnId_Address);
             ImGui::TableSetupColumn("Perms", ImGuiTableColumnFlags_WidthFixed,
-                                    46.0f, eSmapsViewerColumnId_Perms);
+                                    0.0f, eSmapsViewerColumnId_Perms);
             ImGui::TableSetupColumn("Size",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Size);
+                                    0.0f, eSmapsViewerColumnId_Size);
             ImGui::TableSetupColumn("RSS",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Rss);
+                                    0.0f, eSmapsViewerColumnId_Rss);
             ImGui::TableSetupColumn("PSS",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Pss);
+                                    0.0f, eSmapsViewerColumnId_Pss);
             ImGui::TableSetupColumn("Private",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Private);
+                                    0.0f, eSmapsViewerColumnId_Private);
             ImGui::TableSetupColumn("Swap",
                                     ImGuiTableColumnFlags_PreferSortDescending |
                                         ImGuiTableColumnFlags_WidthFixed,
-                                    72.0f, eSmapsViewerColumnId_Swap);
+                                    0.0f, eSmapsViewerColumnId_Swap);
             ImGui::TableSetupColumn("Mapping", ImGuiTableColumnFlags_None, 0.0f,
                                     eSmapsViewerColumnId_Mapping);
             ImGui::TableHeadersRow();

@@ -218,15 +218,15 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                         COMMON_TABLE_FLAGS)) {
     push_mono_font();
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed, 50.0f,
+    ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed, 0.0f,
                             ePortsViewerColumnId_Protocol);
     ImGui::TableSetupColumn("Local Address", ImGuiTableColumnFlags_None, 0.0f,
                             ePortsViewerColumnId_LocalAddress);
-    ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 90.0f,
+    ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 0.0f,
                             ePortsViewerColumnId_State);
-    ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_WidthFixed, 60.0f,
+    ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_WidthFixed, 0.0f,
                             ePortsViewerColumnId_Pid);
-    ImGui::TableSetupColumn("Process", ImGuiTableColumnFlags_WidthFixed, 160.0f,
+    ImGui::TableSetupColumn("Process", ImGuiTableColumnFlags_WidthFixed, 0.0f,
                             ePortsViewerColumnId_Process);
     ImGui::TableHeadersRow();
 

@@ -265,15 +265,15 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::TableSetupColumn("FD",
                                   ImGuiTableColumnFlags_DefaultSort |
                                       ImGuiTableColumnFlags_WidthFixed,
-                                  45.0f, eOpenFilesViewerColumnId_Fd);
+                                  0.0f, eOpenFilesViewerColumnId_Fd);
           ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed,
-                                  60.0f, eOpenFilesViewerColumnId_Type);
+                                  0.0f, eOpenFilesViewerColumnId_Type);
           ImGui::TableSetupColumn("Access", ImGuiTableColumnFlags_WidthFixed,
-                                  55.0f, eOpenFilesViewerColumnId_Access);
+                                  0.0f, eOpenFilesViewerColumnId_Access);
           ImGui::TableSetupColumn("Size",
                                   ImGuiTableColumnFlags_PreferSortDescending |
                                       ImGuiTableColumnFlags_WidthFixed,
-                                  80.0f, eOpenFilesViewerColumnId_Size);
+                                  0.0f, eOpenFilesViewerColumnId_Size);
           ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch,
                                   0.0f, eOpenFilesViewerColumnId_Path);
           ImGui::TableHeadersRow();

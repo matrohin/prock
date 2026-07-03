@@ -238,6 +238,14 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
                                     PropertiesViewerWindow &win,
                                     const PropEntry *entries,
                                     const uint32_t count) {
+  // Shared Property column width keeps the per-section tables aligned
+  push_mono_font();
+  float label_width = 0.0f;
+  for (uint32_t i = 0; i < count; ++i) {
+    label_width = ImMax(label_width, ImGui::CalcTextSize(entries[i].label).x);
+  }
+  pop_mono_font();
+
   for (int section = 0; section < IM_ARRAYSIZE(PROP_SECTIONS); ++section) {
     bool has_rows = false;
     for (uint32_t i = 0; i < count && !has_rows; ++i) {
@@ -254,7 +262,7 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
     }
     push_mono_font();
     ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed,
-                            170.0f);
+                            label_width);
     ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
     for (uint32_t i = 0; i < count; ++i) {

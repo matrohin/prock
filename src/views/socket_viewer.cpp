@@ -222,21 +222,21 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           push_mono_font();
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed,
-                                  50.0f, eSocketViewerColumnId_Protocol);
+                                  0.0f, eSocketViewerColumnId_Protocol);
           ImGui::TableSetupColumn("Local Address", ImGuiTableColumnFlags_None,
                                   0.0f, eSocketViewerColumnId_LocalAddress);
           ImGui::TableSetupColumn("Remote Address", ImGuiTableColumnFlags_None,
                                   0.0f, eSocketViewerColumnId_RemoteAddress);
           ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed,
-                                  90.0f, eSocketViewerColumnId_State);
+                                  0.0f, eSocketViewerColumnId_State);
           ImGui::TableSetupColumn("Recv-Q",
                                   ImGuiTableColumnFlags_PreferSortDescending |
                                       ImGuiTableColumnFlags_WidthFixed,
-                                  60.0f, eSocketViewerColumnId_RecvQ);
+                                  0.0f, eSocketViewerColumnId_RecvQ);
           ImGui::TableSetupColumn("Send-Q",
                                   ImGuiTableColumnFlags_PreferSortDescending |
                                       ImGuiTableColumnFlags_WidthFixed,
-                                  60.0f, eSocketViewerColumnId_SendQ);
+                                  0.0f, eSocketViewerColumnId_SendQ);
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,

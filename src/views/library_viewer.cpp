@@ -207,11 +207,11 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::TableSetupColumn("Mapped Size",
                                   ImGuiTableColumnFlags_PreferSortDescending |
                                       ImGuiTableColumnFlags_WidthFixed,
-                                  100.0f, eLibraryViewerColumnId_MappedSize);
+                                  0.0f, eLibraryViewerColumnId_MappedSize);
           ImGui::TableSetupColumn("File Size",
                                   ImGuiTableColumnFlags_PreferSortDescending |
                                       ImGuiTableColumnFlags_WidthFixed,
-                                  100.0f, eLibraryViewerColumnId_FileSize);
+                                  0.0f, eLibraryViewerColumnId_FileSize);
           ImGui::TableHeadersRow();
 
           handle_table_sort_specs(win.sorted_by, win.sorted_order,
