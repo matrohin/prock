@@ -1041,26 +1041,26 @@ TEST_CASE("format_memory_bytes") {
 
   SUBCASE("kilobytes range") {
     format_memory_bytes(1024.0, buf, sizeof(buf));
-    CHECK(strcmp(buf, "1 K") == 0);
+    CHECK(strcmp(buf, "1 KB") == 0);
 
     format_memory_bytes(500.0 * 1024.0, buf, sizeof(buf));
-    CHECK(strcmp(buf, "500 K") == 0);
+    CHECK(strcmp(buf, "500 KB") == 0);
   }
 
   SUBCASE("megabytes range") {
     format_memory_bytes(1024.0 * 1024.0, buf, sizeof(buf));
-    CHECK(strcmp(buf, "1.0 M") == 0);
+    CHECK(strcmp(buf, "1.0 MB") == 0);
 
     format_memory_bytes(512.0 * 1024.0 * 1024.0, buf, sizeof(buf));
-    CHECK(strcmp(buf, "512.0 M") == 0);
+    CHECK(strcmp(buf, "512.0 MB") == 0);
   }
 
   SUBCASE("gigabytes range") {
     format_memory_bytes(1024.0 * 1024.0 * 1024.0, buf, sizeof(buf));
-    CHECK(strcmp(buf, "1.0 G") == 0);
+    CHECK(strcmp(buf, "1.0 GB") == 0);
 
     format_memory_bytes(2.5 * 1024.0 * 1024.0 * 1024.0, buf, sizeof(buf));
-    CHECK(strcmp(buf, "2.5 G") == 0);
+    CHECK(strcmp(buf, "2.5 GB") == 0);
   }
 }
 

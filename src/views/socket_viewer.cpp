@@ -4,6 +4,7 @@
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/socket_format.h"
+#include "views/table_item.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -306,17 +307,17 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             // Recv-Q
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_RecvQ);
             if (sock.rx_queue > 0) {
-              ImGui::Text("%u", sock.rx_queue);
+              table_item_draw_long(sock.rx_queue);
             } else {
-              ImGui::TextDisabled("0");
+              table_item_draw_dim("0");
             }
 
             // Send-Q
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_SendQ);
             if (sock.tx_queue > 0) {
-              ImGui::Text("%u", sock.tx_queue);
+              table_item_draw_long(sock.tx_queue);
             } else {
-              ImGui::TextDisabled("0");
+              table_item_draw_dim("0");
             }
             ImGui::PopID();
           }

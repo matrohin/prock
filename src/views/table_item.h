@@ -8,13 +8,13 @@
 
 inline int format_memory_bytes(const double bytes, char *buff, const int size) {
   if (bytes >= 1024.0 * 1024.0 * 1024.0) {
-    return snprintf(buff, size, "%.1f G", bytes / (1024.0 * 1024.0 * 1024.0));
+    return snprintf(buff, size, "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
   }
   if (bytes >= 1024.0 * 1024.0) {
-    return snprintf(buff, size, "%.1f M", bytes / (1024.0 * 1024.0));
+    return snprintf(buff, size, "%.1f MB", bytes / (1024.0 * 1024.0));
   }
   if (bytes >= 1024.0) {
-    return snprintf(buff, size, "%.0f K", bytes / 1024.0);
+    return snprintf(buff, size, "%.0f KB", bytes / 1024.0);
   }
   return snprintf(buff, size, "%.0f B", bytes);
 }
@@ -60,6 +60,15 @@ inline void table_item_draw_long(const long value) {
 }
 
 inline void table_item_draw_text(const char *text) { ImGui::Text("%s", text); }
+
+// Right-aligned dimmed value for numeric columns: missing data ("-", "N/A")
+// or zeros that are noise rather than signal.
+inline void table_item_draw_dim(const char *text) {
+  ImGui::PushStyleColor(ImGuiCol_Text,
+                        ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+  ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%s", text);
+  ImGui::PopStyleColor();
+}
 
 inline void table_item_draw_memory(const double bytes) {
   char mem_buf[32];

@@ -3,6 +3,7 @@
 #include "base/string.h"
 #include "views/common.h"
 #include "views/icons.h"
+#include "views/table_item.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -53,10 +54,9 @@ static const char *fd_access_name(const FdAccess access) {
 
 static String format_fd_size(BumpArena &arena, const long size) {
   if (size < 0) return String::static_string("-");
-  if (size >= 1024L * 1024)
-    return String::sprintf(arena, "%.1f MB", size / (1024.0 * 1024.0));
-  if (size >= 1024) return String::sprintf(arena, "%.1f KB", size / 1024.0);
-  return String::sprintf(arena, "%ld B", size);
+  char buf[32];
+  format_memory_bytes(static_cast<double>(size), buf, sizeof(buf));
+  return String::copy_from(arena, buf);
 }
 
 static String open_file_cell_text(BumpArena &arena, const OpenFileEntry &file,
@@ -340,10 +340,9 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             // Size
             ImGui::TableSetColumnIndex(eOpenFilesViewerColumnId_Size);
             if (file.size < 0) {
-              ImGui::TextDisabled("-");
+              table_item_draw_dim("-");
             } else {
-              ImGui::TextUnformatted(
-                  format_fd_size(ctx.frame_arena, file.size).data);
+              table_item_draw_memory(static_cast<double>(file.size));
             }
 
             // Path
