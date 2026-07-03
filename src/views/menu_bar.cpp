@@ -34,9 +34,12 @@ static float ui_scale() { return ImGui::GetFontSize() / BASE_FONT_SIZE; }
 
 // Left-hand label column shared by all Preferences rows; the widget that
 // follows starts at a fixed x so rows line up across sections.
-static void setting_label(const char *label) {
+static void setting_label(const char *label, const char *tooltip = nullptr) {
   ImGui::AlignTextToFramePadding();
   ImGui::TextUnformatted(label);
+  if (tooltip != nullptr) {
+    ImGui::SetItemTooltip("%s", tooltip);
+  }
   ImGui::SameLine(SETTING_LABEL_WIDTH * ui_scale());
 }
 
@@ -56,10 +59,10 @@ static bool input_int(const char *title, int &value, const int min,
 }
 
 static void draw_font_picker(PreferencesState &prefs, const char *label,
-                             const char *default_label, char *path,
-                             const size_t path_size) {
+                             const char *tooltip, const char *default_label,
+                             char *path, const size_t path_size) {
   ImGui::PushID(label);
-  setting_label(label);
+  setting_label(label, tooltip);
 
   if (prefs.font_list.size == 0) {
     if (!prefs.font_list_received) {
@@ -231,10 +234,13 @@ static void draw_preferences_modal(PreferencesState &prefs) {
 
     ImGui::SeparatorText("Fonts");
 
-    draw_font_picker(prefs, "UI Font", "Default (Inter)", prefs.font_path,
-                     sizeof(prefs.font_path));
-    draw_font_picker(prefs, "Monospace Font", "Default (JetBrains Mono)",
-                     prefs.mono_font_path, sizeof(prefs.mono_font_path));
+    draw_font_picker(
+        prefs, "UI Font", "Used for menus, toolbars, charts, and dialogs",
+        "Default (Inter)", prefs.font_path, sizeof(prefs.font_path));
+    draw_font_picker(prefs, "Monospace Font",
+                     "Used for data tables, keeping digits and paths aligned",
+                     "Default (JetBrains Mono)", prefs.mono_font_path,
+                     sizeof(prefs.mono_font_path));
 
     ImGui::Spacing();
     ImGui::Spacing();
