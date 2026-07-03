@@ -142,7 +142,8 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     }
   }
 
-  ImGui::SetNextWindowSize(ImVec2(640, 400), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(ImVec2(640 * ui_scale(), 400 * ui_scale()),
+                           ImGuiCond_FirstUseEver);
   const bool visible = ImGui::Begin(PORTS_TITLE, nullptr, COMMON_VIEW_FLAGS);
 
   // Scan whenever the tab is brought to the foreground; data is otherwise

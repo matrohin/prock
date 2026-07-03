@@ -90,6 +90,11 @@ inline void push_mono_font() {
 }
 inline void pop_mono_font() { ImGui::PopFont(); }
 
+// Fixed pixel sizes are authored at the base font size; scale them by the
+// live zoom/DPI so they track the text instead of staying frozen when the UI
+// is zoomed or on a HiDPI monitor. Call with the default UI font active.
+inline float ui_scale() { return ImGui::GetFontSize() / BASE_FONT_SIZE; }
+
 // Draw a filter input with Ctrl+F keyboard shortcut
 // Refresh toolbar button (icon + label). When `pending`, shows a disabled
 // "Refreshing..." state and returns false (smaps' in-flight reload state).

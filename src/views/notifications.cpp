@@ -1,6 +1,7 @@
 #include "views/notifications.h"
 
 #include "themes.h"
+#include "views/common.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -123,10 +124,12 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
     return;
   }
 
+  const float scale = ui_scale();
   const ImGuiViewport *viewport = ImGui::GetMainViewport();
   const float right =
-      viewport->WorkPos.x + viewport->WorkSize.x - NOTIFY_EDGE_PAD;
-  float bottom = viewport->WorkPos.y + viewport->WorkSize.y - NOTIFY_EDGE_PAD;
+      viewport->WorkPos.x + viewport->WorkSize.x - NOTIFY_EDGE_PAD * scale;
+  float bottom =
+      viewport->WorkPos.y + viewport->WorkSize.y - NOTIFY_EDGE_PAD * scale;
 
   constexpr ImGuiWindowFlags flags =
       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
@@ -144,8 +147,8 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
 
     ImGui::SetNextWindowPos(ImVec2(right, bottom), ImGuiCond_Always,
                             ImVec2(1.0f, 1.0f));
-    ImGui::SetNextWindowSizeConstraints(ImVec2(NOTIFY_WIDTH, 0.0f),
-                                        ImVec2(NOTIFY_WIDTH, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(NOTIFY_WIDTH * scale, 0.0f),
+                                        ImVec2(NOTIFY_WIDTH * scale, FLT_MAX));
 
     if (ImGui::Begin(window_id.data, nullptr, flags)) {
       const ImVec2 header_pos = ImGui::GetCursorScreenPos();
@@ -173,7 +176,7 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
         note.action_fn(note.action_data);
       }
 
-      bottom = ImGui::GetWindowPos().y - NOTIFY_STACK_GAP;
+      bottom = ImGui::GetWindowPos().y - NOTIFY_STACK_GAP * scale;
     }
     ImGui::End();
   }

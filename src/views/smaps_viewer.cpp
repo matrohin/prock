@@ -322,31 +322,23 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
         // Summary bar
         if (visible_count > 0 || win.segments.size == 0) {
+          const struct {
+            const char *label;
+            ulong value;
+          } totals[] = {{"PSS:", total_pss},
+                        {"RSS:", total_rss},
+                        {"Private:", total_private},
+                        {"Swap:", total_swap},
+                        {"Size:", total_size}};
+          const float scale = ui_scale();
           char val[32];
-          ImGui::TextDisabled("PSS:");
-          ImGui::SameLine(0, 4);
-          format_kb(val, sizeof(val), total_pss);
-          ImGui::Text("%s", val);
-          ImGui::SameLine(0, 16);
-          ImGui::TextDisabled("RSS:");
-          ImGui::SameLine(0, 4);
-          format_kb(val, sizeof(val), total_rss);
-          ImGui::Text("%s", val);
-          ImGui::SameLine(0, 16);
-          ImGui::TextDisabled("Private:");
-          ImGui::SameLine(0, 4);
-          format_kb(val, sizeof(val), total_private);
-          ImGui::Text("%s", val);
-          ImGui::SameLine(0, 16);
-          ImGui::TextDisabled("Swap:");
-          ImGui::SameLine(0, 4);
-          format_kb(val, sizeof(val), total_swap);
-          ImGui::Text("%s", val);
-          ImGui::SameLine(0, 16);
-          ImGui::TextDisabled("Size:");
-          ImGui::SameLine(0, 4);
-          format_kb(val, sizeof(val), total_size);
-          ImGui::Text("%s", val);
+          for (uint32_t t = 0; t < IM_ARRAYSIZE(totals); ++t) {
+            if (t > 0) ImGui::SameLine(0, 16 * scale);
+            ImGui::TextDisabled("%s", totals[t].label);
+            ImGui::SameLine(0, 4 * scale);
+            format_kb(val, sizeof(val), totals[t].value);
+            ImGui::Text("%s", val);
+          }
         }
 
         if (win.segments.size == 0) {

@@ -27,11 +27,6 @@ static constexpr float UI_ELEMENT_WIDTH = 220.0f;
 static constexpr float FONT_POPUP_WIDTH = 300.0f;
 static constexpr float SETTING_LABEL_WIDTH = 130.0f;
 
-// Fixed widget widths are authored at the base font size; scale them by the
-// live zoom/DPI so fields grow with the text instead of staying cramped (and
-// pinning the auto-resized modal narrow) when the UI is zoomed in.
-static float ui_scale() { return ImGui::GetFontSize() / BASE_FONT_SIZE; }
-
 // Left-hand label column shared by all Preferences rows; the widget that
 // follows starts at a fixed x so rows line up across sections.
 static void setting_label(const char *label, const char *tooltip = nullptr) {
@@ -287,7 +282,8 @@ static void draw_licenses_modal(PreferencesState &prefs) {
 
   const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
   ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-  ImGui::SetNextWindowSize(ImVec2(640.0f, 480.0f), ImGuiCond_Appearing);
+  ImGui::SetNextWindowSize(ImVec2(640.0f * ui_scale(), 480.0f * ui_scale()),
+                           ImGuiCond_Appearing);
 
   if (ImGui::BeginPopupModal(LICENSES_TITLE, &prefs.show_licenses_modal)) {
     if (popup_close_on_escape()) {

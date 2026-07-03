@@ -3,6 +3,7 @@
 #include "base/const_string.h"
 #include "views/brief_table.h"
 #include "views/command_palette.h"
+#include "views/common.h"
 #include "views/cpu_chart.h"
 #include "views/environ_viewer.h"
 #include "views/io_chart.h"
@@ -24,6 +25,9 @@
 
 #include "imgui_internal.h"
 
+// Positions and sizes are authored at the base font size; next() scales them
+// by ui_scale() at use so windows track zoom/DPI while the cascade state stays
+// consistent across zoom changes.
 struct CascadeLayout {
   ImVec2 start = {30, 30};
   ImVec2 pos = {30, 30};
@@ -31,23 +35,26 @@ struct CascadeLayout {
   ImVec2 size = {500, 400};
 
   void next() {
+    const float scale = ui_scale();
     ImVec2 viewport_size = ImGui::GetMainViewport()->Size;
 
     // Reset Y and shift start to the right when hitting bottom
-    if (pos.y + size.y > viewport_size.y) {
+    if ((pos.y + size.y) * scale > viewport_size.y) {
       start.x += offset.x;
       start.y = 30;
       pos = start;
     }
 
     // Full reset when hitting right edge
-    if (pos.x + size.x > viewport_size.x) {
+    if ((pos.x + size.x) * scale > viewport_size.x) {
       start = {30, 30};
       pos = start;
     }
 
-    ImGui::SetNextWindowPos(pos, ImGuiCond_Once);
-    ImGui::SetNextWindowSize(size, ImGuiCond_Once);
+    ImGui::SetNextWindowPos(ImVec2(pos.x * scale, pos.y * scale),
+                            ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(size.x * scale, size.y * scale),
+                             ImGuiCond_Once);
     pos.x += offset.x;
     pos.y += offset.y;
   }
