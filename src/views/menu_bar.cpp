@@ -23,24 +23,131 @@ static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
 static const char *PREFERENCES_TITLE = "Preferences";
 static const char *ABOUT_TITLE = "About Prock";
 static const char *LICENSES_TITLE = "Third-Party Licenses";
-static constexpr float FONT_LIST_WIDTH = 400.0f;
-static constexpr float UI_ELEMENT_WIDTH = 140.0f;
-static constexpr float FONT_PATH_WIDTH = 300.0f;
+static constexpr float UI_ELEMENT_WIDTH = 220.0f;
+static constexpr float FONT_POPUP_WIDTH = 300.0f;
+static constexpr float SETTING_LABEL_WIDTH = 130.0f;
 
 // Fixed widget widths are authored at the base font size; scale them by the
 // live zoom/DPI so fields grow with the text instead of staying cramped (and
 // pinning the auto-resized modal narrow) when the UI is zoomed in.
 static float ui_scale() { return ImGui::GetFontSize() / BASE_FONT_SIZE; }
 
+// Left-hand label column shared by all Preferences rows; the widget that
+// follows starts at a fixed x so rows line up across sections.
+static void setting_label(const char *label) {
+  ImGui::AlignTextToFramePadding();
+  ImGui::TextUnformatted(label);
+  ImGui::SameLine(SETTING_LABEL_WIDTH * ui_scale());
+}
+
 static bool input_int(const char *title, int &value, const int min,
                       const int max) {
+  setting_label(title);
+  ImGui::PushID(title);
   ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * ui_scale());
-  ImGui::InputInt(title, &value, 1, 10);
-  if (ImGui::IsItemDeactivatedAfterEdit()) {
+  ImGui::InputInt("##value", &value, 1, 10);
+  const bool edited = ImGui::IsItemDeactivatedAfterEdit();
+  ImGui::PopID();
+  if (edited) {
     value = std::clamp(value, min, max);
     return true;
   }
   return false;
+}
+
+static void draw_font_picker(PreferencesState &prefs, const char *label,
+                             const char *default_label, char *path,
+                             const size_t path_size) {
+  ImGui::PushID(label);
+  setting_label(label);
+
+  if (prefs.font_list.size == 0) {
+    if (!prefs.font_list_received) {
+      ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * ui_scale());
+      ImGui::BeginDisabled();
+      if (ImGui::BeginCombo("##font", "Loading fonts...")) {
+        ImGui::EndCombo();
+      }
+      ImGui::EndDisabled();
+    } else {
+      ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * ui_scale());
+      ImGui::InputTextWithHint("##font", "Path to .ttf file (empty = default)",
+                               path, path_size);
+      ImGui::SameLine();
+      if (ImGui::Button("Apply")) {
+        prefs.font_needs_reload = true;
+      }
+    }
+    ImGui::PopID();
+    return;
+  }
+
+  const char *preview = default_label;
+  if (path[0] != '\0') {
+    preview = path;
+    for (uint32_t i = 0; i < prefs.font_list.size; i++) {
+      if (strcmp(path, prefs.font_list.data[i].path) == 0) {
+        preview = prefs.font_list.data[i].name;
+        break;
+      }
+    }
+  }
+
+  ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * ui_scale());
+  ImGui::SetNextWindowSizeConstraints(
+      ImVec2(FONT_POPUP_WIDTH * ui_scale(), 0.0f), ImVec2(FLT_MAX, FLT_MAX));
+  if (ImGui::BeginCombo("##font", preview)) {
+    const bool appearing = ImGui::IsWindowAppearing();
+    if (appearing) {
+      prefs.font_filter[0] = '\0';
+      ImGui::SetKeyboardFocusHere();
+    }
+    ImGuiTextFilter filter;
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    ImGui::PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+    draw_filter_input(filter, "##FontFilter", prefs.font_filter,
+                      sizeof(prefs.font_filter));
+    ImGui::PopStyleColor();
+
+    const float list_height = 8.25f * ImGui::GetTextLineHeightWithSpacing();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
+                        ImVec2(ImGui::GetStyle().FramePadding.x, 0.0f));
+    const bool list_open = ImGui::BeginChild(
+        "##FontList", ImVec2(0.0f, list_height),
+        ImGuiChildFlags_NavFlattened | ImGuiChildFlags_AlwaysUseWindowPadding);
+    ImGui::PopStyleVar();
+    if (list_open) {
+      if (ImGui::Selectable(default_label, path[0] == '\0')) {
+        path[0] = '\0';
+        prefs.font_needs_reload = true;
+        ImGui::CloseCurrentPopup();
+      }
+      for (uint32_t i = 0; i < prefs.font_list.size; i++) {
+        const FontEntry &entry = prefs.font_list.data[i];
+        const bool selected = strcmp(path, entry.path) == 0;
+        if (!filter.PassFilter(entry.name)) {
+          continue;
+        }
+        if (ImGui::Selectable(entry.name, selected)) {
+          snprintf(path, path_size, "%s", entry.path);
+          prefs.font_needs_reload = true;
+          ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsItemHovered()) {
+          ImGui::SetTooltip("%s", entry.path);
+        }
+        if (selected && appearing) {
+          ImGui::SetScrollHereY(0.5f);
+        }
+      }
+    }
+    ImGui::EndChild();
+    ImGui::EndCombo();
+  } else if (path[0] != '\0' && ImGui::IsItemHovered()) {
+    // The narrow combo can clip a long font name; show it in full.
+    ImGui::SetTooltip("%s\n%s", preview, path);
+  }
+  ImGui::PopID();
 }
 
 static void draw_preferences_modal(PreferencesState &prefs) {
@@ -64,8 +171,9 @@ static void draw_preferences_modal(PreferencesState &prefs) {
 
     bool changed_style = false;
 
+    setting_label("Theme");
     ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * scale);
-    if (ImGui::BeginCombo("Theme", theme_name(prefs.theme))) {
+    if (ImGui::BeginCombo("##Theme", theme_name(prefs.theme))) {
       for (int i = 0; i < static_cast<int>(Theme::COUNT); i++) {
         const Theme t = static_cast<Theme>(i);
         const bool is_selected = prefs.theme == t;
@@ -112,95 +220,28 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       }
     }
 
+    setting_label("Update Period");
     ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * scale);
-    if (ImGui::Combo("Update Period", &current_idx, PERIOD_LABELS, 6)) {
+    if (ImGui::Combo("##UpdatePeriod", &current_idx, PERIOD_LABELS, 6)) {
       prefs.update_period = PERIODS[current_idx];
     }
 
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::SeparatorText("Font");
+    ImGui::SeparatorText("Fonts");
 
-    const float list_height = 8.0f * ImGui::GetTextLineHeightWithSpacing();
-    const float font_list_width = FONT_LIST_WIDTH * scale;
-    if (prefs.font_list.size > 0) {
-      ImGui::SetNextItemWidth(font_list_width);
-      ImGuiTextFilter filter;
-      draw_filter_input(filter, "##FontFilter", prefs.font_filter,
-                        sizeof(prefs.font_filter));
-      bool found_in_list = prefs.font_path[0] == '\0';
-      if (ImGui::BeginListBox("##FontList",
-                              ImVec2(font_list_width, list_height))) {
-        const bool default_selected = prefs.font_path[0] == '\0';
-        if (ImGui::Selectable("Default (built-in)", default_selected)) {
-          prefs.font_path[0] = '\0';
-          prefs.font_needs_reload = true;
-        }
-        if (default_selected) {
-          ImGui::SetItemDefaultFocus();
-          if (prefs.font_scroll_to_selected) {
-            ImGui::SetScrollHereY(0.5f);
-            prefs.font_scroll_to_selected = false;
-          }
-        }
-        for (uint32_t i = 0; i < prefs.font_list.size; i++) {
-          const FontEntry &entry = prefs.font_list.data[i];
-          const bool selected = strcmp(prefs.font_path, entry.path) == 0;
-          if (selected) found_in_list = true;
-          if (!filter.PassFilter(entry.name)) {
-            continue;
-          }
-          if (ImGui::Selectable(entry.name, selected)) {
-            snprintf(prefs.font_path, sizeof(prefs.font_path), "%s",
-                     entry.path);
-            prefs.font_needs_reload = true;
-          }
-          if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", entry.path);
-          }
-          if (selected) {
-            ImGui::SetItemDefaultFocus();
-            if (prefs.font_scroll_to_selected) {
-              ImGui::SetScrollHereY(0.5f);
-              prefs.font_scroll_to_selected = false;
-            }
-          }
-        }
-        ImGui::EndListBox();
-      }
-      if (!found_in_list) {
-        ImGui::TextDisabled("Active: %s", prefs.font_path);
-      }
-    } else if (!prefs.font_list_received) {
-      // Reserve the loaded list's footprint so the modal opens at its final
-      // size and stays centered while the font list loads.
-      ImGui::BeginDisabled();
-      ImGui::SetNextItemWidth(font_list_width);
-      ImGuiTextFilter filter;
-      draw_filter_input(filter, "##FontFilter", prefs.font_filter,
-                        sizeof(prefs.font_filter));
-      if (ImGui::BeginListBox("##FontList",
-                              ImVec2(font_list_width, list_height))) {
-        ImGui::TextDisabled("Loading fonts...");
-        ImGui::EndListBox();
-      }
-      ImGui::EndDisabled();
-    } else {
-      ImGui::SetNextItemWidth(FONT_PATH_WIDTH * scale);
-      ImGui::InputTextWithHint("##Font", "Path to .ttf file (empty = default)",
-                               prefs.font_path, sizeof(prefs.font_path));
-      ImGui::SameLine();
-      if (ImGui::Button("Apply Font")) {
-        prefs.font_needs_reload = true;
-      }
-    }
+    draw_font_picker(prefs, "UI Font", "Default (Inter)", prefs.font_path,
+                     sizeof(prefs.font_path));
+    draw_font_picker(prefs, "Monospace Font", "Default (JetBrains Mono)",
+                     prefs.mono_font_path, sizeof(prefs.mono_font_path));
 
     ImGui::Spacing();
     ImGui::Spacing();
 
     ImGui::SeparatorText("Dumps");
-    ImGui::SetNextItemWidth(FONT_PATH_WIDTH * scale);
+    setting_label("Folder");
+    ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * scale);
     ImGui::InputTextWithHint("##DumpDir", "Folder for core dumps",
                              prefs.dump_dir, sizeof(prefs.dump_dir));
 
@@ -325,19 +366,13 @@ void menu_bar_update(ViewState &view_state) {
   PreferencesState &prefs = view_state.preferences_state;
   Sync &sync = *view_state.sync;
 
-  const bool opening =
-      prefs.show_preferences_modal && !prefs.prev_show_preferences;
   const bool closing =
       !prefs.show_preferences_modal && prefs.prev_show_preferences;
   prefs.prev_show_preferences = prefs.show_preferences_modal;
 
-  if (opening) {
-    prefs.font_scroll_to_selected = true;
-  }
   if (closing) {
     prefs.font_list_requested = false;
     prefs.font_list_received = false;
-    prefs.font_filter[0] = '\0';
     prefs.font_list_arena.destroy();
     prefs.font_list = {};
   }
@@ -359,7 +394,6 @@ void menu_bar_update(ViewState &view_state) {
       prefs.font_list =
           Array<FontEntry>::copy_from(prefs.font_list_arena, response.fonts);
       prefs.font_list_received = true;
-      prefs.font_scroll_to_selected = true;
     }
     response.owner_arena.destroy();
   }

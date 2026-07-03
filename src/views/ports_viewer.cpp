@@ -216,6 +216,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   bool selected_visible = false;
   if (ImGui::BeginTable("PortsTable", ePortsViewerColumnId_Count,
                         COMMON_TABLE_FLAGS)) {
+    push_mono_font();
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed, 50.0f,
                             ePortsViewerColumnId_Protocol);
@@ -295,6 +296,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       ImGui::PopID();
     }
+    pop_mono_font();
     ImGui::EndTable();
   }
 

@@ -1,8 +1,10 @@
 #pragma once
 
+#include "constants.h"
 #include "cpu_chart.h"
 #include "icons.h"
 #include "notifications.h"
+#include "style_control.h"
 
 #include "imgui_internal.h"
 
@@ -78,6 +80,15 @@ constexpr ImGuiTableFlags COMMON_TABLE_FLAGS =
     ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
     ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |
     ImGuiTableFlags_ScrollY | ImGuiTableFlags_HighlightHoveredColumn;
+
+// Data tables render in the monospaced font: push right after a successful
+// BeginTable, pop right before the matching EndTable. Sized off FontSizeBase
+// (zoom composes on top) with the optical correction factor applied.
+inline void push_mono_font() {
+  ImGui::PushFont(style_control_mono_font(),
+                  ImGui::GetStyle().FontSizeBase * MONO_FONT_SIZE_FACTOR);
+}
+inline void pop_mono_font() { ImGui::PopFont(); }
 
 // Draw a filter input with Ctrl+F keyboard shortcut
 // Refresh toolbar button (icon + label). When `pending`, shows a disabled

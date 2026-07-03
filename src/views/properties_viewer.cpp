@@ -252,6 +252,7 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
     if (!ImGui::BeginTable(table_id.data, 2, PROP_TABLE_FLAGS)) {
       continue;
     }
+    push_mono_font();
     ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed,
                             170.0f);
     ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
@@ -288,6 +289,7 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
 
       ImGui::PopID();
     }
+    pop_mono_font();
     ImGui::EndTable();
   }
 

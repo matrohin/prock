@@ -219,6 +219,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::TextDisabled("No sockets");
         } else if (ImGui::BeginTable("Sockets", eSocketViewerColumnId_Count,
                                      COMMON_TABLE_FLAGS)) {
+          push_mono_font();
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed,
                                   50.0f, eSocketViewerColumnId_Protocol);
@@ -320,6 +321,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ImGui::PopID();
           }
 
+          pop_mono_font();
           ImGui::EndTable();
 
           // Ctrl+C to copy selected row

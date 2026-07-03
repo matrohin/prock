@@ -413,6 +413,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           constexpr int kGroupedCols = 7;
           if (ImGui::BeginTable("MemMapsGrouped", kGroupedCols,
                                 COMMON_TABLE_FLAGS)) {
+            push_mono_font();
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Segs",
                                     ImGuiTableColumnFlags_PreferSortDescending |
@@ -518,6 +519,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ImGui::PopID();
             }
 
+            pop_mono_font();
             ImGui::EndTable();
 
             if (copy_row_shortcut(win.selected_index, groups.size())) {
@@ -529,6 +531,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           // ---- Flat mode ----
           constexpr int kFlatCols = eSmapsViewerColumnId_SegmentCount;
           if (ImGui::BeginTable("MemMaps", kFlatCols, COMMON_TABLE_FLAGS)) {
+            push_mono_font();
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Address",
                                     ImGuiTableColumnFlags_WidthFixed |
@@ -636,6 +639,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ImGui::PopID();
             }
 
+            pop_mono_font();
             ImGui::EndTable();
 
             if (copy_row_shortcut(win.selected_index, win.segments.size)) {

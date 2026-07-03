@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-"""Regenerate the embedded Inter UI font as a compressed C header.
+"""Regenerate the embedded UI fonts as compressed C headers.
 
 Run::
 
     python3 scripts/gen_font.py
 
-Fetches the latest Inter release from GitHub, takes the static Regular cut
-(extras/ttf/Inter-Regular.ttf - the text-optimized family, not Display), and
-runs it through Dear ImGui's binary_to_compressed_c tool. That tool stb-compresses
-the TTF and base85-encodes it, so the committed header stays a few hundred KB of
-source rather than a multi-megabyte byte array; load_fonts() decodes it at startup
-with AddFontFromMemoryCompressedBase85TTF. Needs only network access, a C++
-compiler, and the Python standard library (no fonttools); the generated header is
-committed, so the normal build needs none of this.
+For each font below, fetches the latest release from GitHub, takes the static
+Regular cut, and runs it through Dear ImGui's binary_to_compressed_c tool. That
+tool stb-compresses the TTF and base85-encodes it, so the committed header stays
+a few hundred KB of source rather than a multi-megabyte byte array; load_fonts()
+decodes it at startup with AddFontFromMemoryCompressedBase85TTF. Needs only
+network access, a C++ compiler, and the Python standard library (no fonttools);
+the generated headers are committed, so the normal build needs none of this.
 
-Inter is licensed under the SIL Open Font License 1.1. The OFL permits bundling
-and embedding; we ship the verbatim license at third-party/inter/LICENSE, and the
-header carries an attribution comment with the font's copyright line and a pointer
-to that license.
+Both fonts are licensed under the SIL Open Font License 1.1. The OFL permits
+bundling and embedding; we ship each verbatim license next to its header, and
+each header carries an attribution comment with the font's copyright line and a
+pointer to that license.
 
-Generated (committed) outputs:
-    third-party/inter/inter_font.h  compressed+base85 TTF as a C string
-    third-party/inter/LICENSE       verbatim SIL Open Font License 1.1
+Generated (committed) outputs, per font:
+    third-party/<dir>/<symbol>_font.h  compressed+base85 TTF as a C string
+    third-party/<dir>/LICENSE          verbatim SIL Open Font License 1.1
 """
 
 import io
@@ -35,10 +34,27 @@ import zipfile
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 TOOL_SRC = REPO / "third-party/imgui/misc/fonts/binary_to_compressed_c.cpp"
-TTF_IN_ZIP = "extras/ttf/Inter-Regular.ttf"
-LICENSE_IN_ZIP = "LICENSE.txt"
-SYMBOL = "inter"
-OUT_DIR = REPO / "third-party/inter"
+
+FONTS = [
+    {
+        "name": "Inter",
+        "github_repo": "rsms/inter",
+        "ttf_in_zip": "extras/ttf/Inter-Regular.ttf",
+        "license_in_zip": "LICENSE.txt",
+        "symbol": "inter",
+        "out_dir": REPO / "third-party/inter",
+        "cut_note": "static Regular instance",
+    },
+    {
+        "name": "JetBrains Mono",
+        "github_repo": "JetBrains/JetBrainsMono",
+        "ttf_in_zip": "fonts/ttf/JetBrainsMono-Regular.ttf",
+        "license_in_zip": "OFL.txt",
+        "symbol": "jetbrains_mono",
+        "out_dir": REPO / "third-party/jetbrains-mono",
+        "cut_note": "Regular",
+    },
+]
 
 
 def fetch(url):
@@ -47,13 +63,14 @@ def fetch(url):
         return resp.read()
 
 
-def latest_release_zip_url():
-    """Resolve the .zip asset of the most recent Inter release, with its tag."""
-    rel = json.loads(fetch("https://api.github.com/repos/rsms/inter/releases/latest"))
+def latest_release_zip_url(github_repo):
+    """Resolve the .zip asset of the most recent release, with its tag."""
+    rel = json.loads(
+        fetch(f"https://api.github.com/repos/{github_repo}/releases/latest"))
     for asset in rel["assets"]:
         if asset["name"].lower().endswith(".zip"):
             return asset["browser_download_url"], rel["tag_name"]
-    raise SystemExit("error: no .zip asset on the latest Inter release")
+    raise SystemExit(f"error: no .zip asset on the latest {github_repo} release")
 
 
 def copyright_line(license_text):
@@ -61,10 +78,10 @@ def copyright_line(license_text):
     for line in license_text.splitlines():
         if line.strip().lower().startswith("copyright"):
             return line.strip()
-    raise SystemExit("error: no copyright line in Inter LICENSE")
+    raise SystemExit("error: no copyright line in font LICENSE")
 
 
-def compress_to_base85(ttf, workdir):
+def compress_to_base85(font, ttf, workdir):
     """Compile binary_to_compressed_c and run it on the TTF, returning its C output.
 
     The tool prints the input filename into a comment, so we run it from a temp
@@ -76,47 +93,56 @@ def compress_to_base85(ttf, workdir):
     tool = workdir / "binary_to_compressed_c"
     subprocess.run([cxx, "-O2", str(TOOL_SRC), "-o", str(tool)], check=True)
 
-    (workdir / "Inter-Regular.ttf").write_bytes(ttf)
-    out = subprocess.run([str(tool), "-base85", "Inter-Regular.ttf", SYMBOL],
+    ttf_name = pathlib.Path(font["ttf_in_zip"]).name
+    (workdir / ttf_name).write_bytes(ttf)
+    out = subprocess.run([str(tool), "-base85", ttf_name, font["symbol"]],
                          cwd=workdir, check=True, capture_output=True, text=True)
     return out.stdout
 
 
-def attribution(version, notice):
+def attribution(font, version, notice):
+    rel_out = font["out_dir"].relative_to(REPO)
     return (
         "// Generated by scripts/gen_font.py - do not edit.\n"
         "//\n"
-        f"// Contains Inter ({version}, static Regular instance), stb-compressed with\n"
+        f"// Contains {font['name']} ({version}, {font['cut_note']}), stb-compressed with\n"
         "// third-party/imgui/misc/fonts/binary_to_compressed_c.cpp and base85-encoded.\n"
         f"// {notice}\n"
-        "// Licensed under the SIL Open Font License 1.1; see third-party/inter/LICENSE.\n"
+        f"// Licensed under the SIL Open Font License 1.1; see {rel_out}/LICENSE.\n"
     )
 
 
-def main():
-    print("Resolving latest Inter release...")
-    zip_url, version = latest_release_zip_url()
+def generate(font):
+    print(f"Resolving latest {font['name']} release...")
+    zip_url, version = latest_release_zip_url(font["github_repo"])
     print(f"  {version}: {zip_url}")
 
     print("Downloading release zip...")
     with zipfile.ZipFile(io.BytesIO(fetch(zip_url))) as zf:
-        ttf = zf.read(TTF_IN_ZIP)
-        license_text = zf.read(LICENSE_IN_ZIP).decode()
-    print(f"  {TTF_IN_ZIP}: {len(ttf)} bytes")
+        ttf = zf.read(font["ttf_in_zip"])
+        license_text = zf.read(font["license_in_zip"]).decode()
+    print(f"  {font['ttf_in_zip']}: {len(ttf)} bytes")
 
     print("Compressing font...")
     with tempfile.TemporaryDirectory() as tmp:
-        c_array = compress_to_base85(ttf, pathlib.Path(tmp))
+        c_array = compress_to_base85(font, ttf, pathlib.Path(tmp))
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    (OUT_DIR / "LICENSE").write_text(license_text)
-    header = attribution(version, copyright_line(license_text)) + "#pragma once\n\n" + c_array
-    (OUT_DIR / "inter_font.h").write_text(header)
+    out_dir = font["out_dir"]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "LICENSE").write_text(license_text)
+    header = (attribution(font, version, copyright_line(license_text)) +
+              "#pragma once\n\n" + c_array)
+    (out_dir / f"{font['symbol']}_font.h").write_text(header)
     print(f"  header: {len(header)} bytes")
 
     print("Done:")
-    print("  third-party/inter/inter_font.h")
-    print("  third-party/inter/LICENSE")
+    print(f"  {out_dir.relative_to(REPO)}/{font['symbol']}_font.h")
+    print(f"  {out_dir.relative_to(REPO)}/LICENSE")
+
+
+def main():
+    for font in FONTS:
+        generate(font)
 
 
 if __name__ == "__main__":

@@ -260,6 +260,7 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         } else if (ImGui::BeginTable("OpenFiles",
                                      eOpenFilesViewerColumnId_Count,
                                      COMMON_TABLE_FLAGS)) {
+          push_mono_font();
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("FD",
                                   ImGuiTableColumnFlags_DefaultSort |
@@ -354,6 +355,7 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ImGui::PopID();
           }
 
+          pop_mono_font();
           ImGui::EndTable();
 
           // Ctrl+C to copy selected row

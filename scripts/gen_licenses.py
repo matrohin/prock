@@ -50,6 +50,7 @@ LIBRARIES = [
     ("ImPlot", "implot/LICENSE", None),
     ("GLFW", "glfw-3.4/LICENSE.md", None),
     ("Inter", "inter/LICENSE", None),
+    ("JetBrains Mono", "jetbrains-mono/LICENSE", None),
     ("Material Symbols", "material-symbols/LICENSE",
      font_copyright("material-symbols/material_symbols_font.h")),
     # Theme palettes reimplemented as color values in src/themes.h. The values

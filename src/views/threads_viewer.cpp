@@ -283,6 +283,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
 
         if (ImGui::BeginTable("Threads", eThreadsViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {
+          push_mono_font();
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("TID", ImGuiTableColumnFlags_DefaultSort,
                                   0.0f, eThreadsViewerColumnId_Tid);
@@ -370,6 +371,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             }
           }
 
+          pop_mono_font();
           ImGui::EndTable();
         }
 

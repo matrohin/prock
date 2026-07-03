@@ -811,6 +811,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       ImGuiTableFlags_Sortable | ImGuiTableFlags_Borders |
       ImGuiTableFlags_ScrollY | ImGuiTableFlags_HighlightHoveredColumn;
   if (ImGui::BeginTable("Processes", eBriefTableColumnId_Count, flags)) {
+    push_mono_font();
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_NoHide, 0.0f,
                             eBriefTableColumnId_Pid);
@@ -1077,6 +1078,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     // Restore indent after clipper loop
     window->DC.Indent.x = base_indent;
 
+    pop_mono_font();
     ImGui::EndTable();
   }
 

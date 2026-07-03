@@ -3,6 +3,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #include "inter_font.h"
+#include "jetbrains_mono_font.h"
 #include "material_symbols_font.h"
 #pragma GCC diagnostic pop
 
@@ -15,6 +16,7 @@
 
 static Theme g_applied_theme = Theme::COUNT;
 static float g_monitor_scale = 1.0f;
+static ImFont *g_mono_font = nullptr;
 static int g_applied_opacity = 0;
 static int g_applied_zoom_scale = 0;
 static ImGuiStyle g_base_style;
@@ -172,7 +174,28 @@ static ImFont *add_inter(ImGuiIO &io, const float size,
       inter_compressed_data_base85, size, cfg);
 }
 
-void style_control_load_fonts(const char *font_path) {
+// The bundled default monospace font: JetBrains Mono, embedded compressed.
+static ImFont *add_jetbrains_mono(ImGuiIO &io, const float size,
+                                  const ImFontConfig *cfg) {
+  return io.Fonts->AddFontFromMemoryCompressedBase85TTF(
+      jetbrains_mono_compressed_data_base85, size, cfg);
+}
+
+// Add the user's font if set and loadable, otherwise the bundled fallback.
+static ImFont *add_font(ImGuiIO &io, const char *path, const float size,
+                        const ImFontConfig *cfg,
+                        ImFont *(*fallback)(ImGuiIO &, float,
+                                            const ImFontConfig *)) {
+  if (path && path[0] != '\0') {
+    if (ImFont *font = io.Fonts->AddFontFromFileTTF(path, size, cfg)) {
+      return font;
+    }
+  }
+  return fallback(io, size, cfg);
+}
+
+void style_control_load_fonts(const char *font_path,
+                              const char *mono_font_path) {
   ImGuiIO &io = ImGui::GetIO();
   io.Fonts->Clear();
   // FreeType light hinting: snap glyphs to the pixel grid vertically only (like
@@ -185,15 +208,16 @@ void style_control_load_fonts(const char *font_path) {
   cfg.GlyphExcludeRanges = icon_exclude;
 
   const float size = BASE_FONT_SIZE * g_monitor_scale;
-  if (font_path && font_path[0] != '\0') {
-    if (!io.Fonts->AddFontFromFileTTF(font_path, size, &cfg)) {
-      add_inter(io, size, &cfg);
-    }
-  } else {
-    add_inter(io, size, &cfg);
-  }
+  add_font(io, font_path, size, &cfg, add_inter);
+  merge_icon_font(io, g_monitor_scale);
+
+  // The monospace font for data-dense UI; icons are merged into it too
+  // because context menus can be submitted while it is pushed.
+  g_mono_font = add_font(io, mono_font_path, size, &cfg, add_jetbrains_mono);
   merge_icon_font(io, g_monitor_scale);
 }
+
+ImFont *style_control_mono_font() { return g_mono_font; }
 
 void style_control_set_target_fps(const int fps) {
   g_target_rate = std::chrono::microseconds(1'000'000 / fps);

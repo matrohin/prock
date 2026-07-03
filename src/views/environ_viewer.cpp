@@ -234,6 +234,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
         if (ImGui::BeginTable("Environment", eEnvironViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {
+          push_mono_font();
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("Name",
                                   ImGuiTableColumnFlags_DefaultSort |
@@ -371,6 +372,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ImGui::PopID();
           }
 
+          pop_mono_font();
           ImGui::EndTable();
         }
 

@@ -137,6 +137,12 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     if (len < sizeof(view_state->preferences_state.font_path)) {
       memcpy(view_state->preferences_state.font_path, path, len + 1);
     }
+  } else if (strncmp(line, "MonoFontPath=", 13) == 0) {
+    const char *path = line + 13;
+    const uint32_t len = static_cast<uint32_t>(strlen(path));
+    if (len < sizeof(view_state->preferences_state.mono_font_path)) {
+      memcpy(view_state->preferences_state.mono_font_path, path, len + 1);
+    }
   } else if (strncmp(line, "DumpDir=", 8) == 0) {
     const char *path = line + 8;
     const uint32_t len = static_cast<uint32_t>(strlen(path));
@@ -174,6 +180,10 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
                view_state->preferences_state.window_opacity_pct);
   if (view_state->preferences_state.font_path[0] != '\0') {
     buf->appendf("FontPath=%s\n", view_state->preferences_state.font_path);
+  }
+  if (view_state->preferences_state.mono_font_path[0] != '\0') {
+    buf->appendf("MonoFontPath=%s\n",
+                 view_state->preferences_state.mono_font_path);
   }
   if (view_state->preferences_state.dump_dir[0] != '\0') {
     buf->appendf("DumpDir=%s\n", view_state->preferences_state.dump_dir);
@@ -480,7 +490,8 @@ int main(int, char **) {
                      view_state.preferences_state.target_fps);
   style_control_rebuild(view_state.preferences_state.zoom_scale_pct,
                         view_state.preferences_state.window_opacity_pct);
-  style_control_load_fonts(view_state.preferences_state.font_path);
+  style_control_load_fonts(view_state.preferences_state.font_path,
+                           view_state.preferences_state.mono_font_path);
 
   // Setup Platform/Renderer backends
   glfwSetMouseButtonCallback(window, maintaining_second_update);
@@ -560,7 +571,8 @@ int main(int, char **) {
 
     if (view_state.preferences_state.font_needs_reload) {
       view_state.preferences_state.font_needs_reload = false;
-      style_control_load_fonts(view_state.preferences_state.font_path);
+      style_control_load_fonts(view_state.preferences_state.font_path,
+                               view_state.preferences_state.mono_font_path);
     }
 
     draw(window, io, state, view_state);

@@ -49,6 +49,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   third-party/implot
   third-party/material-symbols
   third-party/inter
+  third-party/jetbrains-mono
   ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE imgui_all glfw OpenGL::GLES2 X11::X11 tracy project_warnings)

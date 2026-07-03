@@ -8,8 +8,9 @@ struct PreferencesState {
   int target_fps = 60;
   int zoom_scale_pct = 100;
   int window_opacity_pct = 100;
-  char font_path[512] = {}; // Custom TTF font path, empty = default
-  char dump_dir[512] = {};  // Core dump folder, empty = ~/prock-dumps
+  char font_path[512] = {};      // Custom UI TTF path, empty = default
+  char mono_font_path[512] = {}; // Custom monospace TTF path, empty = default
+  char dump_dir[512] = {};       // Core dump folder, empty = ~/prock-dumps
   Theme theme = Theme::Light;
   bool show_preferences_modal = false;
   bool show_about_modal = false;
@@ -23,10 +24,10 @@ struct PreferencesState {
   bool y_auto_fit = true; // continuously auto-fit chart Y axes to data
   bool font_list_requested = false;
   bool font_list_received = false;
-  bool font_scroll_to_selected = false;
   bool prev_show_preferences = false;
   BumpArena font_list_arena;
   Array<FontEntry> font_list;
+  // Shared by the font picker popups; reset when a picker opens.
   char font_filter[128] = {};
 };
 
