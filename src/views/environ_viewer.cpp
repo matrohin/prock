@@ -326,10 +326,12 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                     if (ImGui::BeginPopupContextItem()) {
                       win.selected_index = static_cast<int>(j);
                       win.selected_child_index = seg_idx;
-                      if (ImGui::MenuItemEx("Copy Path", ICON_MD_CONTENT_COPY,
-                                            "Ctrl+C")) {
-                        copy_path_segment(view_state.notifications,
-                                          ctx.frame_arena, seg_start, seg_end);
+                      const String path = String::copy_from(
+                          ctx.frame_arena, seg_start, seg_end - seg_start);
+                      if (ImGui::MenuItemEx(
+                              copy_cell_menu_label(ctx.frame_arena, path).data,
+                              ICON_MD_CONTENT_COPY, "Ctrl+C")) {
+                        clipboard_copy_cell(view_state.notifications, path);
                       }
                       ImGui::EndPopup();
                     }
