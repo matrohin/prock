@@ -5,21 +5,18 @@
 String on_demand_viewer_title(BumpArena &frame_arena,
                               const OnDemandViewerStatus status,
                               const char *viewer_name,
-                              const char *results_label,
                               const uint32_t results_size,
                               const char *process_name, const Pid pid) {
   switch (status) {
   case eOnDemandViewerStatus_Error:
-    return String::sprintf(frame_arena, "Error - %s: %s (%d)###%s%d",
+    return String::sprintf(frame_arena, "%s (Error) - %s (%d)###%s%d",
                            viewer_name, process_name, pid, viewer_name, pid);
-
   case eOnDemandViewerStatus_Loading:
-    return String::sprintf(frame_arena, "Loading... - %s: %s (%d)###%s%d",
+    return String::sprintf(frame_arena, "%s (Loading...) - %s (%d)###%s%d",
                            viewer_name, process_name, pid, viewer_name, pid);
   case eOnDemandViewerStatus_Ready:
-    return String::sprintf(frame_arena, "%u %s - %s: %s (%d)###%s%d",
-                           results_size, results_label, viewer_name,
-                           process_name, pid, viewer_name, pid);
+    return String::sprintf(frame_arena, "%s (%u) - %s (%d)###%s%d", viewer_name,
+                           results_size, process_name, pid, viewer_name, pid);
   }
   return INTERNAL_ERROR;
 }

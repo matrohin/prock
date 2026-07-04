@@ -10,6 +10,5 @@ enum OnDemandViewerStatus {
 
 String on_demand_viewer_title(BumpArena &frame_arena,
                               OnDemandViewerStatus status,
-                              const char *viewer_name,
-                              const char *results_label, uint32_t results_size,
+                              const char *viewer_name, uint32_t results_size,
                               const char *process_name, Pid pid);

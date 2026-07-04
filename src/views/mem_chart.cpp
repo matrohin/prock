@@ -106,7 +106,8 @@ void mem_chart_add(MemChartState &my_state, const Pid pid, const char *comm,
   data.pid = pid;
   data.dock_id = dock_id;
   data.flags |= eProcessWindowFlags_RedockRequested | extra_flags;
-  snprintf(data.label, sizeof(data.label), "Memory Usage: %s (%d)", comm, pid);
+  snprintf(data.label, sizeof(data.label), "Memory - %s (%d)###MemChart%d",
+           comm, pid, pid);
 
   common_views_sort_added(my_state.charts);
 }

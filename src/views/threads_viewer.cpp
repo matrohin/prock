@@ -250,9 +250,9 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
     }
     ThreadsViewerWindow &win = my_state.windows.data()[last];
 
-    const String title = on_demand_viewer_title(
-        ctx.frame_arena, win.status, "Threads", "threads [Live]",
-        win.lines.size, win.process_name, win.pid);
+    const String title =
+        on_demand_viewer_title(ctx.frame_arena, win.status, "Threads",
+                               win.lines.size, win.process_name, win.pid);
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
                                           title.data);
 

@@ -143,7 +143,8 @@ void cpu_chart_add(CpuChartState &my_state, const int pid, const char *comm,
   data.pid = pid;
   data.dock_id = dock_id;
   data.flags |= eProcessWindowFlags_RedockRequested;
-  snprintf(data.label, sizeof(data.label), "CPU Usage: %s (%d)", comm, pid);
+  snprintf(data.label, sizeof(data.label), "CPU - %s (%d)###CpuChart%d", comm,
+           pid, pid);
 
   common_views_sort_added(my_state.charts);
 }

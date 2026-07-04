@@ -212,9 +212,9 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     OpenFilesViewerWindow &win = my_state.windows.data()[last];
-    const String title = on_demand_viewer_title(
-        ctx.frame_arena, win.status, "Open Files", "files", win.files.size,
-        win.process_name, win.pid);
+    const String title =
+        on_demand_viewer_title(ctx.frame_arena, win.status, "Open Files",
+                               win.files.size, win.process_name, win.pid);
     process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
                                           title.data);
 

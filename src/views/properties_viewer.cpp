@@ -312,11 +312,11 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
 static String properties_window_title(BumpArena &arena,
                                       const OnDemandViewerStatus status,
                                       const char *process_name, const Pid pid) {
-  const char *prefix = status == eOnDemandViewerStatus_Error ? "Error - "
+  const char *suffix = status == eOnDemandViewerStatus_Error ? " (Error)"
                        : status == eOnDemandViewerStatus_Loading
-                           ? "Loading... - "
+                           ? " (Loading...)"
                            : "";
-  return String::sprintf(arena, "%sProperties: %s (%d)###Properties%d", prefix,
+  return String::sprintf(arena, "Properties%s - %s (%d)###Properties%d", suffix,
                          process_name, pid, pid);
 }
 
