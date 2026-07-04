@@ -5,6 +5,7 @@
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "imgui_internal.h"
 
 #include <cfloat>
 #include <cstdarg>
@@ -136,7 +137,6 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
       ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
       ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
       ImGuiWindowFlags_AlwaysAutoResize;
-  const ImGuiStyle &style = ImGui::GetStyle();
 
   for (uint32_t i = track.size; i-- > 0;) {
     Notification &note = notifications.items[track.to_data_idx(i)];
@@ -160,12 +160,10 @@ void notifications_draw(FrameContext &ctx, Notifications &notifications) {
       // Sticky progress entries are removed when their action completes, so
       // they have no manual close button.
       if (!note.sticky) {
-        const float close_width =
-            ImGui::CalcTextSize("x").x + style.FramePadding.x * 2.0f;
-        ImGui::SameLine();
-        ImGui::SetCursorScreenPos(
-            ImVec2(header_pos.x + header_width - close_width, header_pos.y));
-        if (ImGui::SmallButton("x")) {
+        const float button_size = ImGui::GetFontSize();
+        if (ImGui::CloseButton(ImGui::GetID("#CLOSE"),
+                               ImVec2(header_pos.x + header_width - button_size,
+                                      header_pos.y))) {
           note.created_time = -100;
         }
       }
