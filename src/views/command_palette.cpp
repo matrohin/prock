@@ -6,6 +6,7 @@
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "implot.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -32,6 +33,8 @@ static void cmd_open_preferences(ViewState &vs) {
 static void cmd_toggle_per_core_cpu(ViewState &vs) {
   vs.preferences_state.cpu_per_core = !vs.preferences_state.cpu_per_core;
   vs.system_cpu_chart_state.y_axis_fitted = 0;
+  // bust the cache so that the new lines get consistent colors always
+  ImPlot::BustColorCache();
 }
 static void cmd_toggle_stacked(ViewState &vs) {
   vs.system_cpu_chart_state.stacked = !vs.system_cpu_chart_state.stacked;
