@@ -173,15 +173,12 @@ void command_palette_draw(ViewState &vs) {
   }
 
   // Rows span the full width edge-to-edge; the padding lives *inside* each
-  // selectable (zero window padding so the highlight reaches the border).
+  // selectable. The modal's own border frames the palette, so the list child
+  // stays borderless (which also gives it zero window padding).
   const float pad_x = ImGui::GetFontSize() * 0.5f;
   const float row_h = ImGui::GetFrameHeight();
   const float text_off = (row_h - ImGui::GetTextLineHeight()) * 0.5f;
-  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-  const bool list_open = ImGui::BeginChild("##cmdlist", ImVec2(0.0f, 0.0f),
-                                           ImGuiChildFlags_Borders);
-  ImGui::PopStyleVar();
-  if (list_open) {
+  if (ImGui::BeginChild("##cmdlist")) {
     ImDrawList *dl = ImGui::GetWindowDrawList();
     const ImU32 label_col = ImGui::GetColorU32(ImGuiCol_Text);
     const ImU32 key_col = ImGui::GetColorU32(ImGuiCol_TextDisabled);
