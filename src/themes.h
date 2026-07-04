@@ -540,17 +540,6 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
 // DPI-independent; callers scale them by monitor scale and zoom via
 // ImGuiStyle::ScaleAllSizes().
 inline void apply_geometry(ImGuiStyle &style) {
-  // Flat, borderless panels - separation comes from dock splitters and tinted
-  // headers, not outlines. A hairline is kept around popups so floating menus
-  // stay distinct from the content behind them.
-  style.WindowBorderSize = 0.0f;
-  style.ChildBorderSize = 0.0f;
-  style.FrameBorderSize = 0.0f;
-  style.TabBorderSize = 0.0f;
-  style.PopupBorderSize = 1.0f;
-
-  // Just a hint of rounding - enough to take the hard edge off without the
-  // rounded "consumer app" look.
   constexpr float kRounding = 2.0f;
   style.WindowRounding = kRounding;
   style.ChildRounding = kRounding;
