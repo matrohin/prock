@@ -273,12 +273,14 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_ResizeGrip] = with_alpha(nord10, 0.40f);
     colors[ImGuiCol_ResizeGripHovered] = with_alpha(nord9, 0.67f);
     colors[ImGuiCol_ResizeGripActive] = with_alpha(nord8, 0.95f);
-    colors[ImGuiCol_Tab] = nord1;
+    // Docked tab bars fill the strip behind the tabs with TitleBg /
+    // TitleBgActive, so tab colors sit one shade above those to stay visible.
+    colors[ImGuiCol_Tab] = nord2;
     colors[ImGuiCol_TabHovered] = with_alpha(nord9, 0.80f);
     colors[ImGuiCol_TabSelected] = nord10;
     colors[ImGuiCol_TabSelectedOverline] = nord8;
-    colors[ImGuiCol_TabDimmed] = nord0;
-    colors[ImGuiCol_TabDimmedSelected] = nord2;
+    colors[ImGuiCol_TabDimmed] = nord1;
+    colors[ImGuiCol_TabDimmedSelected] = nord3;
     colors[ImGuiCol_DockingPreview] = with_alpha(nord8, 0.70f);
     // Chart series colors come from the ImPlot colormap (see
     // style_control.cpp), not ImGuiCol_PlotLines, so those are intentionally
@@ -355,12 +357,12 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_ResizeGrip] = wa(on_blue2, 0.40f);
     colors[ImGuiCol_ResizeGripHovered] = wa(on_blue, 0.67f);
     colors[ImGuiCol_ResizeGripActive] = wa(on_cyan, 0.95f);
-    colors[ImGuiCol_Tab] = on1;
+    colors[ImGuiCol_Tab] = on3;
     colors[ImGuiCol_TabHovered] = wa(on_blue, 0.80f);
     colors[ImGuiCol_TabSelected] = on_blue2;
     colors[ImGuiCol_TabSelectedOverline] = on_cyan;
-    colors[ImGuiCol_TabDimmed] = on0;
-    colors[ImGuiCol_TabDimmedSelected] = on2;
+    colors[ImGuiCol_TabDimmed] = on2;
+    colors[ImGuiCol_TabDimmedSelected] = on3;
     colors[ImGuiCol_DockingPreview] = wa(on_cyan, 0.70f);
     // Chart series colors come from the ImPlot colormap (see
     // style_control.cpp), not ImGuiCol_PlotLines, so those are intentionally
@@ -432,11 +434,11 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     colors[ImGuiCol_ResizeGrip] = wa(green, 0.40f);
     colors[ImGuiCol_ResizeGripHovered] = wa(green, 0.67f);
     colors[ImGuiCol_ResizeGripActive] = wa(aqua, 0.95f);
-    colors[ImGuiCol_Tab] = bg1;
+    colors[ImGuiCol_Tab] = bg2;
     colors[ImGuiCol_TabHovered] = wa(green, 0.70f);
     colors[ImGuiCol_TabSelected] = wa(green, 0.55f);
     colors[ImGuiCol_TabSelectedOverline] = aqua;
-    colors[ImGuiCol_TabDimmed] = bg0;
+    colors[ImGuiCol_TabDimmed] = bg1;
     colors[ImGuiCol_TabDimmedSelected] = bg2;
     colors[ImGuiCol_DockingPreview] = wa(aqua, 0.70f);
     colors[ImGuiCol_TableHeaderBg] = bg1;
