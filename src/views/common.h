@@ -243,6 +243,15 @@ inline void draw_error_with_pkexec(const int error_code) {
   }
 }
 
+// Draw an error for a failed netlink sock_diag socket query. ENOENT means the
+// kernel has no inet_diag handler (module missing, unloadable, or not built).
+inline void draw_socket_query_error(const int error_code) {
+  ImGui::Text("Error: socket query failed: %s", strerror(error_code));
+  if (error_code == ENOENT) {
+    ImGui::TextDisabled("The kernel's inet_diag module is unavailable.");
+  }
+}
+
 // Push an error notification; on permission errors it offers a pkexec restart.
 inline void notify_error(Notifications &notifications, const int error_code,
                          const char *fmt, ...) {

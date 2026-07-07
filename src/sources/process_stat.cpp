@@ -5,6 +5,7 @@
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
+#include <cerrno>
 #include <dirent.h>
 #include <linux/inet_diag.h>
 #include <linux/netlink.h>
@@ -18,12 +19,14 @@
 
 // Query all TCP/UDP sockets via netlink SOCK_DIAG
 // Returns array sorted by inode for binary search
-Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
+Array<SocketEntry> query_sockets_netlink(BumpArena &arena, int &out_errno) {
   ZoneScoped;
   GrowingArray<SocketEntry> result = {};
+  int first_errno = 0;
 
   const int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_SOCK_DIAG);
   if (fd < 0) {
+    out_errno = errno;
     return {};
   }
 
@@ -58,6 +61,7 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
     }
 
     if (send(fd, &request, sizeof(request), 0) < 0) {
+      if (first_errno == 0) first_errno = errno;
       continue;
     }
 
@@ -65,14 +69,25 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
     char buf[16384];
     while (!done) {
       ssize_t len = recv(fd, buf, sizeof(buf), 0);
-      if (len <= 0) break;
+      if (len <= 0) {
+        if (len < 0 && first_errno == 0) first_errno = errno;
+        break;
+      }
 
 // NLMSG_NEXT/RTA_NEXT walk buffers the kernel guarantees are aligned.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
       for (nlmsghdr *h = reinterpret_cast<nlmsghdr *>(buf); NLMSG_OK(h, len);
            h = NLMSG_NEXT(h, len)) {
-        if (h->nlmsg_type == NLMSG_DONE || h->nlmsg_type == NLMSG_ERROR) {
+        if (h->nlmsg_type == NLMSG_DONE) {
+          done = true;
+          break;
+        }
+        if (h->nlmsg_type == NLMSG_ERROR) {
+          // E.g. ENOENT when the kernel has no inet_diag handler for this
+          // family/protocol (module missing or unloadable).
+          const nlmsgerr *err = static_cast<const nlmsgerr *>(NLMSG_DATA(h));
+          if (err->error != 0 && first_errno == 0) first_errno = -err->error;
           done = true;
           break;
         }
@@ -124,6 +139,8 @@ Array<SocketEntry> query_sockets_netlink(BumpArena &arena) {
   }
 
   close(fd);
+
+  if (result.size() == 0 && first_errno != 0) out_errno = first_errno;
 
   // Sort by inode for binary search
   std::sort(result.begin(), result.end(),

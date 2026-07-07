@@ -23,6 +23,7 @@ struct SocketViewerWindow {
   ImGuiID dock_id;
   char process_name[64];
   int error_code;
+  int netlink_error_code;
   int selected_index;
   char filter_text[256];
 

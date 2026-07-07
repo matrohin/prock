@@ -129,7 +129,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
   while (sync.on_demand_reader.socket_response_queue.pop(response)) {
     for (SocketViewerWindow &win : state.windows) {
       if (win.pid == response.pid) {
-        if (response.error_code == 0) {
+        if (response.error_code == 0 && response.netlink_error_code == 0) {
           win.status = eOnDemandViewerStatus_Ready;
           win.sockets = Array<SocketEntry>::create(state.cur_arena,
                                                    response.sockets.size);
@@ -140,6 +140,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
         } else {
           win.status = eOnDemandViewerStatus_Error;
           win.error_code = response.error_code;
+          win.netlink_error_code = response.netlink_error_code;
         }
         break;
       }
@@ -185,7 +186,11 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       process_window_check_close(win.flags, should_be_opened);
 
       if (win.status == eOnDemandViewerStatus_Error) {
-        draw_error_with_pkexec(win.error_code);
+        if (win.netlink_error_code != 0) {
+          draw_socket_query_error(win.netlink_error_code);
+        } else {
+          draw_error_with_pkexec(win.error_code);
+        }
       } else if (win.sockets.size > 0 ||
                  win.status == eOnDemandViewerStatus_Ready) {
         ImGuiTextFilter filter;

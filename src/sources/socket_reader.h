@@ -10,6 +10,7 @@ struct SocketRequest {
 struct SocketResponse {
   Pid pid;
   int error_code;
+  int netlink_error_code;
   BumpArena owner_arena;
   Array<SocketEntry> sockets;
 };

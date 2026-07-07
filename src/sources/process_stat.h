@@ -137,4 +137,6 @@ void gather(GatheringState &state, Sync &sync);
 
 // Query all TCP/UDP sockets via netlink SOCK_DIAG
 // Returns array sorted by inode for binary search
-Array<SocketEntry> query_sockets_netlink(BumpArena &arena);
+// Sets out_errno only when the query fails entirely and nothing is returned;
+// partial failures (e.g. no IPv6 support) still produce usable results.
+Array<SocketEntry> query_sockets_netlink(BumpArena &arena, int &out_errno);

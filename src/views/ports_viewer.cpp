@@ -58,6 +58,7 @@ void ports_viewer_update(PortsViewerState &state, Sync &sync) {
         Array<PortEntry>::copy_from(state.cur_arena, response.entries);
     state.permission_limited = response.permission_limited;
     state.scan_error_code = response.error_code;
+    state.netlink_error_code = response.netlink_error_code;
     state.status = ePortsViewerStatus_Ready;
     if (state.selected_index >= static_cast<int>(state.entries.size)) {
       state.selected_index = -1;
@@ -211,6 +212,9 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
   if (state.scan_error_code != 0) {
     draw_error_with_pkexec(state.scan_error_code);
+  }
+  if (state.netlink_error_code != 0) {
+    draw_socket_query_error(state.netlink_error_code);
   }
 
   const bool filter_active = filter.IsActive();

@@ -34,6 +34,7 @@ struct PortsViewerState {
   int selected_index = -1;
 
   int scan_error_code;
+  int netlink_error_code;
 
   double last_updated = 0.0;
 

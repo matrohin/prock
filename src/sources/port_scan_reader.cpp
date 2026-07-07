@@ -26,7 +26,12 @@ PortScanResponse read_port_scan(BumpArena &temp_arena,
   PortScanResponse response = {};
   response.owner_arena = BumpArena::create();
 
-  const Array<SocketEntry> all_sockets = query_sockets_netlink(temp_arena);
+  const Array<SocketEntry> all_sockets =
+      query_sockets_netlink(temp_arena, response.netlink_error_code);
+  if (all_sockets.size == 0) {
+    response.entries = Array<PortEntry>::create(response.owner_arena, 0);
+    return response;
+  }
 
   GrowingArray<PortEntry> entries = {};
 

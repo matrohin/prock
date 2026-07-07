@@ -13,6 +13,7 @@ struct PortScanRequest {};
 
 struct PortScanResponse {
   int error_code;
+  int netlink_error_code;
   bool permission_limited;
   BumpArena owner_arena;
   Array<PortEntry> entries;

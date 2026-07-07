@@ -65,7 +65,8 @@ SocketResponse read_process_sockets(BumpArena &temp_arena,
   }
   std::sort(inodes.data, inodes.data + inodes.size);
 
-  const Array<SocketEntry> all_sockets = query_sockets_netlink(temp_arena);
+  const Array<SocketEntry> all_sockets =
+      query_sockets_netlink(temp_arena, response.netlink_error_code);
 
   response.sockets =
       Array<SocketEntry>::create(response.owner_arena, inodes.size);
