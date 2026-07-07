@@ -14,6 +14,7 @@ enum PortsViewerStatus {
 enum PortsViewerColumnId {
   ePortsViewerColumnId_Protocol,
   ePortsViewerColumnId_LocalAddress,
+  ePortsViewerColumnId_RemoteAddress,
   ePortsViewerColumnId_State,
   ePortsViewerColumnId_Pid,
   ePortsViewerColumnId_Process,

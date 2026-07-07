@@ -1,7 +1,9 @@
 #include "views/socket_format.h"
 #include "base/string.h"
 
+#include <arpa/inet.h>
 #include <cstdio>
+#include <cstring>
 
 const char *tcp_state_name(const int state) {
   switch (state) {
@@ -61,6 +63,10 @@ bool is_tcp(const SocketProtocol protocol) {
   return protocol == eSocketProtocol_TCP || protocol == eSocketProtocol_TCP6;
 }
 
+bool is_ipv6(const SocketProtocol protocol) {
+  return protocol == eSocketProtocol_TCP6 || protocol == eSocketProtocol_UDP6;
+}
+
 String format_ipv4(BumpArena &arena, const unsigned int ip,
                    const unsigned short port) {
   return String::sprintf(arena, "%u.%u.%u.%u:%u", (ip >> 0) & 0xFF,
@@ -117,12 +123,25 @@ String format_ipv6(BumpArena &arena, const unsigned char *ip,
 
 String format_address(BumpArena &arena, const SocketEntry &sock,
                       const bool local) {
-  const bool is_ipv6 = sock.protocol == eSocketProtocol_TCP6 ||
-                       sock.protocol == eSocketProtocol_UDP6;
-  if (is_ipv6) {
+  if (is_ipv6(sock.protocol)) {
     return format_ipv6(arena, local ? sock.local_ip6 : sock.remote_ip6,
                        local ? sock.local_port : sock.remote_port);
   }
   return format_ipv4(arena, local ? sock.local_ip : sock.remote_ip,
                      local ? sock.local_port : sock.remote_port);
+}
+
+int compare_address(const SocketEntry &a, const SocketEntry &b,
+                    const bool local) {
+  const bool a_v6 = is_ipv6(a.protocol);
+  const bool b_v6 = is_ipv6(b.protocol);
+  if (a_v6 != b_v6) return a_v6 ? 1 : -1;
+  if (a_v6) {
+    return memcmp(local ? a.local_ip6 : a.remote_ip6,
+                  local ? b.local_ip6 : b.remote_ip6, 16);
+  }
+  // Stored in network byte order; ntohl so IPv4 addresses sort numerically.
+  const unsigned int ip_a = ntohl(local ? a.local_ip : a.remote_ip);
+  const unsigned int ip_b = ntohl(local ? b.local_ip : b.remote_ip);
+  return ip_a < ip_b ? -1 : (ip_a > ip_b ? 1 : 0);
 }

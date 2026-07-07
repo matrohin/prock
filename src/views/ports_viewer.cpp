@@ -17,7 +17,7 @@
 static const char *PORTS_TITLE = "Ports";
 
 const char *PORTS_COPY_HEADER =
-    "Protocol\tLocal Address\tState\tPID\tProcess\n";
+    "Protocol\tLocal Address\tRemote Address\tState\tPID\tProcess\n";
 
 static void send_port_scan_request(Sync &sync) {
   {
@@ -33,10 +33,16 @@ static void sort_ports(PortsViewerState &state) {
                        switch (state.sorted_by) {
                        case ePortsViewerColumnId_Protocol:
                          return a.sock.protocol < b.sock.protocol;
-                       case ePortsViewerColumnId_LocalAddress:
-                         if (a.sock.local_port != b.sock.local_port)
-                           return a.sock.local_port < b.sock.local_port;
-                         return a.sock.local_ip < b.sock.local_ip;
+                       case ePortsViewerColumnId_LocalAddress: {
+                         const int cmp = compare_address(a.sock, b.sock, true);
+                         if (cmp != 0) return cmp < 0;
+                         return a.sock.local_port < b.sock.local_port;
+                       }
+                       case ePortsViewerColumnId_RemoteAddress: {
+                         const int cmp = compare_address(a.sock, b.sock, false);
+                         if (cmp != 0) return cmp < 0;
+                         return a.sock.remote_port < b.sock.remote_port;
+                       }
                        case ePortsViewerColumnId_State:
                          return a.sock.state < b.sock.state;
                        case ePortsViewerColumnId_Pid:
@@ -90,6 +96,8 @@ static String port_cell_text(BumpArena &arena, const PortEntry &e,
     return String::static_string(protocol_name(e.sock.protocol));
   case ePortsViewerColumnId_LocalAddress:
     return format_address(arena, e.sock, true);
+  case ePortsViewerColumnId_RemoteAddress:
+    return format_address(arena, e.sock, false);
   case ePortsViewerColumnId_State:
     return String::static_string(
         socket_state_name(e.sock.protocol, e.sock.state));
@@ -105,9 +113,10 @@ static String port_cell_text(BumpArena &arena, const PortEntry &e,
 static void copy_port_row(Notifications &notifications, BumpArena &frame_arena,
                           const PortEntry &e) {
   const String local_addr = format_address(frame_arena, e.sock, true);
+  const String remote_addr = format_address(frame_arena, e.sock, false);
   const String buf = String::sprintf(
-      frame_arena, "%s%s\t%s\t%s\t%d\t%s", PORTS_COPY_HEADER,
-      protocol_name(e.sock.protocol), local_addr.data,
+      frame_arena, "%s%s\t%s\t%s\t%s\t%d\t%s", PORTS_COPY_HEADER,
+      protocol_name(e.sock.protocol), local_addr.data, remote_addr.data,
       socket_state_name(e.sock.protocol, e.sock.state), e.pid, e.name);
   clipboard_copy_row(notifications, buf.data);
 }
@@ -115,14 +124,15 @@ static void copy_port_row(Notifications &notifications, BumpArena &frame_arena,
 static void copy_all_ports(Notifications &notifications, BumpArena &arena,
                            const PortsViewerState &state) {
   copy_all_to_clipboard(
-      notifications, arena, state.entries.data, state.entries.size, 128,
+      notifications, arena, state.entries.data, state.entries.size, 256,
       PORTS_COPY_HEADER,
       [&arena](char *ptr, const size_t rem, const PortEntry &e) {
         const String local_addr = format_address(arena, e.sock, true);
-        return snprintf(ptr, rem, "%s\t%s\t%s\t%d\t%s\n",
-                        protocol_name(e.sock.protocol), local_addr.data,
-                        socket_state_name(e.sock.protocol, e.sock.state), e.pid,
-                        e.name);
+        const String remote_addr = format_address(arena, e.sock, false);
+        return snprintf(
+            ptr, rem, "%s\t%s\t%s\t%s\t%d\t%s\n",
+            protocol_name(e.sock.protocol), local_addr.data, remote_addr.data,
+            socket_state_name(e.sock.protocol, e.sock.state), e.pid, e.name);
       });
 }
 
@@ -227,6 +237,8 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                             ePortsViewerColumnId_Protocol);
     ImGui::TableSetupColumn("Local Address", ImGuiTableColumnFlags_None, 0.0f,
                             ePortsViewerColumnId_LocalAddress);
+    ImGui::TableSetupColumn("Remote Address", ImGuiTableColumnFlags_None, 0.0f,
+                            ePortsViewerColumnId_RemoteAddress);
     ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 0.0f,
                             ePortsViewerColumnId_State);
     ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_WidthFixed, 0.0f,
@@ -241,14 +253,15 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     for (uint32_t i = 0; i < state.entries.size; ++i) {
       const PortEntry &e = state.entries.data[i];
       const String local_addr = format_address(ctx.frame_arena, e.sock, true);
+      const String remote_addr = format_address(ctx.frame_arena, e.sock, false);
 
       // Only build the filter string when a filter is active; PassFilter on an
       // empty filter trivially matches every row.
       if (filter_active) {
         const String filter_str = String::sprintf(
-            ctx.frame_arena, "%s %s %s %d %s", protocol_name(e.sock.protocol),
-            local_addr.data, socket_state_name(e.sock.protocol, e.sock.state),
-            e.pid, e.name);
+            ctx.frame_arena, "%s %s %s %s %d %s",
+            protocol_name(e.sock.protocol), local_addr.data, remote_addr.data,
+            socket_state_name(e.sock.protocol, e.sock.state), e.pid, e.name);
         if (!filter.PassFilter(filter_str.data)) continue;
       }
 
@@ -289,6 +302,9 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_LocalAddress);
       ImGui::TextUnformatted(local_addr.data);
+
+      ImGui::TableSetColumnIndex(ePortsViewerColumnId_RemoteAddress);
+      ImGui::TextUnformatted(remote_addr.data);
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_State);
       ImGui::TextUnformatted(socket_state_name(e.sock.protocol, e.sock.state));

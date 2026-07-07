@@ -5,6 +5,7 @@
 
 #include "tracy/Tracy.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <dirent.h>
 #include <stdlib.h>
@@ -49,9 +50,14 @@ PortScanResponse read_port_scan(BumpArena &temp_arena,
     if (pid <= 0) continue;
 
     int collect_errno = 0;
-    const Array<unsigned long> inodes =
+    Array<unsigned long> inodes =
         collect_socket_inodes(temp_arena, pid, collect_errno);
     if (collect_errno == EACCES) response.permission_limited = true;
+
+    // Several fds may point at the same socket (dup'd fds); one row each.
+    std::sort(inodes.data, inodes.data + inodes.size);
+    inodes.size = static_cast<uint32_t>(
+        std::unique(inodes.data, inodes.data + inodes.size) - inodes.data);
 
     char name[64];
     bool name_read = false;

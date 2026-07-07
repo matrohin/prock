@@ -73,14 +73,16 @@ static void sort_sockets(const SocketViewerWindow &win) {
                        switch (win.sorted_by) {
                        case eSocketViewerColumnId_Protocol:
                          return a.protocol < b.protocol;
-                       case eSocketViewerColumnId_LocalAddress:
-                         if (a.local_ip != b.local_ip)
-                           return a.local_ip < b.local_ip;
+                       case eSocketViewerColumnId_LocalAddress: {
+                         const int cmp = compare_address(a, b, true);
+                         if (cmp != 0) return cmp < 0;
                          return a.local_port < b.local_port;
-                       case eSocketViewerColumnId_RemoteAddress:
-                         if (a.remote_ip != b.remote_ip)
-                           return a.remote_ip < b.remote_ip;
+                       }
+                       case eSocketViewerColumnId_RemoteAddress: {
+                         const int cmp = compare_address(a, b, false);
+                         if (cmp != 0) return cmp < 0;
                          return a.remote_port < b.remote_port;
+                       }
                        case eSocketViewerColumnId_State:
                          return a.state < b.state;
                        case eSocketViewerColumnId_RecvQ:
