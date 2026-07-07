@@ -42,7 +42,7 @@ static void sort_ports(PortsViewerState &state) {
                        case ePortsViewerColumnId_Pid:
                          return a.pid < b.pid;
                        case ePortsViewerColumnId_Process:
-                         return strcasecmp(a.comm, b.comm) < 0;
+                         return strcasecmp(a.name, b.name) < 0;
                        default:
                          return false;
                        }
@@ -95,7 +95,7 @@ static String port_cell_text(BumpArena &arena, const PortEntry &e,
   case ePortsViewerColumnId_Pid:
     return String::sprintf(arena, "%d", e.pid);
   case ePortsViewerColumnId_Process:
-    return String::static_string(e.comm);
+    return String::static_string(e.name);
   default:
     return String::static_string("");
   }
@@ -107,7 +107,7 @@ static void copy_port_row(Notifications &notifications, BumpArena &frame_arena,
   const String buf = String::sprintf(
       frame_arena, "%s%s\t%s\t%s\t%d\t%s", PORTS_COPY_HEADER,
       protocol_name(e.sock.protocol), local_addr.data,
-      socket_state_name(e.sock.protocol, e.sock.state), e.pid, e.comm);
+      socket_state_name(e.sock.protocol, e.sock.state), e.pid, e.name);
   clipboard_copy_row(notifications, buf.data);
 }
 
@@ -121,7 +121,7 @@ static void copy_all_ports(Notifications &notifications, BumpArena &arena,
         return snprintf(ptr, rem, "%s\t%s\t%s\t%d\t%s\n",
                         protocol_name(e.sock.protocol), local_addr.data,
                         socket_state_name(e.sock.protocol, e.sock.state), e.pid,
-                        e.comm);
+                        e.name);
       });
 }
 
@@ -244,7 +244,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         const String filter_str = String::sprintf(
             ctx.frame_arena, "%s %s %s %d %s", protocol_name(e.sock.protocol),
             local_addr.data, socket_state_name(e.sock.protocol, e.sock.state),
-            e.pid, e.comm);
+            e.pid, e.name);
         if (!filter.PassFilter(filter_str.data)) continue;
       }
 
@@ -293,7 +293,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       ImGui::Text("%d", e.pid);
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_Process);
-      ImGui::TextUnformatted(e.comm);
+      ImGui::TextUnformatted(e.name);
 
       ImGui::PopID();
     }

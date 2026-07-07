@@ -6,7 +6,7 @@
 struct PortEntry {
   SocketEntry sock;
   Pid pid;
-  char comm[64];
+  char name[64];
 };
 
 struct PortScanRequest {};

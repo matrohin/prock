@@ -982,40 +982,43 @@ TEST_CASE("sort_brief_table_lines by columns") {
 }
 
 // ============================================================================
-// cmdline_display_name Tests
+// process_display_name Tests
 // ============================================================================
 
-TEST_CASE("cmdline_display_name") {
+TEST_CASE("process_display_name") {
   BumpArena arena = BumpArena::create();
   InternTable interner = InternTable::create(&arena);
 
-  SUBCASE("null and empty return nullptr") {
-    CHECK(cmdline_display_name(nullptr, interner).data == nullptr);
-    CHECK(cmdline_display_name("", interner).data == nullptr);
+  SUBCASE("null and empty cmdline fall back to comm") {
+    CHECK(strcmp(process_display_name(nullptr, "kthreadd", interner).data,
+                 "kthreadd") == 0);
+    CHECK(strcmp(process_display_name("", "kthreadd", interner).data,
+                 "kthreadd") == 0);
   }
 
   SUBCASE("strips leading directories") {
-    ConstString name = cmdline_display_name("/usr/bin/bash", interner);
+    ConstString name = process_display_name("/usr/bin/bash", "bash", interner);
     REQUIRE(name.data != nullptr);
     CHECK(strcmp(name.data, "bash") == 0);
   }
 
   SUBCASE("stops at first argument separator") {
     ConstString name =
-        cmdline_display_name("/usr/bin/python3 script.py -v", interner);
+        process_display_name("/usr/bin/python3 script.py -v", "foo", interner);
     REQUIRE(name.data != nullptr);
     CHECK(strcmp(name.data, "python3") == 0);
   }
 
   SUBCASE("plain basename with no path") {
-    ConstString name = cmdline_display_name("cat", interner);
+    ConstString name = process_display_name("cat", "cat", interner);
     REQUIRE(name.data != nullptr);
     CHECK(strcmp(name.data, "cat") == 0);
   }
 
-  SUBCASE("trailing slash leaves no basename") {
+  SUBCASE("trailing slash leaves no basename, falls back to comm") {
     // base advances past the last '/' to end-of-token, so base == end.
-    CHECK(cmdline_display_name("/usr/bin/", interner).data == nullptr);
+    CHECK(strcmp(process_display_name("/usr/bin/", "comm", interner).data,
+                 "comm") == 0);
   }
 
   arena.destroy();

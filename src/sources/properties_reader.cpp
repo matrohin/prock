@@ -248,8 +248,10 @@ PropertiesResponse read_process_properties(BumpArena &temp_arena,
   char comm_buf[64];
   read_proc_comm(pid, comm_buf, sizeof(comm_buf));
   props.comm = String::copy_from(arena, comm_buf);
-  read_proc_comm(props.ppid, comm_buf, sizeof(comm_buf));
-  props.parent_comm = String::copy_from(arena, comm_buf);
+
+  char parent_buf[256];
+  read_proc_display_name(props.ppid, parent_buf, sizeof(parent_buf));
+  props.parent_name = String::copy_from(arena, parent_buf);
 
   // Credentials and security posture from /proc/<pid>/status. Read line by
   // line because the capability/seccomp lines sit near the end of the file.
@@ -310,26 +312,13 @@ PropertiesResponse read_process_properties(BumpArena &temp_arena,
   props.cgroup = read_cgroup(temp_arena, arena, pid);
   props.security_label = read_security_label(temp_arena, arena, pid);
 
-  // Full command line: null-separated args joined with spaces, like
-  // read_process() in process_stat.cpp.
-  props.cmdline = String::static_string("");
-  const String cmdline_path =
-      String::sprintf(temp_arena, "/proc/%d/cmdline", pid);
-  if (FILE *cmdline_file = fopen(cmdline_path.data, "r")) {
-    char cmdline_buf[4096];
-    const size_t nread =
-        fread(cmdline_buf, 1, sizeof(cmdline_buf) - 1, cmdline_file);
-    fclose(cmdline_file);
-    if (nread > 0) {
-      for (size_t i = 0; i < nread; ++i)
-        if (cmdline_buf[i] == '\0') cmdline_buf[i] = ' ';
-      size_t len = nread;
-      while (len > 0 && cmdline_buf[len - 1] == ' ')
-        --len;
-      props.cmdline =
-          String::copy_from(arena, cmdline_buf, static_cast<uint32_t>(len));
-    }
-  }
+  char cmdline_buf[4096];
+  const size_t cmdline_len =
+      read_proc_cmdline(pid, cmdline_buf, sizeof(cmdline_buf));
+  props.cmdline = cmdline_len > 0
+                      ? String::copy_from(arena, cmdline_buf,
+                                          static_cast<uint32_t>(cmdline_len))
+                      : String::static_string("");
 
   response.error_code = 0;
   return response;

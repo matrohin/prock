@@ -10,7 +10,7 @@
 // intentionally excluded here and will be provided by a separate struct.
 struct ProcessProperties {
   String comm;
-  String parent_comm;
+  String parent_name;
   String exe;
   String cwd;
   String root;

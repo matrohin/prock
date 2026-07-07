@@ -48,23 +48,23 @@ PortScanResponse read_port_scan(BumpArena &temp_arena,
         collect_socket_inodes(temp_arena, pid, collect_errno);
     if (collect_errno == EACCES) response.permission_limited = true;
 
-    char comm[64];
-    bool comm_read = false;
+    char name[64];
+    bool name_read = false;
 
     for (const unsigned long inode : inodes) {
       const SocketEntry *match = find_socket_by_inode(all_sockets, inode);
       if (!match) continue;
 
-      if (!comm_read) {
-        read_proc_comm(pid, comm, sizeof(comm));
-        comm_read = true;
+      if (!name_read) {
+        read_proc_display_name(pid, name, sizeof(name));
+        name_read = true;
       }
 
       PortEntry *pe = entries.emplace_back(temp_arena);
       pe->sock = *match;
       pe->pid = pid;
-      strncpy(pe->comm, comm, sizeof(pe->comm) - 1);
-      pe->comm[sizeof(pe->comm) - 1] = '\0';
+      strncpy(pe->name, name, sizeof(pe->name) - 1);
+      pe->name[sizeof(pe->name) - 1] = '\0';
     }
   }
   closedir(proc_dir);

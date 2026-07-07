@@ -61,9 +61,9 @@ static uint32_t build_property_rows(BumpArena &arena,
   // Process
   add(ePropSection_Process, "Name", p.comm);
   add(ePropSection_Process, "PID", String::sprintf(arena, "%d", p.pid));
-  if (p.parent_comm.len > 0) {
+  if (p.parent_name.len > 0) {
     add(ePropSection_Process, "Parent",
-        String::sprintf(arena, "%d (%s)", p.ppid, p.parent_comm.data));
+        String::sprintf(arena, "%d (%s)", p.ppid, p.parent_name.data));
   } else {
     add(ePropSection_Process, "Parent", String::sprintf(arena, "%d", p.ppid));
   }
@@ -175,7 +175,7 @@ void properties_viewer_request(PropertiesViewerState &state, Sync &sync,
 
 static void copy_props_into(BumpArena &arena, ProcessProperties &p) {
   p.comm = String::copy_from(arena, p.comm);
-  p.parent_comm = String::copy_from(arena, p.parent_comm);
+  p.parent_name = String::copy_from(arena, p.parent_name);
   p.exe = String::copy_from(arena, p.exe);
   p.cwd = String::copy_from(arena, p.cwd);
   p.root = String::copy_from(arena, p.root);

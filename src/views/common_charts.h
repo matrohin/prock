@@ -3,6 +3,7 @@
 #include "base/base.h"
 #include "base/const_string.h"
 #include "base/ring_track.h"
+#include "sources/proc_parsers.h"
 #include "state.h"
 
 constexpr uint32_t CHART_HISTORY_SIZE = 4096;
@@ -15,18 +16,13 @@ struct TopProcess {
   double value;
 };
 
-// Returns nullptr if cmdline is empty or has no useful basename.
-inline ConstString cmdline_display_name(const char *cmdline,
+// Interned counterpart of read_proc_display_name() for snapshot data.
+inline ConstString process_display_name(const char *cmdline, const char *comm,
                                         InternTable &interner) {
-  if (!cmdline || !cmdline[0]) return ConstString{nullptr};
-  const char *end = cmdline;
-  while (*end && *end != ' ')
-    ++end;
-  const char *base = cmdline;
-  for (const char *p = cmdline; p < end; ++p)
-    if (*p == '/') base = p + 1;
-  if (base < end) return interner.intern(base, end - base);
-  return ConstString{nullptr};
+  uint32_t len = 0;
+  if (const char *base = cmdline_basename(cmdline, &len))
+    return interner.intern(base, len);
+  return interner.intern(comm);
 }
 
 // Find top process by a given metric extractor. Name is placed in the interner.
@@ -39,10 +35,8 @@ TopProcess find_top_process(const StateSnapshot &snapshot,
     if (val > top.value) {
       top.pid = snapshot.stats.data[i].pid;
       top.value = val;
-      ConstString display =
-          cmdline_display_name(snapshot.stats.data[i].cmdline, interner);
-      top.name =
-          display.data ? display : interner.intern(snapshot.stats.data[i].comm);
+      top.name = process_display_name(snapshot.stats.data[i].cmdline,
+                                      snapshot.stats.data[i].comm, interner);
     }
   }
   return top;
