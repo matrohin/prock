@@ -1,5 +1,6 @@
 #include "open_files_reader.h"
 
+#include "base/containers.h"
 #include "tracy/Tracy.hpp"
 
 #include <cerrno>

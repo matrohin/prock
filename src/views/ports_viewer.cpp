@@ -1,5 +1,6 @@
 #include "ports_viewer.h"
 
+#include "base/containers.h"
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/notifications.h"

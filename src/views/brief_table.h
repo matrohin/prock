@@ -2,6 +2,7 @@
 
 #include "base/base.h"
 #include "base/const_string.h"
+#include "base/containers.h"
 #include "sources/process_stat.h"
 
 #include "imgui.h"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/base.h"
+#include "base/containers.h"
 #include "process_window_flags.h"
 #include "sources/properties_reader.h"
 #include "sources/sync.h"

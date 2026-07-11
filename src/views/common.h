@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/containers.h"
 #include "constants.h"
 #include "cpu_chart.h"
 #include "icons.h"

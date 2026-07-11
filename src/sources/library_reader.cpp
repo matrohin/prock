@@ -1,6 +1,7 @@
 #include "library_reader.h"
 
 #include "base/base.h"
+#include "base/containers.h"
 #include "base/string.h"
 #include "tracy/Tracy.hpp"
 

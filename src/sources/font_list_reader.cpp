@@ -1,5 +1,7 @@
 #include "font_list_reader.h"
 
+#include "base/containers.h"
+
 #include <algorithm>
 #include <climits>
 #include <cstdio>

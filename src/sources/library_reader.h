@@ -1,4 +1,6 @@
 #pragma once
+
+#include "base/containers.h"
 #include "base/string.h"
 
 struct LibraryEntry {

@@ -2,6 +2,7 @@
 
 #include "base/base.h"
 #include "base/channel.h"
+#include "base/containers.h"
 #include "on_demand_actions.h"
 #include "on_demand_reader.h"
 #include "process_stat.h"

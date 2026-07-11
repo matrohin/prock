@@ -1,6 +1,7 @@
 #include "process_stat.h"
 #include "proc_parsers.h"
 
+#include "base/containers.h"
 #include "sync.h"
 #include "tracy/Tracy.hpp"
 

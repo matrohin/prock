@@ -1,5 +1,6 @@
 #include "open_files_viewer.h"
 
+#include "base/containers.h"
 #include "base/string.h"
 #include "views/common.h"
 #include "views/icons.h"

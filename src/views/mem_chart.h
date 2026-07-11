@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/containers.h"
 #include "process_window_flags.h"
 #include "views/common_charts.h"
 

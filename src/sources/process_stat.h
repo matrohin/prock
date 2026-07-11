@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/base.h"
+#include "base/containers.h"
 #include "username.h"
 
 #include <climits>

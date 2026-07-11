@@ -1,5 +1,6 @@
 #include "smaps_reader.h"
 
+#include "base/containers.h"
 #include "base/string.h"
 #include "tracy/Tracy.hpp"
 

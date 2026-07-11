@@ -4,6 +4,7 @@
 #include "base/base.h"
 #include "base/channel.h"
 #include "base/const_string.h"
+#include "base/containers.h"
 
 #include <cstdio>
 

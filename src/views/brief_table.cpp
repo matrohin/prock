@@ -13,6 +13,7 @@
 #include "views/threads_viewer.h"
 #include "views/view_state.h"
 
+#include "base/containers.h"
 #include "sources/sync.h"
 #include "state.h"
 #include "themes.h"
