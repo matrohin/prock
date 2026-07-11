@@ -5,6 +5,7 @@
 #include "views/icons.h"
 #include "views/notifications.h"
 #include "views/socket_format.h"
+#include "views/ui.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -192,8 +193,8 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
     ImGui::TableNextColumn();
     ImGui::SetNextItemWidth(-FLT_MIN);
-    draw_filter_input(filter, "##PortsFilter", state.filter_text,
-                      sizeof(state.filter_text));
+    ui_filter_input(filter, "##PortsFilter", state.filter_text,
+                    sizeof(state.filter_text));
 
     if (state.permission_limited) {
       ImGui::TableNextColumn();
@@ -208,13 +209,13 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
     }
 
     ImGui::TableNextColumn();
-    if (draw_refresh_button(state.status == ePortsViewerStatus_Loading)) {
+    if (ui_refresh_button(state.status == ePortsViewerStatus_Loading)) {
       state.status = ePortsViewerStatus_Loading;
       send_port_scan_request(*view_state.sync);
     }
 
     ImGui::TableNextColumn();
-    draw_last_updated(state.last_updated);
+    ui_last_updated(state.last_updated);
 
     ImGui::TableNextColumn(); // spacer
 
@@ -232,7 +233,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   bool selected_visible = false;
   if (ImGui::BeginTable("PortsTable", ePortsViewerColumnId_Count,
                         COMMON_TABLE_FLAGS)) {
-    push_mono_font();
+    ui_push_mono_font();
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed, 0.0f,
                             ePortsViewerColumnId_Protocol);
@@ -318,7 +319,7 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       ImGui::PopID();
     }
-    pop_mono_font();
+    ui_pop_mono_font();
     ImGui::EndTable();
   }
 

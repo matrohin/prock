@@ -25,8 +25,8 @@ inline double counter_rate(const ulonglong cur, const ulonglong prev,
 }
 
 // Rescale the one-core jiffy budget to a task's own sampling window, since
-// tasks are read at different instants within a gather pass. Falls back to the
-// shared budget when either interval is unusable.
+// tasks are read at different instants within a process_stat_gather pass. Falls
+// back to the shared budget when either interval is unusable.
 inline double effective_core_ticks(const SteadyTimePoint cur_read,
                                    const SteadyTimePoint prev_read,
                                    const double per_core_ticks,

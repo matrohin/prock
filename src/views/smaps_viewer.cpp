@@ -3,6 +3,7 @@
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/table_item.h"
+#include "views/ui.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -283,8 +284,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           ImGui::TableNextColumn();
           ImGui::SetNextItemWidth(-FLT_MIN);
-          draw_filter_input(filter, "##SmapsFilter", win.filter_text,
-                            sizeof(win.filter_text));
+          ui_filter_input(filter, "##SmapsFilter", win.filter_text,
+                          sizeof(win.filter_text));
 
           ImGui::TableNextColumn();
           if (ImGui::Checkbox("Group", &win.grouped)) {
@@ -292,13 +293,13 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           }
 
           ImGui::TableNextColumn();
-          if (draw_refresh_button(win.refresh_pending)) {
+          if (ui_refresh_button(win.refresh_pending)) {
             win.refresh_pending = true;
             send_smaps_request(*view_state.sync, win.pid);
           }
 
           ImGui::TableNextColumn();
-          draw_last_updated(win.last_updated);
+          ui_last_updated(win.last_updated);
 
           ImGui::TableNextColumn(); // spacer
 
@@ -405,7 +406,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           constexpr int kGroupedCols = 7;
           if (ImGui::BeginTable("MemMapsGrouped", kGroupedCols,
                                 COMMON_TABLE_FLAGS)) {
-            push_mono_font();
+            ui_push_mono_font();
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Segs",
                                     ImGuiTableColumnFlags_PreferSortDescending |
@@ -511,7 +512,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ImGui::PopID();
             }
 
-            pop_mono_font();
+            ui_pop_mono_font();
             ImGui::EndTable();
 
             if (copy_row_shortcut(win.selected_index, groups.size())) {
@@ -523,7 +524,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           // ---- Flat mode ----
           constexpr int kFlatCols = eSmapsViewerColumnId_SegmentCount;
           if (ImGui::BeginTable("MemMaps", kFlatCols, COMMON_TABLE_FLAGS)) {
-            push_mono_font();
+            ui_push_mono_font();
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Address",
                                     ImGuiTableColumnFlags_WidthFixed |
@@ -631,7 +632,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               ImGui::PopID();
             }
 
-            pop_mono_font();
+            ui_pop_mono_font();
             ImGui::EndTable();
 
             if (copy_row_shortcut(win.selected_index, win.segments.size)) {

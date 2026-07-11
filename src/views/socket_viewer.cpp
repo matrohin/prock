@@ -5,6 +5,7 @@
 #include "views/icons.h"
 #include "views/socket_format.h"
 #include "views/table_item.h"
+#include "views/ui.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -206,17 +207,17 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           ImGui::TableNextColumn();
           ImGui::SetNextItemWidth(-FLT_MIN);
-          draw_filter_input(filter, "##SockFilter", win.filter_text,
-                            sizeof(win.filter_text));
+          ui_filter_input(filter, "##SockFilter", win.filter_text,
+                          sizeof(win.filter_text));
 
           ImGui::TableNextColumn();
-          if (draw_refresh_button()) {
+          if (ui_refresh_button()) {
             win.status = eOnDemandViewerStatus_Loading;
             send_socket_request(*view_state.sync, win.pid);
           }
 
           ImGui::TableNextColumn();
-          draw_last_updated(win.last_updated);
+          ui_last_updated(win.last_updated);
 
           ImGui::TableNextColumn(); // spacer
 
@@ -227,7 +228,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::TextDisabled("No sockets");
         } else if (ImGui::BeginTable("Sockets", eSocketViewerColumnId_Count,
                                      COMMON_TABLE_FLAGS)) {
-          push_mono_font();
+          ui_push_mono_font();
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("Proto", ImGuiTableColumnFlags_WidthFixed,
                                   0.0f, eSocketViewerColumnId_Protocol);
@@ -329,7 +330,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ImGui::PopID();
           }
 
-          pop_mono_font();
+          ui_pop_mono_font();
           ImGui::EndTable();
 
           // Ctrl+C to copy selected row

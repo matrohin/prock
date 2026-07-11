@@ -23,9 +23,9 @@ struct DumpResponse {
   int exit_status;         // gcore's exit code when it ran but failed
 };
 
-DumpResponse write_process_dump(const DumpRequest &request,
-                                const std::atomic<bool> &quit);
+DumpResponse dump_writer_write(const DumpRequest &request,
+                               const std::atomic<bool> &quit);
 
 // Default folder for core dumps ("$HOME/prock-dumps", or under /tmp if $HOME is
 // unset). Used to seed the preference and as the fallback when it is empty.
-void default_dump_dir(char *out, uint32_t size);
+void dump_writer_default_dir(char *out, uint32_t size);

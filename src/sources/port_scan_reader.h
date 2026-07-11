@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/base.h"
-#include "sources/process_stat.h"
+#include "sock_diag.h"
 
 struct PortEntry {
   SocketEntry sock;
@@ -19,5 +19,5 @@ struct PortScanResponse {
   Array<PortEntry> entries;
 };
 
-PortScanResponse read_port_scan(BumpArena &temp_arena,
-                                const PortScanRequest &request);
+PortScanResponse port_scan_reader_read(BumpArena &temp_arena,
+                                       const PortScanRequest &request);

@@ -8,8 +8,8 @@
 #include <cstdio>
 #include <cstring>
 
-SmapsResponse read_process_smaps(BumpArena &temp_arena,
-                                 const SmapsRequest &request) {
+SmapsResponse smaps_reader_read(BumpArena &temp_arena,
+                                const SmapsRequest &request) {
   ZoneScoped;
   const Pid pid = request.pid;
 

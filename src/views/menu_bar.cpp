@@ -102,8 +102,8 @@ static void draw_font_picker(PreferencesState &prefs, const char *label,
     }
     ImGuiTextFilter filter;
     ImGui::SetNextItemWidth(-FLT_MIN);
-    draw_filter_input(filter, "##FontFilter", prefs.font_filter,
-                      sizeof(prefs.font_filter));
+    ui_filter_input(filter, "##FontFilter", prefs.font_filter,
+                    sizeof(prefs.font_filter));
 
     const float list_height = 8.25f * ImGui::GetTextLineHeightWithSpacing();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,

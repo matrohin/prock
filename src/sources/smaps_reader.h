@@ -25,5 +25,5 @@ struct SmapsResponse {
   Array<SmapsSegment> segments;
 };
 
-SmapsResponse read_process_smaps(BumpArena &temp_arena,
-                                 const SmapsRequest &request);
+SmapsResponse smaps_reader_read(BumpArena &temp_arena,
+                                const SmapsRequest &request);

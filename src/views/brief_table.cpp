@@ -11,6 +11,7 @@
 #include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/threads_viewer.h"
+#include "views/ui.h"
 #include "views/view_state.h"
 
 #include "base/containers.h"
@@ -252,7 +253,7 @@ static void copy_all_processes(Notifications &notifications, BumpArena &arena,
 
 // Ask the on-demand actions thread to run gcore. The dump_dir is the configured
 // folder; when empty (the user cleared the preference) it falls back to
-// default_dump_dir(). The dump lands at "<out_path>.<pid>" because gcore
+// dump_writer_default_dir(). The dump lands at "<out_path>.<pid>" because gcore
 // appends the pid to its -o base. A sticky toast tracks progress until the
 // reply arrives (correlated by id) and is then swapped for the result toast.
 static void send_dump_request(ViewState &view_state, const Pid pid,
@@ -260,7 +261,7 @@ static void send_dump_request(ViewState &view_state, const Pid pid,
   const char *dump_dir = view_state.preferences_state.dump_dir;
   char default_dir[512];
   if (!dump_dir || dump_dir[0] == '\0') {
-    default_dump_dir(default_dir, sizeof(default_dir));
+    dump_writer_default_dir(default_dir, sizeof(default_dir));
     dump_dir = default_dir;
   }
 
@@ -554,7 +555,7 @@ static void compute_filter_visibility(FrameContext &ctx,
 // axis formatter so the table and charts ladder units identically.
 static void draw_io_rate(const double kb_per_sec) {
   char buf[32];
-  format_io_rate_kb(kb_per_sec, buf, sizeof(buf), nullptr);
+  common_format_io_rate_kb(kb_per_sec, buf, sizeof(buf), nullptr);
   ImGui::TextAligned(1.0f, ImGui::GetColumnWidth(), "%s", buf);
 }
 
@@ -789,8 +790,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
     ImGui::TableNextColumn();
     ImGui::SetNextItemWidth(-FLT_MIN);
-    draw_filter_input(filter, "##ProcessFilter", my_state.filter_text,
-                      sizeof(my_state.filter_text));
+    ui_filter_input(filter, "##ProcessFilter", my_state.filter_text,
+                    sizeof(my_state.filter_text));
 
     ImGui::TableNextColumn();
     if (ImGui::Checkbox("Tree", &my_state.tree_mode) && my_state.tree_mode) {
@@ -812,7 +813,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       ImGuiTableFlags_Sortable | ImGuiTableFlags_Borders |
       ImGuiTableFlags_ScrollY | ImGuiTableFlags_HighlightHoveredColumn;
   if (ImGui::BeginTable("Processes", eBriefTableColumnId_Count, flags)) {
-    push_mono_font();
+    ui_push_mono_font();
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_NoHide, 0.0f,
                             eBriefTableColumnId_Pid);
@@ -1079,7 +1080,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
     // Restore indent after clipper loop
     window->DC.Indent.x = base_indent;
 
-    pop_mono_font();
+    ui_pop_mono_font();
     ImGui::EndTable();
   }
 

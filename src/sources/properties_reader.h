@@ -51,5 +51,5 @@ struct PropertiesResponse {
   ProcessProperties props;
 };
 
-PropertiesResponse read_process_properties(BumpArena &temp_arena,
-                                           const PropertiesRequest &request);
+PropertiesResponse properties_reader_read(BumpArena &temp_arena,
+                                          const PropertiesRequest &request);

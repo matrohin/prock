@@ -22,7 +22,7 @@ void on_demand_actions_loop(Sync &sync) {
     while (my_sync.dump_request_queue.pop(dump_request)) {
       ZoneScopedN("dump_request");
       ZoneValue(dump_request.pid);
-      DumpResponse response = write_process_dump(dump_request, sync.quit);
+      DumpResponse response = dump_writer_write(dump_request, sync.quit);
       response.id = dump_request.id;
       // Can't drop: the response queue capacity matches the request queue and
       // actions run serially, so every popped request leaves room for its
@@ -30,6 +30,6 @@ void on_demand_actions_loop(Sync &sync) {
       my_sync.dump_response_queue.push(response);
     }
 
-    notify_data_ready(sync);
+    sock_notify_data_ready(sync);
   }
 }

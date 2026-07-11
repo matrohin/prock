@@ -3,7 +3,7 @@
 #include "base/base.h"
 #include "base/const_string.h"
 #include "base/ring_track.h"
-#include "sources/proc_parsers.h"
+#include "sources/proc_util.h"
 #include "state.h"
 
 constexpr uint32_t CHART_HISTORY_SIZE = 4096;
@@ -16,11 +16,11 @@ struct TopProcess {
   double value;
 };
 
-// Interned counterpart of read_proc_display_name() for snapshot data.
+// Interned counterpart of proc_util_read_display_name() for snapshot data.
 inline ConstString process_display_name(const char *cmdline, const char *comm,
                                         InternTable &interner) {
   uint32_t len = 0;
-  if (const char *base = cmdline_basename(cmdline, &len))
+  if (const char *base = proc_util_cmdline_basename(cmdline, &len))
     return interner.intern(base, len);
   return interner.intern(comm);
 }

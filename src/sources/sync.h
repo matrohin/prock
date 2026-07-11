@@ -43,4 +43,4 @@ struct Sync {
   OnDemandActionsSync on_demand_actions;
 };
 
-void notify_data_ready(Sync &sync);
+void sock_notify_data_ready(Sync &sync);

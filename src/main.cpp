@@ -24,7 +24,7 @@
 #include <thread>
 #include <unistd.h>
 
-void notify_data_ready(Sync &sync) {
+void sock_notify_data_ready(Sync &sync) {
   sync.data_ready.store(true);
   glfwPostEmptyEvent();
 }
@@ -39,10 +39,11 @@ void notify_data_ready(Sync &sync) {
 #include "sources/on_demand_reader.cpp"
 #include "sources/open_files_reader.cpp"
 #include "sources/port_scan_reader.cpp"
-#include "sources/proc_parsers.cpp"
+#include "sources/proc_util.cpp"
 #include "sources/process_stat.cpp"
 #include "sources/properties_reader.cpp"
 #include "sources/smaps_reader.cpp"
+#include "sources/sock_diag.cpp"
 #include "sources/socket_reader.cpp"
 #include "sources/username.cpp"
 #include "state.cpp"
@@ -236,7 +237,7 @@ static void state_update(State &state, ViewState &view_state,
   state.update_count += 1;
   state.update_system_time = snapshot.system_time;
 
-  views_update(view_state, state);
+  entry_views_update(view_state, state);
 
   old_arena.destroy();
 }
@@ -284,8 +285,8 @@ static void draw_main_window(const ImGuiIO &io, const State &state,
                    ImGuiDockNodeFlags_NoWindowMenuButton);
 
   FrameContext frame_ctx = {};
-  views_on_demand_update(view_state);
-  views_draw(frame_ctx, view_state, state);
+  entry_views_on_demand_update(view_state);
+  entry_views_draw(frame_ctx, view_state, state);
   frame_ctx.frame_arena.destroy();
 
   ImGui::End();
@@ -482,8 +483,8 @@ int main(int, char **) {
   // user) so it persists in settings; an elevated relaunch then reads it back
   // instead of defaulting to /root.
   if (view_state.preferences_state.dump_dir[0] == '\0') {
-    default_dump_dir(view_state.preferences_state.dump_dir,
-                     sizeof(view_state.preferences_state.dump_dir));
+    dump_writer_default_dir(view_state.preferences_state.dump_dir,
+                            sizeof(view_state.preferences_state.dump_dir));
   }
 
   style_control_init(view_state.preferences_state.theme, main_scale,
@@ -519,7 +520,7 @@ int main(int, char **) {
     gathering_state.usernames =
         UsernameResolver::create(&gathering_state.persistent_arena);
     while (!sync.quit.load()) {
-      gather(gathering_state, sync);
+      process_stat_gather(gathering_state, sync);
     }
   }};
 

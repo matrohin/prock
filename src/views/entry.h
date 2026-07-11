@@ -6,6 +6,7 @@ struct StateSnapshot;
 struct FrameContext;
 struct UpdateSnapshot;
 
-void views_update(ViewState &view_state, State &state);
-void views_on_demand_update(ViewState &view_state);
-void views_draw(FrameContext &ctx, ViewState &view_state, const State &state);
+void entry_views_update(ViewState &view_state, State &state);
+void entry_views_on_demand_update(ViewState &view_state);
+void entry_views_draw(FrameContext &ctx, ViewState &view_state,
+                      const State &state);

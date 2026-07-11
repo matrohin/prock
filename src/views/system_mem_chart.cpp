@@ -50,7 +50,8 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       if (should_fit_y) {
         my_state.y_axis_fitted++;
       }
-      setup_chart(my_state.times[my_state.track.last_idx()], format_memory_kb,
+      setup_chart(my_state.times[my_state.track.last_idx()],
+                  common_format_memory_kb,
                   view_state.preferences_state.auto_follow,
                   view_state.preferences_state.y_auto_fit);
 
@@ -74,7 +75,7 @@ void system_mem_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
 
       show_top_process_tooltip(my_state.track, my_state.times, my_state.used,
                                my_state.top_processes, "Used",
-                               format_memory_kb);
+                               common_format_memory_kb);
 
       ImPlot::EndPlot();
     }

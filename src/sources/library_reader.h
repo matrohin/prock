@@ -21,5 +21,5 @@ struct LibraryResponse {
   Array<LibraryEntry> libraries;
 };
 
-LibraryResponse read_process_libraries(BumpArena &temp_arena,
-                                       const LibraryRequest &request);
+LibraryResponse library_reader_read(BumpArena &temp_arena,
+                                    const LibraryRequest &request);

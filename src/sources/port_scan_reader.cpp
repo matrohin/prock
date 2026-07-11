@@ -2,7 +2,8 @@
 
 #include "base/algorithms.h"
 #include "base/containers.h"
-#include "sources/proc_parsers.h"
+#include "sources/proc_util.h"
+#include "sources/sock_diag.h"
 #include "sources/socket_reader.h"
 
 #include "tracy/Tracy.hpp"
@@ -22,15 +23,15 @@ find_socket_by_inode(const Array<SocketEntry> &sockets,
   return idx == UINT32_MAX ? nullptr : &sockets.data[idx];
 }
 
-PortScanResponse read_port_scan(BumpArena &temp_arena,
-                                const PortScanRequest & /*request*/) {
+PortScanResponse port_scan_reader_read(BumpArena &temp_arena,
+                                       const PortScanRequest & /*request*/) {
   ZoneScoped;
 
   PortScanResponse response = {};
   response.owner_arena = BumpArena::create();
 
   const Array<SocketEntry> all_sockets =
-      query_sockets_netlink(temp_arena, response.netlink_error_code);
+      sock_diag_query(temp_arena, response.netlink_error_code);
   if (all_sockets.size == 0) {
     response.entries = Array<PortEntry>::create(response.owner_arena, 0);
     return response;
@@ -53,7 +54,7 @@ PortScanResponse read_port_scan(BumpArena &temp_arena,
 
     int collect_errno = 0;
     Array<unsigned long> inodes =
-        collect_socket_inodes(temp_arena, pid, collect_errno);
+        socket_reader_collect_inodes(temp_arena, pid, collect_errno);
     if (collect_errno == EACCES) response.permission_limited = true;
 
     // Several fds may point at the same socket (dup'd fds); one row each.
@@ -69,7 +70,7 @@ PortScanResponse read_port_scan(BumpArena &temp_arena,
       if (!match) continue;
 
       if (!name_read) {
-        read_proc_display_name(pid, name, sizeof(name));
+        proc_util_read_display_name(pid, name, sizeof(name));
         name_read = true;
       }
 

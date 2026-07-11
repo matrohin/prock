@@ -13,8 +13,8 @@
 #include <cstring>
 #include <sys/stat.h>
 
-LibraryResponse read_process_libraries(BumpArena &temp_arena,
-                                       const LibraryRequest &request) {
+LibraryResponse library_reader_read(BumpArena &temp_arena,
+                                    const LibraryRequest &request) {
   ZoneScoped;
 
   const Pid pid = request.pid;

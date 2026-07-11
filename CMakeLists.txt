@@ -20,7 +20,6 @@ target_compile_options(project_warnings
     -Wnon-virtual-dtor # warn the user if a class with virtual functions has a non-virtual destructor.
     -Wcast-align # warn for potential performance problem casts
     -Woverloaded-virtual # warn if you overload (not override) a virtual function
-    -Wpedantic # warn if non-standard C++ is used
     -Wnull-dereference # warn if a null dereference is detected
 )
 
@@ -88,7 +87,7 @@ if(BUILD_TESTS)
     tests/test_base.cpp
     tests/test_views.cpp
     src/base/base.cpp
-    src/sources/proc_parsers.cpp
+    src/sources/proc_util.cpp
     src/sources/username.cpp
     src/views/brief_table_logic.cpp
     src/state.cpp)
@@ -96,6 +95,7 @@ if(BUILD_TESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/tests
     third-party/imgui
+    third-party/implot
   )
   target_link_libraries(prock_tests PRIVATE tracy project_warnings)
 

@@ -4,6 +4,7 @@
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/table_item.h"
+#include "views/ui.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -239,12 +240,12 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
                                     const PropEntry *entries,
                                     const uint32_t count) {
   // Shared Property column width keeps the per-section tables aligned
-  push_mono_font();
+  ui_push_mono_font();
   float label_width = 0.0f;
   for (uint32_t i = 0; i < count; ++i) {
     label_width = ImMax(label_width, ImGui::CalcTextSize(entries[i].label).x);
   }
-  pop_mono_font();
+  ui_pop_mono_font();
 
   for (int section = 0; section < IM_ARRAYSIZE(PROP_SECTIONS); ++section) {
     bool has_rows = false;
@@ -260,7 +261,7 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
     if (!ImGui::BeginTable(table_id.data, 2, PROP_TABLE_FLAGS)) {
       continue;
     }
-    push_mono_font();
+    ui_push_mono_font();
     ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed,
                             label_width);
     ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
@@ -297,7 +298,7 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
 
       ImGui::PopID();
     }
-    pop_mono_font();
+    ui_pop_mono_font();
     ImGui::EndTable();
   }
 

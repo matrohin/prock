@@ -4,6 +4,7 @@
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/process_window_flags.h"
+#include "views/ui.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -273,8 +274,8 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
 
           ImGui::TableNextColumn();
           ImGui::SetNextItemWidth(-FLT_MIN);
-          draw_filter_input(filter, "##ThreadFilter", win.filter_text,
-                            sizeof(win.filter_text));
+          ui_filter_input(filter, "##ThreadFilter", win.filter_text,
+                          sizeof(win.filter_text));
 
           ImGui::TableNextColumn(); // spacer
 
@@ -283,7 +284,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
 
         if (ImGui::BeginTable("Threads", eThreadsViewerColumnId_Count,
                               COMMON_TABLE_FLAGS)) {
-          push_mono_font();
+          ui_push_mono_font();
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("TID", ImGuiTableColumnFlags_DefaultSort,
                                   0.0f, eThreadsViewerColumnId_Tid);
@@ -371,7 +372,7 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             }
           }
 
-          pop_mono_font();
+          ui_pop_mono_font();
           ImGui::EndTable();
         }
 

@@ -80,7 +80,7 @@ static void scan_xdg_base(const char *base_dir, BumpArena &temp_arena,
     scan_dir(path, temp_arena, entries);
 }
 
-FontListResponse read_font_list(BumpArena &temp_arena) {
+FontListResponse font_list_reader_read(BumpArena &temp_arena) {
   FontListResponse response = {};
   response.owner_arena = BumpArena::create();
 

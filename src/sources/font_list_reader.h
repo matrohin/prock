@@ -14,4 +14,4 @@ struct FontListResponse {
   Array<FontEntry> fonts;
 };
 
-FontListResponse read_font_list(BumpArena &temp_arena);
+FontListResponse font_list_reader_read(BumpArena &temp_arena);

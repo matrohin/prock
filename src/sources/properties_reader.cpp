@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 #include "base/string.h"
-#include "proc_parsers.h"
+#include "proc_util.h"
 #include "process_stat.h"
 #include "username.h"
 
@@ -187,8 +187,8 @@ static String read_security_label(BumpArena &temp_arena, BumpArena &arena,
   return String::copy_from(arena, buf, static_cast<uint32_t>(n));
 }
 
-PropertiesResponse read_process_properties(BumpArena &temp_arena,
-                                           const PropertiesRequest &request) {
+PropertiesResponse properties_reader_read(BumpArena &temp_arena,
+                                          const PropertiesRequest &request) {
   ZoneScoped;
   ZoneValue(request.pid);
 
@@ -229,7 +229,7 @@ PropertiesResponse read_process_properties(BumpArena &temp_arena,
   }
 
   ProcessStat tmp = {};
-  if (!parse_proc_stat_bufs(stat_buf, statm_buf, &tmp)) {
+  if (!proc_util_parse_stat(stat_buf, statm_buf, &tmp)) {
     response.error_code = EIO;
     return response;
   }
@@ -246,11 +246,11 @@ PropertiesResponse read_process_properties(BumpArena &temp_arena,
   }
 
   char comm_buf[64];
-  read_proc_comm(pid, comm_buf, sizeof(comm_buf));
+  proc_util_read_comm(pid, comm_buf, sizeof(comm_buf));
   props.comm = String::copy_from(arena, comm_buf);
 
   char parent_buf[256];
-  read_proc_display_name(props.ppid, parent_buf, sizeof(parent_buf));
+  proc_util_read_display_name(props.ppid, parent_buf, sizeof(parent_buf));
   props.parent_name = String::copy_from(arena, parent_buf);
 
   // Credentials and security posture from /proc/<pid>/status. Read line by
@@ -314,7 +314,7 @@ PropertiesResponse read_process_properties(BumpArena &temp_arena,
 
   char cmdline_buf[4096];
   const size_t cmdline_len =
-      read_proc_cmdline(pid, cmdline_buf, sizeof(cmdline_buf));
+      proc_util_read_cmdline(pid, cmdline_buf, sizeof(cmdline_buf));
   props.cmdline = cmdline_len > 0
                       ? String::copy_from(arena, cmdline_buf,
                                           static_cast<uint32_t>(cmdline_len))

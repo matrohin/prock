@@ -17,7 +17,7 @@
 
 extern char **environ;
 
-void default_dump_dir(char *out, const uint32_t size) {
+void dump_writer_default_dir(char *out, const uint32_t size) {
   const char *home = getenv("HOME");
   snprintf(out, size, "%s/prock-dumps", home ? home : "/tmp");
 }
@@ -35,8 +35,8 @@ static void ensure_parent_dir(const char *out_path) {
   mkdir(dir, 0700); // ignore EEXIST and other errors
 }
 
-DumpResponse write_process_dump(const DumpRequest &request,
-                                const std::atomic<bool> &quit) {
+DumpResponse dump_writer_write(const DumpRequest &request,
+                               const std::atomic<bool> &quit) {
   ZoneScoped;
   ZoneValue(request.pid);
 

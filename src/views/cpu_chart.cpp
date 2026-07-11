@@ -91,7 +91,7 @@ void cpu_chart_draw(ViewState &view_state) {
           chart.y_axis_fitted++;
         }
 
-        setup_chart(chart.times[chart.track.last_idx()], format_percent,
+        setup_chart(chart.times[chart.track.last_idx()], common_format_percent,
                     view_state.preferences_state.auto_follow,
                     view_state.preferences_state.y_auto_fit);
 

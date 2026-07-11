@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "style_control.h"
 #include "views/common.h"
+#include "views/ui.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
@@ -138,8 +139,8 @@ void command_palette_draw(ViewState &vs) {
   }
   ImGui::SetNextItemWidth(-FLT_MIN);
   ImGuiTextFilter filter;
-  draw_filter_input(filter, "##cmdfilter", cs.filter, sizeof(cs.filter),
-                    "Type to search commands...");
+  ui_filter_input(filter, "##cmdfilter", cs.filter, sizeof(cs.filter),
+                  "Type to search commands...");
 
   int matches[eCommand_Count];
   int match_count = 0;

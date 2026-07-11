@@ -1,9 +1,9 @@
-#include "proc_parsers.h"
+#include "proc_util.h"
 
 #include <cstdio>
 #include <cstring>
 
-void read_proc_comm(const Pid pid, char *out, const size_t out_size) {
+void proc_util_read_comm(const Pid pid, char *out, const size_t out_size) {
   char path[64];
   snprintf(path, sizeof(path), "/proc/%d/comm", pid);
   FILE *f = fopen(path, "r");
@@ -20,7 +20,7 @@ void read_proc_comm(const Pid pid, char *out, const size_t out_size) {
   fclose(f);
 }
 
-size_t read_proc_cmdline(const Pid pid, char *out, const size_t out_size) {
+size_t proc_util_read_cmdline(const Pid pid, char *out, const size_t out_size) {
   char path[64];
   snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
   FILE *f = fopen(path, "r");
@@ -39,7 +39,7 @@ size_t read_proc_cmdline(const Pid pid, char *out, const size_t out_size) {
   return len;
 }
 
-const char *cmdline_basename(const char *cmdline, uint32_t *len) {
+const char *proc_util_cmdline_basename(const char *cmdline, uint32_t *len) {
   if (!cmdline || !cmdline[0]) return nullptr;
   const char *end = cmdline;
   while (*end && *end != ' ')
@@ -52,13 +52,14 @@ const char *cmdline_basename(const char *cmdline, uint32_t *len) {
   return base;
 }
 
-void read_proc_display_name(const Pid pid, char *out, const size_t out_size) {
+void proc_util_read_display_name(const Pid pid, char *out,
+                                 const size_t out_size) {
   char cmdline[4096];
-  read_proc_cmdline(pid, cmdline, sizeof(cmdline));
+  proc_util_read_cmdline(pid, cmdline, sizeof(cmdline));
   uint32_t len = 0;
-  const char *base = cmdline_basename(cmdline, &len);
+  const char *base = proc_util_cmdline_basename(cmdline, &len);
   if (!base) {
-    read_proc_comm(pid, out, out_size);
+    proc_util_read_comm(pid, out, out_size);
     return;
   }
   if (len >= out_size) len = static_cast<uint32_t>(out_size) - 1;
@@ -66,7 +67,7 @@ void read_proc_display_name(const Pid pid, char *out, const size_t out_size) {
   out[len] = '\0';
 }
 
-bool parse_proc_stat_bufs(const char *stat_buf, const char *statm_buf,
+bool proc_util_parse_stat(const char *stat_buf, const char *statm_buf,
                           ProcessStat *out) {
   const char *after_comm = strrchr(stat_buf, ')');
   if (!after_comm) {
@@ -86,7 +87,7 @@ bool parse_proc_stat_bufs(const char *stat_buf, const char *statm_buf,
   return true;
 }
 
-bool parse_proc_status_uid(const char *status_buf, uid_t *out) {
+bool proc_util_parse_status_uid(const char *status_buf, uid_t *out) {
   const char *line = strstr(status_buf, "Uid:");
   if (!line) return false;
   unsigned int real_uid;
@@ -95,7 +96,7 @@ bool parse_proc_status_uid(const char *status_buf, uid_t *out) {
   return true;
 }
 
-void parse_io_line(const char *line, ProcessStat *out) {
+void proc_util_parse_io_line(const char *line, ProcessStat *out) {
   char key[32];
   ulonglong value;
   if (sscanf(line, "%31[^:]: %llu", key, &value) == 2) {

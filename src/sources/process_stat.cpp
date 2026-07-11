@@ -1,156 +1,15 @@
 #include "process_stat.h"
-#include "proc_parsers.h"
+#include "proc_util.h"
 
 #include "base/containers.h"
 #include "sync.h"
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
-#include <cerrno>
 #include <dirent.h>
-#include <linux/inet_diag.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
-#include <linux/sock_diag.h>
-#include <linux/tcp.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <sys/socket.h>
-#include <unistd.h>
-
-// Query all TCP/UDP sockets via netlink SOCK_DIAG
-// Returns array sorted by inode for binary search
-Array<SocketEntry> query_sockets_netlink(BumpArena &arena, int &out_errno) {
-  ZoneScoped;
-  GrowingArray<SocketEntry> result = {};
-  int first_errno = 0;
-
-  const int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_SOCK_DIAG);
-  if (fd < 0) {
-    out_errno = errno;
-    return {};
-  }
-
-  // Query for TCP and UDP sockets (AF_INET and AF_INET6)
-  struct ProtocolQuery {
-    int family;
-    int protocol;
-    SocketProtocol socket_protocol;
-  };
-  constexpr ProtocolQuery queries[] = {
-      {AF_INET, IPPROTO_TCP, eSocketProtocol_TCP},
-      {AF_INET, IPPROTO_UDP, eSocketProtocol_UDP},
-      {AF_INET6, IPPROTO_TCP, eSocketProtocol_TCP6},
-      {AF_INET6, IPPROTO_UDP, eSocketProtocol_UDP6},
-  };
-
-  for (const auto &q : queries) {
-    struct {
-      nlmsghdr nlh;
-      inet_diag_req_v2 req;
-    } request = {};
-
-    request.nlh.nlmsg_len = sizeof(request);
-    request.nlh.nlmsg_type = SOCK_DIAG_BY_FAMILY;
-    request.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-    request.req.sdiag_family = static_cast<__u8>(q.family);
-    request.req.sdiag_protocol = static_cast<__u8>(q.protocol);
-    request.req.idiag_states = ~0U; // All states
-    // Request TCP_INFO for byte counts (only meaningful for TCP)
-    if (q.protocol == IPPROTO_TCP) {
-      request.req.idiag_ext |= 1 << (INET_DIAG_INFO - 1);
-    }
-
-    if (send(fd, &request, sizeof(request), 0) < 0) {
-      if (first_errno == 0) first_errno = errno;
-      continue;
-    }
-
-    bool done = false;
-    char buf[16384];
-    while (!done) {
-      ssize_t len = recv(fd, buf, sizeof(buf), 0);
-      if (len <= 0) {
-        if (len < 0 && first_errno == 0) first_errno = errno;
-        break;
-      }
-
-// NLMSG_NEXT/RTA_NEXT walk buffers the kernel guarantees are aligned.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
-      for (nlmsghdr *h = reinterpret_cast<nlmsghdr *>(buf); NLMSG_OK(h, len);
-           h = NLMSG_NEXT(h, len)) {
-        if (h->nlmsg_type == NLMSG_DONE) {
-          done = true;
-          break;
-        }
-        if (h->nlmsg_type == NLMSG_ERROR) {
-          // E.g. ENOENT when the kernel has no inet_diag handler for this
-          // family/protocol (module missing or unloadable).
-          const nlmsgerr *err = static_cast<const nlmsgerr *>(NLMSG_DATA(h));
-          if (err->error != 0 && first_errno == 0) first_errno = -err->error;
-          done = true;
-          break;
-        }
-
-        inet_diag_msg *diag = static_cast<inet_diag_msg *>(NLMSG_DATA(h));
-        const unsigned long inode = diag->idiag_inode;
-        if (inode == 0) continue;
-
-        SocketEntry *entry = result.emplace_back(arena);
-        entry->inode = inode;
-        entry->protocol = q.socket_protocol;
-        entry->state = static_cast<TcpState>(diag->idiag_state);
-        entry->tx_queue = diag->idiag_wqueue;
-        entry->rx_queue = diag->idiag_rqueue;
-        entry->bytes_received = 0;
-        entry->bytes_sent = 0;
-
-        // Extract addresses and ports
-        entry->local_port = ntohs(diag->id.idiag_sport);
-        entry->remote_port = ntohs(diag->id.idiag_dport);
-
-        if (q.family == AF_INET) {
-          entry->local_ip = diag->id.idiag_src[0];
-          entry->remote_ip = diag->id.idiag_dst[0];
-          memset(entry->local_ip6, 0, sizeof(entry->local_ip6));
-          memset(entry->remote_ip6, 0, sizeof(entry->remote_ip6));
-        } else {
-          entry->local_ip = 0;
-          entry->remote_ip = 0;
-          memcpy(entry->local_ip6, diag->id.idiag_src, 16);
-          memcpy(entry->remote_ip6, diag->id.idiag_dst, 16);
-        }
-
-        // Parse response attributes for TCP_INFO (byte counts)
-        if (q.protocol == IPPROTO_TCP) {
-          unsigned int rta_len = h->nlmsg_len - NLMSG_LENGTH(sizeof(*diag));
-          for (rtattr *attr = reinterpret_cast<rtattr *>(diag + 1);
-               RTA_OK(attr, rta_len); attr = RTA_NEXT(attr, rta_len)) {
-            if (attr->rta_type == INET_DIAG_INFO) {
-              const tcp_info *info = static_cast<tcp_info *>(RTA_DATA(attr));
-              entry->bytes_received = info->tcpi_bytes_received;
-              entry->bytes_sent = info->tcpi_bytes_acked;
-            }
-          }
-        }
-      }
-#pragma GCC diagnostic pop
-    }
-  }
-
-  close(fd);
-
-  if (result.size() == 0 && first_errno != 0) out_errno = first_errno;
-
-  // Sort by inode for binary search
-  std::sort(result.begin(), result.end(),
-            [](const SocketEntry &a, const SocketEntry &b) {
-              return a.inode < b.inode;
-            });
-
-  return result.to_array();
-}
 
 // Read stat for a thread (or process) given explicit paths
 static bool read_thread_stat(const int tid, const char *stat_path,
@@ -195,7 +54,7 @@ static bool read_thread_stat(const int tid, const char *stat_path,
   fclose(comm_file);
   fclose(stat_file);
 
-  return parse_proc_stat_bufs(stat_buf, "", out);
+  return proc_util_parse_stat(stat_buf, "", out);
 }
 
 static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
@@ -260,17 +119,17 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
     const size_t n = fread(status_buf, 1, sizeof(status_buf) - 1, status_file);
     status_buf[n] = '\0';
     fclose(status_file);
-    parse_proc_status_uid(status_buf, &uid);
+    proc_util_parse_status_uid(status_buf, &uid);
   }
   stat.username = usernames.resolve(uid);
 
   char comm_buf[64];
-  read_proc_comm(pid, comm_buf, sizeof(comm_buf));
+  proc_util_read_comm(pid, comm_buf, sizeof(comm_buf));
   if (comm_buf[0] != '\0') {
     stat.comm = arena.alloc_string_copy(comm_buf);
   }
 
-  if (!parse_proc_stat_bufs(stat_buf, statm_buf, &stat)) {
+  if (!proc_util_parse_stat(stat_buf, statm_buf, &stat)) {
     return false;
   }
 
@@ -279,14 +138,14 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
   if (io_file) {
     char io_line[128];
     while (fgets(io_line, sizeof(io_line), io_file)) {
-      parse_io_line(io_line, &stat);
+      proc_util_parse_io_line(io_line, &stat);
     }
     fclose(io_file);
   }
 
   char cmdline_buf[4096];
   const size_t cmdline_len =
-      read_proc_cmdline(pid, cmdline_buf, sizeof(cmdline_buf));
+      proc_util_read_cmdline(pid, cmdline_buf, sizeof(cmdline_buf));
   if (cmdline_len > 0) {
     stat.cmdline = arena.alloc_string_copy(cmdline_buf, cmdline_len);
   }
@@ -634,7 +493,7 @@ static MemInfo read_mem_info() {
   return result;
 }
 
-void gather(GatheringState &state, Sync &sync) {
+void process_stat_gather(GatheringState &state, Sync &sync) {
   const float period_secs = sync.update_period.load();
   {
     std::unique_lock<std::mutex> lock(sync.quit_mutex);
@@ -692,7 +551,7 @@ void gather(GatheringState &state, Sync &sync) {
       arena, process_stats, cpu_stats, mem_info, disk_io_stats, net_io_stats,
       thread_snapshots, state.last_update, system_now});
   if (pushed) {
-    notify_data_ready(sync);
+    sock_notify_data_ready(sync);
   } else {
     arena.destroy();
   }

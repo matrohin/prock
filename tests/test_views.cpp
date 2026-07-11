@@ -6,12 +6,12 @@
 // implot
 using ImPlotShadedFlags = int;
 
-#include "sources/proc_parsers.h"
+#include "sources/proc_util.h"
 #include "sources/sync.h"
 #include "sources/username.h"
 #include "state.h"
 #include "test_helpers.h"
-#include "views/brief_table.h"
+#include "views/brief_table_logic.h"
 #include "views/common.h"
 #include "views/common_charts.h"
 #include "views/table_item.h"
@@ -1068,38 +1068,38 @@ TEST_CASE("format_memory_bytes") {
 }
 
 // ============================================================================
-// format_io_rate_kb Tests
+// common_format_io_rate_kb Tests
 // ============================================================================
 
-TEST_CASE("format_io_rate_kb") {
+TEST_CASE("common_format_io_rate_kb") {
   char buf[32];
 
   SUBCASE("bytes per second range") {
-    format_io_rate_kb(0.5, buf, sizeof(buf), nullptr);
+    common_format_io_rate_kb(0.5, buf, sizeof(buf), nullptr);
     CHECK(strcmp(buf, "512 B/s") == 0);
 
-    format_io_rate_kb(0.0, buf, sizeof(buf), nullptr);
+    common_format_io_rate_kb(0.0, buf, sizeof(buf), nullptr);
     CHECK(strcmp(buf, "0 B/s") == 0);
   }
 
   SUBCASE("KB/s range") {
-    format_io_rate_kb(1.0, buf, sizeof(buf), nullptr);
+    common_format_io_rate_kb(1.0, buf, sizeof(buf), nullptr);
     CHECK(strcmp(buf, "1.0 KB/s") == 0);
 
-    format_io_rate_kb(500.0, buf, sizeof(buf), nullptr);
+    common_format_io_rate_kb(500.0, buf, sizeof(buf), nullptr);
     CHECK(strcmp(buf, "500.0 KB/s") == 0);
   }
 
   SUBCASE("MB/s range") {
-    format_io_rate_kb(1024.0, buf, sizeof(buf), nullptr);
+    common_format_io_rate_kb(1024.0, buf, sizeof(buf), nullptr);
     CHECK(strcmp(buf, "1.0 MB/s") == 0);
 
-    format_io_rate_kb(2048.0, buf, sizeof(buf), nullptr);
+    common_format_io_rate_kb(2048.0, buf, sizeof(buf), nullptr);
     CHECK(strcmp(buf, "2.0 MB/s") == 0);
   }
 
   SUBCASE("GB/s range") {
-    format_io_rate_kb(1024.0 * 1024.0, buf, sizeof(buf), nullptr);
+    common_format_io_rate_kb(1024.0 * 1024.0, buf, sizeof(buf), nullptr);
     CHECK(strcmp(buf, "1.0 GB/s") == 0);
   }
 }
@@ -1285,7 +1285,7 @@ TEST_CASE("state_snapshot_update network I/O") {
 }
 
 // ============================================================================
-// parse_proc_stat_bufs Tests
+// proc_util_parse_stat Tests
 // ============================================================================
 
 // Helper: build a /proc/[pid]/stat line from components.
@@ -1302,7 +1302,7 @@ static const char *make_stat_line(char *buf, size_t buf_size, int pid,
   return buf;
 }
 
-TEST_CASE("parse_proc_stat_bufs") {
+TEST_CASE("proc_util_parse_stat") {
   ProcessStat stat = {};
 
   SUBCASE("basic process") {
@@ -1311,7 +1311,7 @@ TEST_CASE("parse_proc_stat_bufs") {
                    102400);
     const char *statm_buf = "25600 2500 1000 100 0 3000 0";
 
-    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(proc_util_parse_stat(stat_buf, statm_buf, &stat));
     CHECK(stat.state == 'S');
     CHECK(stat.ppid == 100);
     CHECK(stat.utime == 5);
@@ -1328,7 +1328,7 @@ TEST_CASE("parse_proc_stat_bufs") {
                    10, 3, 2, 65536);
     const char *statm_buf = "1000 500 0 0 0 0 0";
 
-    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(proc_util_parse_stat(stat_buf, statm_buf, &stat));
     CHECK(stat.state == 'R');
     CHECK(stat.ppid == 1);
     CHECK(stat.utime == 10);
@@ -1343,7 +1343,7 @@ TEST_CASE("parse_proc_stat_bufs") {
                    0);
     const char *statm_buf = "0 0 0 0 0 0 0";
 
-    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(proc_util_parse_stat(stat_buf, statm_buf, &stat));
     CHECK(stat.state == 'Z');
     CHECK(stat.vsize == 0);
     CHECK(stat.statm_resident == 0);
@@ -1353,7 +1353,7 @@ TEST_CASE("parse_proc_stat_bufs") {
     const char *stat_buf = "999 (truncated";
     const char *statm_buf = "0 0";
 
-    CHECK_FALSE(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK_FALSE(proc_util_parse_stat(stat_buf, statm_buf, &stat));
   }
 
   SUBCASE("kernel thread - zero utime and stime") {
@@ -1362,7 +1362,7 @@ TEST_CASE("parse_proc_stat_bufs") {
                    0);
     const char *statm_buf = "0 0 0 0 0 0 0";
 
-    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(proc_util_parse_stat(stat_buf, statm_buf, &stat));
     CHECK(stat.utime == 0);
     CHECK(stat.stime == 0);
     CHECK(stat.ppid == 0);
@@ -1376,7 +1376,7 @@ TEST_CASE("parse_proc_stat_bufs") {
         "1234 (bash) S 100 0 0 0 -1 0 111 50 222 7 5 2 0 0 20 -5 3 0 99 102400";
     const char *statm_buf = "25600 2500 1000 100 0 3000 0";
 
-    CHECK(parse_proc_stat_bufs(stat_buf, statm_buf, &stat));
+    CHECK(proc_util_parse_stat(stat_buf, statm_buf, &stat));
     CHECK(stat.nice == -5);
     CHECK(stat.utime == 5);
     CHECK(stat.stime == 2);
@@ -1387,66 +1387,66 @@ TEST_CASE("parse_proc_stat_bufs") {
 }
 
 // ============================================================================
-// parse_io_line Tests
+// proc_util_parse_io_line Tests
 // ============================================================================
 
-TEST_CASE("parse_io_line") {
+TEST_CASE("proc_util_parse_io_line") {
   ProcessStat stat = {};
 
   SUBCASE("read_bytes line") {
-    parse_io_line("read_bytes: 1024\n", &stat);
+    proc_util_parse_io_line("read_bytes: 1024\n", &stat);
     CHECK(stat.io_read_bytes == 1024);
     CHECK(stat.io_write_bytes == 0);
   }
 
   SUBCASE("write_bytes line") {
-    parse_io_line("write_bytes: 512\n", &stat);
+    proc_util_parse_io_line("write_bytes: 512\n", &stat);
     CHECK(stat.io_read_bytes == 0);
     CHECK(stat.io_write_bytes == 512);
   }
 
   SUBCASE("unrelated key is ignored") {
-    parse_io_line("rchar: 99999\n", &stat);
+    proc_util_parse_io_line("rchar: 99999\n", &stat);
     CHECK(stat.io_read_bytes == 0);
     CHECK(stat.io_write_bytes == 0);
   }
 
   SUBCASE("large byte counts") {
-    parse_io_line("read_bytes: 10737418240\n", &stat); // 10 GB
+    proc_util_parse_io_line("read_bytes: 10737418240\n", &stat); // 10 GB
     CHECK(stat.io_read_bytes == 10737418240ULL);
   }
 
   SUBCASE("multiple lines accumulate correctly") {
-    parse_io_line("rchar: 12345\n", &stat);
-    parse_io_line("read_bytes: 1024\n", &stat);
-    parse_io_line("write_bytes: 512\n", &stat);
+    proc_util_parse_io_line("rchar: 12345\n", &stat);
+    proc_util_parse_io_line("read_bytes: 1024\n", &stat);
+    proc_util_parse_io_line("write_bytes: 512\n", &stat);
     CHECK(stat.io_read_bytes == 1024);
     CHECK(stat.io_write_bytes == 512);
   }
 }
 
 // ============================================================================
-// parse_proc_status_uid Tests
+// proc_util_parse_status_uid Tests
 // ============================================================================
 
-TEST_CASE("parse_proc_status_uid") {
+TEST_CASE("proc_util_parse_status_uid") {
   uid_t uid = 12345; // sentinel: must stay untouched on failure
 
   SUBCASE("reads the real uid from a status buffer") {
     const char *status = "Name:\tbash\nState:\tS\nPid:\t42\n"
                          "Uid:\t1000\t1000\t1000\t1000\n"
                          "Gid:\t1000\t1000\t1000\t1000\n";
-    CHECK(parse_proc_status_uid(status, &uid));
+    CHECK(proc_util_parse_status_uid(status, &uid));
     CHECK(uid == 1000);
   }
 
   SUBCASE("real uid differs from effective (setuid)") {
-    CHECK(parse_proc_status_uid("Uid:\t1000\t0\t0\t0\n", &uid));
+    CHECK(proc_util_parse_status_uid("Uid:\t1000\t0\t0\t0\n", &uid));
     CHECK(uid == 1000); // real uid, not the effective root
   }
 
   SUBCASE("missing Uid line leaves the output untouched") {
-    CHECK_FALSE(parse_proc_status_uid("Name:\tbash\nState:\tS\n", &uid));
+    CHECK_FALSE(proc_util_parse_status_uid("Name:\tbash\nState:\tS\n", &uid));
     CHECK(uid == 12345);
   }
 }

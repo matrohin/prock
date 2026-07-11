@@ -2,6 +2,7 @@
 
 #include "base/containers.h"
 #include "base/string.h"
+#include "sources/sock_diag.h"
 #include "tracy/Tracy.hpp"
 
 #include <algorithm>
@@ -10,8 +11,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-Array<unsigned long> collect_socket_inodes(BumpArena &arena, const Pid pid,
-                                           int &out_errno) {
+Array<unsigned long>
+socket_reader_collect_inodes(BumpArena &arena, const Pid pid, int &out_errno) {
   GrowingArray<unsigned long> inodes = {};
   const String fd_dir_path = String::sprintf(arena, "/proc/%d/fd", pid);
 
@@ -46,8 +47,8 @@ Array<unsigned long> collect_socket_inodes(BumpArena &arena, const Pid pid,
   return inodes.to_array();
 }
 
-SocketResponse read_process_sockets(BumpArena &temp_arena,
-                                    const SocketRequest &request) {
+SocketResponse socket_reader_read(BumpArena &temp_arena,
+                                  const SocketRequest &request) {
   ZoneScoped;
   const Pid pid = request.pid;
 
@@ -57,7 +58,7 @@ SocketResponse read_process_sockets(BumpArena &temp_arena,
 
   int collect_errno = 0;
   const Array<unsigned long> inodes =
-      collect_socket_inodes(temp_arena, pid, collect_errno);
+      socket_reader_collect_inodes(temp_arena, pid, collect_errno);
 
   if (inodes.size == 0) {
     response.sockets = Array<SocketEntry>::create(response.owner_arena, 0);
@@ -67,7 +68,7 @@ SocketResponse read_process_sockets(BumpArena &temp_arena,
   std::sort(inodes.data, inodes.data + inodes.size);
 
   const Array<SocketEntry> all_sockets =
-      query_sockets_netlink(temp_arena, response.netlink_error_code);
+      sock_diag_query(temp_arena, response.netlink_error_code);
 
   response.sockets =
       Array<SocketEntry>::create(response.owner_arena, inodes.size);

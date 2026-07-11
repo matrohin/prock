@@ -38,7 +38,8 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
       if (should_fit_y) {
         my_state.y_axis_fitted++;
       }
-      setup_chart(my_state.times[my_state.track.last_idx()], format_io_rate_mb,
+      setup_chart(my_state.times[my_state.track.last_idx()],
+                  common_format_io_rate_mb,
                   view_state.preferences_state.auto_follow,
                   view_state.preferences_state.y_auto_fit);
 
@@ -70,10 +71,10 @@ void system_io_chart_draw(FrameContext & /*ctx*/, ViewState &view_state) {
         const uint32_t data_idx = my_state.track.to_data_idx(i);
         char read_buf[32];
         char write_buf[32];
-        format_io_rate_mb(my_state.read_mb_per_sec[data_idx], read_buf,
-                          sizeof(read_buf), nullptr);
-        format_io_rate_mb(my_state.write_mb_per_sec[data_idx], write_buf,
-                          sizeof(write_buf), nullptr);
+        common_format_io_rate_mb(my_state.read_mb_per_sec[data_idx], read_buf,
+                                 sizeof(read_buf), nullptr);
+        common_format_io_rate_mb(my_state.write_mb_per_sec[data_idx], write_buf,
+                                 sizeof(write_buf), nullptr);
         ImGui::BeginTooltip();
         ImGui::Text("Read: %s", read_buf);
         ImGui::Text("Write: %s", write_buf);

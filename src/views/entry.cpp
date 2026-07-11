@@ -21,7 +21,7 @@
 
 #include "tracy/Tracy.hpp"
 
-void views_update(ViewState &view_state, State &state) {
+void entry_views_update(ViewState &view_state, State &state) {
   ZoneScoped;
   brief_table_update(view_state.brief_table_state, view_state.string_interner,
                      state);
@@ -37,7 +37,7 @@ void views_update(ViewState &view_state, State &state) {
   threads_viewer_update(view_state.threads_viewer_state, state);
 }
 
-void views_on_demand_update(ViewState &view_state) {
+void entry_views_on_demand_update(ViewState &view_state) {
   ZoneScoped;
   menu_bar_update(view_state);
   library_viewer_update(view_state.library_viewer_state, *view_state.sync);
@@ -53,7 +53,8 @@ void views_on_demand_update(ViewState &view_state) {
   notifications_update(view_state.notifications);
 }
 
-void views_draw(FrameContext &ctx, ViewState &view_state, const State &state) {
+void entry_views_draw(FrameContext &ctx, ViewState &view_state,
+                      const State &state) {
   ZoneScoped;
   menu_bar_draw(view_state);
   process_host_draw(view_state);

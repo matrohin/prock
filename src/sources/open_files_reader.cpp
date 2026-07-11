@@ -86,8 +86,8 @@ static void classify_fd(const char *target, const char *link_path,
   }
 }
 
-OpenFilesResponse read_process_open_files(BumpArena &temp_arena,
-                                          const OpenFilesRequest &request) {
+OpenFilesResponse open_files_reader_read(BumpArena &temp_arena,
+                                         const OpenFilesRequest &request) {
   ZoneScoped;
   const Pid pid = request.pid;
 

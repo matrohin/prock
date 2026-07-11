@@ -40,5 +40,5 @@ struct OpenFilesResponse {
   Array<OpenFileEntry> files;
 };
 
-OpenFilesResponse read_process_open_files(BumpArena &temp_arena,
-                                          const OpenFilesRequest &request);
+OpenFilesResponse open_files_reader_read(BumpArena &temp_arena,
+                                         const OpenFilesRequest &request);

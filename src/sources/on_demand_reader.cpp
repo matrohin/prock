@@ -39,8 +39,7 @@ void on_demand_reader_loop(Sync &sync) {
     while (my_sync.library_request_queue.pop(lib_request)) {
       ZoneScopedN("library_request");
       ZoneValue(lib_request.pid);
-      LibraryResponse response =
-          read_process_libraries(temp_arena, lib_request);
+      LibraryResponse response = library_reader_read(temp_arena, lib_request);
       if (!my_sync.library_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
@@ -49,7 +48,7 @@ void on_demand_reader_loop(Sync &sync) {
     while (my_sync.environ_request_queue.pop(env_request)) {
       ZoneScopedN("environ_request");
       ZoneValue(env_request.pid);
-      EnvironResponse response = read_process_environ(temp_arena, env_request);
+      EnvironResponse response = environ_reader_read(temp_arena, env_request);
       if (!my_sync.environ_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
@@ -58,7 +57,7 @@ void on_demand_reader_loop(Sync &sync) {
     while (my_sync.socket_request_queue.pop(sock_request)) {
       ZoneScopedN("socket_request");
       ZoneValue(sock_request.pid);
-      SocketResponse response = read_process_sockets(temp_arena, sock_request);
+      SocketResponse response = socket_reader_read(temp_arena, sock_request);
       if (!my_sync.socket_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
@@ -68,7 +67,7 @@ void on_demand_reader_loop(Sync &sync) {
       ZoneScopedN("open_files_request");
       ZoneValue(open_files_request.pid);
       OpenFilesResponse response =
-          read_process_open_files(temp_arena, open_files_request);
+          open_files_reader_read(temp_arena, open_files_request);
       if (!my_sync.open_files_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
@@ -77,7 +76,7 @@ void on_demand_reader_loop(Sync &sync) {
     while (my_sync.smaps_request_queue.pop(smaps_request)) {
       ZoneScopedN("smaps_request");
       ZoneValue(smaps_request.pid);
-      SmapsResponse response = read_process_smaps(temp_arena, smaps_request);
+      SmapsResponse response = smaps_reader_read(temp_arena, smaps_request);
       if (!my_sync.smaps_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
@@ -85,7 +84,8 @@ void on_demand_reader_loop(Sync &sync) {
 
     while (my_sync.port_scan_request_queue.pop(port_scan_request)) {
       ZoneScopedN("port_scan_request");
-      PortScanResponse response = read_port_scan(temp_arena, port_scan_request);
+      PortScanResponse response =
+          port_scan_reader_read(temp_arena, port_scan_request);
       if (!my_sync.port_scan_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
@@ -93,7 +93,7 @@ void on_demand_reader_loop(Sync &sync) {
 
     while (my_sync.font_list_request_queue.pop(font_list_request)) {
       ZoneScopedN("font_list_request");
-      FontListResponse response = read_font_list(temp_arena);
+      FontListResponse response = font_list_reader_read(temp_arena);
       if (!my_sync.font_list_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
@@ -103,13 +103,13 @@ void on_demand_reader_loop(Sync &sync) {
       ZoneScopedN("properties_request");
       ZoneValue(properties_request.pid);
       PropertiesResponse response =
-          read_process_properties(temp_arena, properties_request);
+          properties_reader_read(temp_arena, properties_request);
       if (!my_sync.properties_response_queue.push(response)) {
         response.owner_arena.destroy();
       }
     }
 
-    notify_data_ready(sync);
+    sock_notify_data_ready(sync);
     if (temp_arena.cur_slab &&
         (temp_arena.cur_slab->prev ||
          temp_arena.cur_slab->left_size < SLAB_SIZE / 10)) {

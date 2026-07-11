@@ -10,8 +10,8 @@
 #include <cstdio>
 #include <cstring>
 
-EnvironResponse read_process_environ(BumpArena &temp_arena,
-                                     const EnvironRequest &request) {
+EnvironResponse environ_reader_read(BumpArena &temp_arena,
+                                    const EnvironRequest &request) {
   ZoneScoped;
 
   const Pid pid = request.pid;
