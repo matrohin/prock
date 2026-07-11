@@ -85,6 +85,7 @@ option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
   add_executable(prock_tests
     tests/test_main.cpp
+    tests/test_base.cpp
     tests/test_views.cpp
     src/base/base.cpp
     src/sources/proc_parsers.cpp
