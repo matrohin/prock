@@ -1,5 +1,6 @@
 #include "threads_viewer.h"
 
+#include "base/algorithms.h"
 #include "state.h"
 #include "views/common.h"
 #include "views/icons.h"
@@ -132,7 +133,8 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
   common_views_sort_added(state.windows);
 }
 
-void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
+void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
+                           const State &state_data) {
   ZoneScoped;
 
   const double per_core_ticks = state_data.snapshot.per_core_ticks;
@@ -164,14 +166,18 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
                           win.prev_threads.size * sizeof(ThreadCpuSample);
 
     const Array<ThreadCpuSample> prev_threads = win.prev_threads;
+    const Array<ThreadLine> old_lines = win.lines;
 
-    // Build ThreadLine array from snapshot
-    win.lines = Array<ThreadLine>::create(state.cur_arena, snap->threads.size);
+    // Build ThreadLine array from snapshot, in TID order as required by the
+    // monotonic prev_threads walk below. Scratch for this update only, so it
+    // lives in the frame arena.
+    const Array<ThreadLine> fresh =
+        Array<ThreadLine>::create(ctx.frame_arena, snap->threads.size);
 
     uint32_t prev_idx = 0;
     for (uint32_t i = 0; i < snap->threads.size; ++i) {
       const ProcessStat &thread = snap->threads.data[i];
-      ThreadLine &line = win.lines.data[i];
+      ThreadLine &line = fresh.data[i];
 
       line.tid = thread.pid;
       strncpy(line.comm, thread.comm, sizeof(line.comm) - 1);
@@ -207,6 +213,27 @@ void threads_viewer_update(ThreadsViewerState &state, const State &state_data) {
     for (uint32_t i = 0; i < snap->threads.size; ++i) {
       const ProcessStat &t = snap->threads.data[i];
       win.prev_threads.data[i] = {t.pid, t.utime, t.stime, t.read_time};
+    }
+
+    // Rebuild lines in previous display order (dead threads dropped, new ones
+    // appended) so the stable sort keeps tied rows where they were
+    const Array<bool> taken = Array<bool>::create(ctx.frame_arena, fresh.size);
+    win.lines = Array<ThreadLine>::create(state.cur_arena, fresh.size);
+    uint32_t lines_count = 0;
+    for (const ThreadLine &old_line : old_lines) {
+      const uint32_t idx = bin_search_exact(
+          fresh.size,
+          [&fresh](const uint32_t mid) { return fresh.data[mid].tid; },
+          old_line.tid);
+      if (idx != UINT32_MAX) {
+        win.lines.data[lines_count++] = fresh.data[idx];
+        taken.data[idx] = true;
+      }
+    }
+    for (uint32_t i = 0; i < fresh.size; ++i) {
+      if (!taken.data[i]) {
+        win.lines.data[lines_count++] = fresh.data[i];
+      }
     }
 
     // Apply current sorting

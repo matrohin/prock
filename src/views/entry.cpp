@@ -21,10 +21,11 @@
 
 #include "tracy/Tracy.hpp"
 
-void entry_views_update(ViewState &view_state, State &state) {
+void entry_views_update(FrameContext &ctx, ViewState &view_state,
+                        State &state) {
   ZoneScoped;
-  brief_table_update(view_state.brief_table_state, view_state.string_interner,
-                     state);
+  brief_table_update(ctx, view_state.brief_table_state,
+                     view_state.string_interner, state);
   cpu_chart_update(view_state.cpu_chart_state, state);
   mem_chart_update(view_state.mem_chart_state, state);
   io_chart_update(view_state.io_chart_state, state);
@@ -34,7 +35,7 @@ void entry_views_update(ViewState &view_state, State &state) {
                           view_state.string_interner, state);
   system_io_chart_update(view_state.system_io_chart_state, state);
   system_net_chart_update(view_state.system_net_chart_state, state);
-  threads_viewer_update(view_state.threads_viewer_state, state);
+  threads_viewer_update(ctx, view_state.threads_viewer_state, state);
 }
 
 void entry_views_on_demand_update(ViewState &view_state) {

@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "state.h"
 #include "views/brief_table.h"
+#include "views/common.h"
 #include "views/common_charts.h"
 
 #include <algorithm>
@@ -104,7 +105,7 @@ static void tree_dfs(const Array<BriefTableLine> &lines, const TreeNode *nodes,
   }
 }
 
-void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
+void sort_brief_table_tree(BriefTableState &my_state, BumpArena &temp_arena) {
   Array<BriefTableLine> &lines = my_state.lines;
   if (lines.size == 0) return;
 
@@ -117,7 +118,7 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
   const uint32_t n = lines.size;
 
   // Index 0 is the sentinel (virtual root). Real processes at indices 1..N.
-  TreeNode *nodes = arena.alloc_array_of<TreeNode>(n + 1);
+  TreeNode *nodes = temp_arena.alloc_array_of<TreeNode>(n + 1);
 
   // Build left-child/right-sibling tree using binary search for parent lookup.
   // Iterate in reverse so that prepending produces ascending PID order.
@@ -139,7 +140,7 @@ void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena) {
   }
 
   // DFS from sentinel's children to produce sorted output
-  BriefTableLine *sorted = arena.alloc_array_of<BriefTableLine>(n);
+  BriefTableLine *sorted = temp_arena.alloc_array_of<BriefTableLine>(n);
   uint32_t sorted_idx = 0;
 
   for (uint32_t root = nodes[0].first_child; root != 0;
@@ -179,14 +180,14 @@ static void brief_table_line_init(BriefTableLine &new_line,
 
 // Rebuilds lines in previous display order (with new processes appended)
 // for stable sorting.
-void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
-                        State &state) {
+void brief_table_update(FrameContext &ctx, BriefTableState &my_state,
+                        InternTable &string_interner, State &state) {
   const StateSnapshot &new_snapshot = state.snapshot;
   const Array<BriefTableLine> &old_lines = my_state.lines;
   const int64_t now_ns = new_snapshot.at.time_since_epoch().count();
 
   const Array<bool> added =
-      Array<bool>::create(state.snapshot_arena, new_snapshot.stats.size);
+      Array<bool>::create(ctx.frame_arena, new_snapshot.stats.size);
 
   // Allocate enough space for old lines + new processes
   const uint32_t max_lines = old_lines.size + new_snapshot.stats.size;
@@ -247,7 +248,7 @@ void brief_table_update(BriefTableState &my_state, InternTable &string_interner,
   my_state.lines = new_lines;
 
   if (my_state.tree_mode) {
-    sort_brief_table_tree(my_state, state.snapshot_arena);
+    sort_brief_table_tree(my_state, ctx.frame_arena);
   } else {
     sort_brief_table_lines(my_state);
   }

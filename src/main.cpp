@@ -228,7 +228,8 @@ static bool state_init(State &state) {
   return true;
 }
 
-static void state_update(State &state, ViewState &view_state,
+static void state_update(FrameContext &frame_ctx, State &state,
+                         ViewState &view_state,
                          const UpdateSnapshot &snapshot) {
   BumpArena old_arena = state.snapshot_arena;
 
@@ -237,24 +238,25 @@ static void state_update(State &state, ViewState &view_state,
   state.update_count += 1;
   state.update_system_time = snapshot.system_time;
 
-  entry_views_update(view_state, state);
+  entry_views_update(frame_ctx, view_state, state);
 
   old_arena.destroy();
 }
 
-static bool update(State &state, ViewState &view_state, Sync &sync) {
+static bool update(FrameContext &frame_ctx, State &state, ViewState &view_state,
+                   Sync &sync) {
   ZoneScoped;
   UpdateSnapshot snapshot = {};
   bool updated = false;
   while (sync.update_queue.pop(snapshot)) {
-    state_update(state, view_state, snapshot);
+    state_update(frame_ctx, state, view_state, snapshot);
     updated = true;
   }
   return updated;
 }
 
-static void draw_main_window(const ImGuiIO &io, const State &state,
-                             ViewState &view_state) {
+static void draw_main_window(FrameContext &frame_ctx, const ImGuiIO &io,
+                             const State &state, ViewState &view_state) {
   ZoneScoped;
 
   ImGui::SetNextWindowSize(io.DisplaySize, ImGuiCond_Always);
@@ -284,16 +286,14 @@ static void draw_main_window(const ImGuiIO &io, const State &state,
   ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f),
                    ImGuiDockNodeFlags_NoWindowMenuButton);
 
-  FrameContext frame_ctx = {};
   entry_views_on_demand_update(view_state);
   entry_views_draw(frame_ctx, view_state, state);
-  frame_ctx.frame_arena.destroy();
 
   ImGui::End();
 }
 
-static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
-                 ViewState &view_state) {
+static void draw(FrameContext &frame_ctx, GLFWwindow *window, const ImGuiIO &io,
+                 const State &state, ViewState &view_state) {
   ZoneScoped;
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
@@ -302,7 +302,7 @@ static void draw(GLFWwindow *window, const ImGuiIO &io, const State &state,
     ZoneScopedN("ImGui frame");
     ImGui::NewFrame();
 
-    draw_main_window(io, state, view_state);
+    draw_main_window(frame_ctx, io, state, view_state);
 
     ImGui::Render();
   }
@@ -556,7 +556,8 @@ int main(int, char **) {
 
     auto frame_start = SteadyClock::now();
     FrameMarkStart(MAIN_FRAME);
-    if (update(state, view_state, sync)) {
+    FrameContext frame_ctx = {};
+    if (update(frame_ctx, state, view_state, sync)) {
       g_needs_updates = 2;
     }
 
@@ -576,7 +577,8 @@ int main(int, char **) {
                                view_state.preferences_state.mono_font_path);
     }
 
-    draw(window, io, state, view_state);
+    draw(frame_ctx, window, io, state, view_state);
+    frame_ctx.frame_arena.destroy();
 
     // The modal / Ctrl+Tab dim background fades via ImGui's DimBgRatio over
     // several frames. Because we render on demand, keep requesting frames while

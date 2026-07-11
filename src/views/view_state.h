@@ -66,10 +66,6 @@ struct CascadeLayout {
   }
 };
 
-struct FrameContext {
-  BumpArena frame_arena;
-};
-
 struct ViewState {
   BumpArena arena;
   InternTable string_interner;

@@ -8,9 +8,16 @@
 #include "imgui_internal.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cstdarg>
 #include <cstdio>
 #include <unistd.h>
+
+// Per-frame context for view update/draw; frame_arena is destroyed at the end
+// of each main-loop frame
+struct FrameContext {
+  BumpArena frame_arena;
+};
 
 constexpr ImGuiWindowFlags COMMON_VIEW_FLAGS = ImGuiWindowFlags_NoCollapse;
 constexpr ImGuiTableFlags COMMON_TABLE_FLAGS =

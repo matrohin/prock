@@ -72,4 +72,4 @@ struct BriefTableState {
 uint32_t binary_search_pid(const Array<ProcessStat> &stats, int pid);
 
 void sort_brief_table_lines(BriefTableState &my_state);
-void sort_brief_table_tree(BriefTableState &my_state, BumpArena &arena);
+void sort_brief_table_tree(BriefTableState &my_state, BumpArena &temp_arena);
