@@ -90,7 +90,8 @@ struct StateSnapshot {
 struct State {
   SystemInfo system;
 
-  BumpArena snapshot_arena; // destroyed after every update
+  BumpArena snapshot_arena;        // destroyed after every update
+  BumpArena frozen_snapshot_arena; // used when the view is paused
   StateSnapshot snapshot;
 
   uint update_count;

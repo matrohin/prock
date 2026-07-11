@@ -240,7 +240,16 @@ static void state_update(FrameContext &frame_ctx, State &state,
 
   entry_views_update(frame_ctx, view_state, state);
 
-  old_arena.destroy();
+  // Save the old arena to continue to show it in all the tables:
+  const bool paused = !view_state.preferences_state.auto_follow;
+  if (paused && !state.frozen_snapshot_arena.cur_slab) {
+    state.frozen_snapshot_arena = old_arena;
+  } else {
+    old_arena.destroy();
+    if (!paused) {
+      state.frozen_snapshot_arena.destroy();
+    }
+  }
 }
 
 static bool update(FrameContext &frame_ctx, State &state, ViewState &view_state,

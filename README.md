@@ -49,7 +49,7 @@ and environment — with controls to suspend, kill, or reprioritize processes.
 - Kill the owning process directly from the table
 
 ### Charts & Navigation
-- Toggle "Auto-Follow" on all charts (Space)
+- Toggle "Auto-Follow" on all charts and tables (Space)
 - Toggle continuous Y-axis auto-fit (Shift+Space)
 - Per-core and stacked CPU chart views
 - Zoom the UI in / out (Ctrl++ / Ctrl+-)
