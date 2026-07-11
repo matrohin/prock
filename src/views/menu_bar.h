@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/containers.h"
-#include "sources/font_list_reader.h"
+#include "readers/font_list_reader.h"
 #include "themes.h"
 
 struct PreferencesState {

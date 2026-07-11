@@ -1,11 +1,11 @@
 #pragma once
 
+#include "actions/on_demand_actions.h"
 #include "base/base.h"
 #include "base/channel.h"
 #include "base/containers.h"
-#include "on_demand_actions.h"
-#include "on_demand_reader.h"
-#include "process_stat.h"
+#include "readers/on_demand_reader.h"
+#include "readers/process_stat.h"
 
 #include <condition_variable>
 #include <mutex>

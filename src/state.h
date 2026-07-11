@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 #include "base/containers.h"
-#include "sources/process_stat.h"
+#include "readers/process_stat.h"
 
 struct State;
 struct UpdateSnapshot;

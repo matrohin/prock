@@ -3,7 +3,7 @@
 #include "base/base.h"
 #include "base/containers.h"
 #include "process_window_flags.h"
-#include "sources/sync.h"
+#include "sync.h"
 
 #include "imgui.h"
 #include "on_demand_common.h"

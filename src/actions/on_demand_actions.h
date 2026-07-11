@@ -1,7 +1,7 @@
 #pragma once
 
+#include "actions/dump_writer.h"
 #include "base/channel.h"
-#include "sources/dump_writer.h"
 
 #include <condition_variable>
 

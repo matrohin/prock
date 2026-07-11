@@ -1,6 +1,6 @@
 #include "state.h"
 #include "base/containers.h"
-#include "sources/sync.h"
+#include "sync.h"
 
 StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
                                     const UpdateSnapshot &snapshot) {

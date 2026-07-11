@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 #include "base/string.h"
-#include "sources/process_stat.h"
+#include "readers/sock_diag.h"
 
 const char *tcp_state_name(int state);
 const char *socket_state_name(SocketProtocol protocol, TcpState state);

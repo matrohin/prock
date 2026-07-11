@@ -1,8 +1,8 @@
 #pragma once
 
 #include "base/base.h"
-#include "sources/port_scan_reader.h"
-#include "sources/sync.h"
+#include "readers/port_scan_reader.h"
+#include "sync.h"
 
 #include "imgui.h"
 

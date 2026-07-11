@@ -6,9 +6,9 @@
 // implot
 using ImPlotShadedFlags = int;
 
-#include "sources/proc_util.h"
-#include "sources/sync.h"
-#include "sources/username.h"
+#include "readers/proc_util.h"
+#include "sync.h"
+#include "readers/username.h"
 #include "state.h"
 #include "test_helpers.h"
 #include "views/brief_table_logic.h"

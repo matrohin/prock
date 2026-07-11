@@ -15,8 +15,8 @@
 #include "views/view_state.h"
 
 #include "base/containers.h"
-#include "sources/sync.h"
 #include "state.h"
+#include "sync.h"
 #include "themes.h"
 
 #include "imgui_internal.h"

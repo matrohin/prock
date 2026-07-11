@@ -3,7 +3,7 @@
 #include "base/base.h"
 #include "base/const_string.h"
 #include "base/ring_track.h"
-#include "sources/proc_util.h"
+#include "readers/proc_util.h"
 #include "state.h"
 
 constexpr uint32_t CHART_HISTORY_SIZE = 4096;

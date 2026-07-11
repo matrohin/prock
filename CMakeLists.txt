@@ -87,8 +87,8 @@ if(BUILD_TESTS)
     tests/test_base.cpp
     tests/test_views.cpp
     src/base/base.cpp
-    src/sources/proc_util.cpp
-    src/sources/username.cpp
+    src/readers/proc_util.cpp
+    src/readers/username.cpp
     src/views/brief_table_logic.cpp
     src/state.cpp)
   target_include_directories(prock_tests PRIVATE

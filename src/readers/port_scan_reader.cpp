@@ -2,9 +2,9 @@
 
 #include "base/algorithms.h"
 #include "base/containers.h"
-#include "sources/proc_util.h"
-#include "sources/sock_diag.h"
-#include "sources/socket_reader.h"
+#include "readers/proc_util.h"
+#include "readers/sock_diag.h"
+#include "readers/socket_reader.h"
 
 #include "tracy/Tracy.hpp"
 
