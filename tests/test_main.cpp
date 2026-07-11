@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+#include "base/algorithms.h"
 #include "base/base.h"
 #include "base/channel.h"
 #include "base/const_string.h"

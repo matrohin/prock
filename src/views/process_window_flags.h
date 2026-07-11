@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/algorithms.h"
 #include "base/base.h"
 
 #include "imgui.h"

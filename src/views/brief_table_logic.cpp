@@ -1,3 +1,4 @@
+#include "base/algorithms.h"
 #include "imgui.h"
 #include "state.h"
 #include "views/brief_table.h"

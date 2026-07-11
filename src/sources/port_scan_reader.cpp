@@ -1,5 +1,6 @@
 #include "port_scan_reader.h"
 
+#include "base/algorithms.h"
 #include "sources/proc_parsers.h"
 #include "sources/socket_reader.h"
 
