@@ -4,10 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Prock is a fast, graphical alternative to htop/btop, inspired by the
-Sysinternals Process Explorer. It shows running processes in a sortable tree,
-live system charts (CPU, memory, I/O, network) and per-process charts (CPU,
-memory, I/O), and detailed inspectors for libraries, sockets, threads, and
-environment — with controls to suspend, kill, or reprioritize processes.
+Sysinternals Process Explorer. It shows a process tree, live system charts,
+per-process charts, and detailed inspectors for libraries, sockets, threads,
+and environment — with controls to suspend, kill, or reprioritize processes.
 
 ![Prock per-process windows and ports view (Light theme)](./images/shot-light.png)
 
@@ -16,24 +15,26 @@ environment — with controls to suspend, kill, or reprioritize processes.
 ## Features
 
 ### Process Monitoring
-- Tree view (default) or flat list showing parent-child relationships
-- Filter by name (Ctrl+Shift+F) or type to jump to a process
-- Sortable and reorderable columns
-- Copy process info or entire table to clipboard
-- Kill (SIGTERM), force kill (SIGKILL), or kill entire process tree
-- Suspend / resume processes
+- Filter by name, PID; Use '+' to filter to a subtree
+- Sort by any column
+- Choose the order and which columns to display
+- Copy process info or entire table
+- Kill `SIGTERM`, force kill `SIGKILL`, or kill entire process tree
+- Tree view or a sortable list showing parent-child relationships
 - Set CPU affinity and nice priority
-- Create a core dump (via gcore) without terminating the process
+- Suspend `SIGSTOP` / resume `SIGCONT` processes
+- Create a core dump (via `gcore`) without terminating the process
 
 ### System Charts
-- CPU usage (total, kernel, interrupts) with optional per-core and stacked views
+- CPU usage (total, kernel, interrupts)
+- Toggle to show per-core and stacked charts (per-core toggles the format for all views globally)
 - Memory usage (used vs available)
 - Disk I/O throughput (read/write MB/s)
 - Network throughput (send/receive MB/s)
 
 ### Per-Process Details
 - Right-click any process to open:
-  - Dedicated charts (CPU, memory, I/O)
+  - Charts (CPU, memory, I/O)
   - Properties
   - Loaded libraries with mapped/file sizes
   - Memory maps with address, permissions, RSS/PSS/swap, and grouping by mapping
@@ -44,7 +45,7 @@ environment — with controls to suspend, kill, or reprioritize processes.
 - Double-click to open all windows at once
 
 ### Listening Ports
-- System-wide view of listening ports (protocol, local address, state, owning PID and process)
+- System-wide view of listening ports
 - Kill the owning process directly from the table
 
 ### Charts & Navigation
