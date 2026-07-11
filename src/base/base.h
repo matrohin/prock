@@ -14,6 +14,12 @@ using uint = unsigned int;
 using ulong = unsigned long;
 using ulonglong = unsigned long long;
 using Pid = int;
+using Seconds = std::chrono::duration<double, std::chrono::seconds::period>;
+using SteadyClock = std::chrono::steady_clock;
+using SteadyTimePoint = std::chrono::time_point<SteadyClock>;
+
+using SystemClock = std::chrono::system_clock;
+using SystemTimePoint = std::chrono::time_point<SystemClock>;
 
 constexpr size_t SLAB_SIZE = 256UL * 1024; // 256KB
 constexpr const char *ARENA_SLAB_POOL = "arena slabs";
@@ -172,10 +178,3 @@ template <class T> T *create_with_arena() {
   res->arena = arena;
   return res;
 }
-
-using Seconds = std::chrono::duration<double, std::chrono::seconds::period>;
-using SteadyClock = std::chrono::steady_clock;
-using SteadyTimePoint = std::chrono::time_point<SteadyClock>;
-
-using SystemClock = std::chrono::system_clock;
-using SystemTimePoint = std::chrono::time_point<SystemClock>;
