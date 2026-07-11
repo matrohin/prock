@@ -3,6 +3,7 @@
 #include "state.h"
 #include "views/common.h"
 #include "views/icons.h"
+#include "views/shortcut.h"
 #include "views/table_item.h"
 #include "views/ui.h"
 #include "views/view_state.h"
@@ -276,11 +277,12 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
 
       const bool is_selected = win.selected_index == static_cast<int>(i);
       if (ImGui::Selectable(entry.label, is_selected,
-                            ImGuiSelectableFlags_SpanAllColumns)) {
+                            ImGuiSelectableFlags_SpanAllColumns) ||
+          ImGui::IsItemFocused()) {
         win.selected_index = static_cast<int>(i);
       }
 
-      if (ImGui::BeginPopupContextItem()) {
+      if (ui_context_menu(is_selected)) {
         win.selected_index = static_cast<int>(i);
         if (ImGui::MenuItemEx(
                 copy_cell_menu_label(ctx.frame_arena, entry.value).data,
@@ -302,7 +304,7 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
     ImGui::EndTable();
   }
 
-  if (copy_row_shortcut(win.selected_index, count)) {
+  if (shortcut_copy_row(win.selected_index, count)) {
     clipboard_copy_cell(view_state.notifications,
                         entries[win.selected_index].value);
   }

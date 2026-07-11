@@ -26,6 +26,7 @@ struct SocketViewerWindow {
   int error_code;
   int netlink_error_code;
   int selected_index;
+  int context_menu_column;
   char filter_text[256];
 
   ProcessWindowFlags flags;

@@ -2,6 +2,7 @@
 
 #include "views/common.h"
 #include "views/icons.h"
+#include "views/shortcut.h"
 #include "views/ui.h"
 #include "views/view_state.h"
 
@@ -47,12 +48,14 @@ static void environ_context_menu(FrameContext &ctx,
                                  Notifications &notifications,
                                  EnvironViewerWindow &win, const int index,
                                  const EnvironEntry &entry) {
-  const int copy_column = table_context_column(eEnvironViewerColumnId_Count);
-  if (ImGui::BeginPopupContextItem()) {
+  if (ui_context_menu(win.selected_index == index &&
+                          win.selected_child_index < 0,
+                      win.context_menu_column, eEnvironViewerColumnId_Count)) {
     win.selected_index = index;
     win.selected_child_index = -1;
-    const String cell =
-        copy_column == eEnvironViewerColumnId_Value ? entry.value : entry.name;
+    const String cell = win.context_menu_column == eEnvironViewerColumnId_Value
+                            ? entry.value
+                            : entry.name;
     if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
                           ICON_MD_CONTENT_COPY)) {
       clipboard_copy_cell(notifications, cell);
@@ -120,6 +123,7 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_index = -1;
+  win->context_menu_column = 0;
   win->selected_child_index = -1;
   win->last_updated = 0.0;
 
@@ -274,7 +278,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               const bool is_open = ImGui::TreeNodeEx(entry.name.data, flags);
 
               // Handle selection on click
-              if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+              if ((ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) ||
+                  ImGui::IsItemFocused()) {
                 win.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
               }
@@ -318,13 +323,13 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                         String::sprintf(ctx.frame_arena, "[%d]", seg_idx);
                     ImGui::TreeNodeEx(seg_label.data, leaf_flags);
 
-                    if (ImGui::IsItemClicked()) {
+                    if (ImGui::IsItemClicked() || ImGui::IsItemFocused()) {
                       win.selected_index = static_cast<int>(j);
                       win.selected_child_index = seg_idx;
                     }
 
                     // Context menu for child segment
-                    if (ImGui::BeginPopupContextItem()) {
+                    if (ui_context_menu(child_selected)) {
                       win.selected_index = static_cast<int>(j);
                       win.selected_child_index = seg_idx;
                       const String path = String::copy_from(
@@ -356,7 +361,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             } else {
               // Non-expandable: use regular selectable
               if (ImGui::Selectable(entry.name.data, is_selected,
-                                    ImGuiSelectableFlags_SpanAllColumns)) {
+                                    ImGuiSelectableFlags_SpanAllColumns) ||
+                  ImGui::IsItemFocused()) {
                 win.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
               }
@@ -380,7 +386,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
 
         // Ctrl+C to copy selected row or child segment
-        if (copy_row_shortcut(win.selected_index, win.entries.size)) {
+        if (shortcut_copy_row(win.selected_index, win.entries.size)) {
           const EnvironEntry &entry = win.entries.data[win.selected_index];
           if (win.selected_child_index >= 0) {
             // Copy specific path segment

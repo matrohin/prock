@@ -28,6 +28,7 @@ struct SmapsViewerWindow {
   char process_name[64];
   int error_code;
   int selected_index;
+  int context_menu_column;
   char filter_text[256];
 
   ProcessWindowFlags flags;

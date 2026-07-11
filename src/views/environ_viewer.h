@@ -23,6 +23,7 @@ struct EnvironViewerWindow {
   int selected_index;       // -1 means no selection
   int selected_child_index; // -1 means parent selected, >= 0 means child
                             // segment
+  int context_menu_column;
   char filter_text[256];
 
   ProcessWindowFlags flags;

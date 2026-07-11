@@ -59,6 +59,7 @@ struct ThreadsViewerWindow {
 
   // UI state
   int selected_tid;
+  int context_menu_column;
   char filter_text[256];
   ThreadsViewerColumnId sorted_by;
   ImGuiSortDirection sorted_order;

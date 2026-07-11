@@ -33,6 +33,7 @@ struct PortsViewerState {
 
   char filter_text[256];
   int selected_index = -1;
+  int context_menu_column = 0;
 
   int scan_error_code;
   int netlink_error_code;

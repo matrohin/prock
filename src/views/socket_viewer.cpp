@@ -3,6 +3,7 @@
 #include "base/string.h"
 #include "views/common.h"
 #include "views/icons.h"
+#include "views/shortcut.h"
 #include "views/socket_format.h"
 #include "views/table_item.h"
 #include "views/ui.h"
@@ -120,6 +121,7 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const Pid pid,
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_index = -1;
+  win->context_menu_column = 0;
   win->last_updated = 0.0;
 
   send_socket_request(sync, pid);
@@ -273,16 +275,16 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             // Protocol
             ImGui::TableSetColumnIndex(eSocketViewerColumnId_Protocol);
             if (ImGui::Selectable(protocol_name(sock.protocol), is_selected,
-                                  ImGuiSelectableFlags_SpanAllColumns)) {
+                                  ImGuiSelectableFlags_SpanAllColumns) ||
+                ImGui::IsItemFocused()) {
               win.selected_index = static_cast<int>(j);
             }
 
-            const int copy_column =
-                table_context_column(eSocketViewerColumnId_Count);
-            if (ImGui::BeginPopupContextItem()) {
+            if (ui_context_menu(is_selected, win.context_menu_column,
+                                eSocketViewerColumnId_Count)) {
               win.selected_index = static_cast<int>(j);
-              const String cell =
-                  socket_cell_text(ctx.frame_arena, sock, copy_column);
+              const String cell = socket_cell_text(ctx.frame_arena, sock,
+                                                   win.context_menu_column);
               if (ImGui::MenuItemEx(
                       copy_cell_menu_label(ctx.frame_arena, cell).data,
                       ICON_MD_CONTENT_COPY)) {
@@ -334,7 +336,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::EndTable();
 
           // Ctrl+C to copy selected row
-          if (copy_row_shortcut(win.selected_index, win.sockets.size)) {
+          if (shortcut_copy_row(win.selected_index, win.sockets.size)) {
             copy_socket_row(view_state.notifications, ctx.frame_arena,
                             win.sockets.data[win.selected_index]);
           }

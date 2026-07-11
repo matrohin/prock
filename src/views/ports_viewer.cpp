@@ -274,14 +274,16 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
       ImGui::TableSetColumnIndex(ePortsViewerColumnId_Protocol);
       if (ImGui::Selectable(protocol_name(e.sock.protocol), is_selected,
-                            ImGuiSelectableFlags_SpanAllColumns)) {
+                            ImGuiSelectableFlags_SpanAllColumns) ||
+          ImGui::IsItemFocused()) {
         state.selected_index = static_cast<int>(i);
       }
 
-      const int copy_column = table_context_column(ePortsViewerColumnId_Count);
-      if (ImGui::BeginPopupContextItem()) {
+      if (ui_context_menu(is_selected, state.context_menu_column,
+                          ePortsViewerColumnId_Count)) {
         state.selected_index = static_cast<int>(i);
-        const String cell = port_cell_text(ctx.frame_arena, e, copy_column);
+        const String cell =
+            port_cell_text(ctx.frame_arena, e, state.context_menu_column);
         if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
                               ICON_MD_CONTENT_COPY)) {
           clipboard_copy_cell(view_state.notifications, cell);

@@ -56,6 +56,7 @@ struct BriefTableState {
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
   Pid selected_pid = -1;
+  int context_menu_column = 0;
   char filter_text[256];
 
   Pid control_edit_pid;        // PID being edited, 0 if none

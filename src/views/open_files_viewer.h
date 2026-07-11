@@ -24,6 +24,7 @@ struct OpenFilesViewerWindow {
   char process_name[64];
   int error_code;
   int selected_index; // -1 means no selection
+  int context_menu_column;
   char filter_text[256];
 
   ProcessWindowFlags flags;

@@ -2,6 +2,7 @@
 
 #include "constants.h"
 #include "imgui.h"
+#include "shortcut.h"
 #include "style_control.h"
 
 // Data tables render in the monospaced font: push right after a successful
@@ -17,6 +18,26 @@ inline void ui_pop_mono_font() { ImGui::PopFont(); }
 // live zoom/DPI so they track the text instead of staying frozen when the UI
 // is zoomed or on a HiDPI monitor. Call with the default UI font active.
 inline float ui_scale() { return ImGui::GetFontSize() / BASE_FONT_SIZE; }
+
+inline bool ui_context_menu(const bool row_is_selected,
+                            const char *str_id = nullptr) {
+  shortcut_row_context_menu(row_is_selected);
+  return ImGui::BeginPopupContextItem(str_id);
+}
+
+inline bool ui_context_menu(const bool row_is_selected, int &menu_column,
+                            const int column_count,
+                            const char *str_id = nullptr) {
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
+      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup)) {
+    const int hovered = ImGui::TableGetHoveredColumn();
+    menu_column = hovered >= 0 && hovered < column_count ? hovered : 0;
+  }
+  if (shortcut_row_context_menu(row_is_selected)) {
+    menu_column = 0;
+  }
+  return ImGui::BeginPopupContextItem(str_id);
+}
 
 // Draw a filter input with Ctrl+F keyboard shortcut
 // Refresh toolbar button (icon + label). When `pending`, shows a disabled

@@ -3,6 +3,7 @@
 #include "base/containers.h"
 #include "views/common.h"
 #include "views/icons.h"
+#include "views/shortcut.h"
 #include "views/table_item.h"
 #include "views/ui.h"
 #include "views/view_state.h"
@@ -94,6 +95,7 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_index = -1;
+  win->context_menu_column = 0;
   win->last_updated = 0.0;
 
   send_library_request(sync, pid);
@@ -229,19 +231,19 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             // Path with selection
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_Path);
             if (ImGui::Selectable(lib.path.data, is_selected,
-                                  ImGuiSelectableFlags_SpanAllColumns)) {
+                                  ImGuiSelectableFlags_SpanAllColumns) ||
+                ImGui::IsItemFocused()) {
               win.selected_index = static_cast<int>(j);
             }
             if (ImGui::IsItemHovered()) {
               ImGui::SetTooltip("%s", lib.path.data);
             }
 
-            const int copy_column =
-                table_context_column(eLibraryViewerColumnId_Count);
-            if (ImGui::BeginPopupContextItem()) {
+            if (ui_context_menu(is_selected, win.context_menu_column,
+                                eLibraryViewerColumnId_Count)) {
               win.selected_index = static_cast<int>(j);
-              const String cell =
-                  library_cell_text(ctx.frame_arena, lib, copy_column);
+              const String cell = library_cell_text(ctx.frame_arena, lib,
+                                                    win.context_menu_column);
               if (ImGui::MenuItemEx(
                       copy_cell_menu_label(ctx.frame_arena, cell).data,
                       ICON_MD_CONTENT_COPY)) {
@@ -277,7 +279,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
 
         // Ctrl+C to copy selected row
-        if (copy_row_shortcut(win.selected_index, win.libraries.size)) {
+        if (shortcut_copy_row(win.selected_index, win.libraries.size)) {
           copy_library_row(view_state.notifications, ctx.frame_arena,
                            win.libraries.data[win.selected_index]);
         }

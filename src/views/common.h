@@ -210,32 +210,6 @@ inline void clipboard_copy_row(Notifications &notifications, const char *text) {
   notify_info(notifications, "Copied row");
 }
 
-// Ctrl+C "copy selected row" gate for the viewer tables. Confirms the stored
-// selection is still in range before the caller indexes data[selected_index]:
-// a Refresh can replace the list with fewer rows and leave selected_index
-// pointing past the end.
-inline bool copy_row_shortcut(const int selected_index, const uint32_t size) {
-  return selected_index >= 0 && selected_index < static_cast<int>(size) &&
-         ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C);
-}
-
-// Remembers which column was under the mouse on the right-click that opened a
-// row context menu, so "Copy <cell>" knows what to copy while the popup is up.
-// Call right after the row's spanning Selectable/TreeNode (it must be the last
-// item). Only one context menu can be open at a time, so a single slot serves
-// every table. The trigger must mirror OpenPopupOnItemClick's (mouse release +
-// AllowWhenBlockedByPopup): a press-based plain-hover check misses the
-// recapture when right-clicking while the previous popup is still open.
-inline int table_context_column(const int column_count) {
-  static int captured = 0;
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
-      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup)) {
-    const int hovered = ImGui::TableGetHoveredColumn();
-    captured = hovered >= 0 && hovered < column_count ? hovered : 0;
-  }
-  return captured;
-}
-
 // Menu label like: Copy "esbuild". Long values are elided; the ### suffix
 // keeps the item ID stable regardless of the value.
 inline String copy_cell_menu_label(BumpArena &arena, const String &cell) {

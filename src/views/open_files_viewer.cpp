@@ -4,6 +4,7 @@
 #include "base/string.h"
 #include "views/common.h"
 #include "views/icons.h"
+#include "views/shortcut.h"
 #include "views/table_item.h"
 #include "views/ui.h"
 #include "views/view_state.h"
@@ -148,6 +149,7 @@ void open_files_viewer_request(OpenFilesViewerState &state, Sync &sync,
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_index = -1;
+  win->context_menu_column = 0;
   win->sorted_by = eOpenFilesViewerColumnId_Fd;
   win->sorted_order = ImGuiSortDirection_Ascending;
   win->last_updated = 0.0;
@@ -301,16 +303,16 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             const String fd_label =
                 String::sprintf(ctx.frame_arena, "%d", file.fd);
             if (ImGui::Selectable(fd_label.data, is_selected,
-                                  ImGuiSelectableFlags_SpanAllColumns)) {
+                                  ImGuiSelectableFlags_SpanAllColumns) ||
+                ImGui::IsItemFocused()) {
               win.selected_index = static_cast<int>(j);
             }
 
-            const int copy_column =
-                table_context_column(eOpenFilesViewerColumnId_Count);
-            if (ImGui::BeginPopupContextItem()) {
+            if (ui_context_menu(is_selected, win.context_menu_column,
+                                eOpenFilesViewerColumnId_Count)) {
               win.selected_index = static_cast<int>(j);
-              const String cell =
-                  open_file_cell_text(ctx.frame_arena, file, copy_column);
+              const String cell = open_file_cell_text(ctx.frame_arena, file,
+                                                      win.context_menu_column);
               if (ImGui::MenuItemEx(
                       copy_cell_menu_label(ctx.frame_arena, cell).data,
                       ICON_MD_CONTENT_COPY)) {
@@ -360,7 +362,7 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::EndTable();
 
           // Ctrl+C to copy selected row
-          if (copy_row_shortcut(win.selected_index, win.files.size)) {
+          if (shortcut_copy_row(win.selected_index, win.files.size)) {
             copy_open_file_row(view_state.notifications, ctx.frame_arena,
                                win.files.data[win.selected_index]);
           }

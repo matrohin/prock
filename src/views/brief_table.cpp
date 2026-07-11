@@ -344,10 +344,12 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                                     const BriefTableLine &line,
                                     const char *label, const int num_cpus) {
   const Pid pid = line.pid;
-  const int copy_column = table_context_column(eBriefTableColumnId_Count);
-  if (ImGui::BeginPopupContextItem(label)) {
+  if (ui_context_menu(my_state.selected_pid == pid,
+                      my_state.context_menu_column, eBriefTableColumnId_Count,
+                      label)) {
     my_state.selected_pid = pid;
-    const String cell = process_cell_text(ctx.frame_arena, line, copy_column);
+    const String cell =
+        process_cell_text(ctx.frame_arena, line, my_state.context_menu_column);
     if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
                           ICON_MD_CONTENT_COPY)) {
       clipboard_copy_cell(view_state.notifications, cell);
@@ -1037,7 +1039,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
 
           ImGui::TreeNodeEx(label.data, node_flags);
 
-          if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+          if ((ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) ||
+              ImGui::IsItemFocused()) {
             my_state.selected_pid = line.pid;
           }
           if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) &&

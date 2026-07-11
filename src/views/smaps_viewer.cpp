@@ -2,6 +2,7 @@
 
 #include "views/common.h"
 #include "views/icons.h"
+#include "views/shortcut.h"
 #include "views/table_item.h"
 #include "views/ui.h"
 #include "views/view_state.h"
@@ -180,6 +181,7 @@ void smaps_viewer_request(SmapsViewerState &state, Sync &sync, const Pid pid,
   win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
   snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_index = -1;
+  win->context_menu_column = 0;
   win->last_updated = 0.0;
 
   send_smaps_request(sync, pid);
@@ -459,15 +461,16 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               const String seg_count =
                   String::sprintf(ctx.frame_arena, "%u", g.count);
               if (ImGui::Selectable(seg_count.data, is_selected,
-                                    ImGuiSelectableFlags_SpanAllColumns)) {
+                                    ImGuiSelectableFlags_SpanAllColumns) ||
+                  ImGui::IsItemFocused()) {
                 win.selected_index = static_cast<int>(j);
               }
 
-              const int copy_column = table_context_column(kGroupedCols);
-              if (ImGui::BeginPopupContextItem()) {
+              if (ui_context_menu(is_selected, win.context_menu_column,
+                                  kGroupedCols)) {
                 win.selected_index = static_cast<int>(j);
-                const String cell =
-                    smaps_group_cell_text(ctx.frame_arena, g, copy_column);
+                const String cell = smaps_group_cell_text(
+                    ctx.frame_arena, g, win.context_menu_column);
                 if (ImGui::MenuItemEx(
                         copy_cell_menu_label(ctx.frame_arena, cell).data,
                         ICON_MD_CONTENT_COPY)) {
@@ -515,7 +518,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ui_pop_mono_font();
             ImGui::EndTable();
 
-            if (copy_row_shortcut(win.selected_index, groups.size())) {
+            if (shortcut_copy_row(win.selected_index, groups.size())) {
               copy_smaps_group(view_state.notifications, ctx.frame_arena,
                                groups.data()[win.selected_index]);
             }
@@ -575,15 +578,16 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               const String addr_buf = String::sprintf(
                   ctx.frame_arena, "%lx-%lx", seg.start_addr, seg.end_addr);
               if (ImGui::Selectable(addr_buf.data, is_selected,
-                                    ImGuiSelectableFlags_SpanAllColumns)) {
+                                    ImGuiSelectableFlags_SpanAllColumns) ||
+                  ImGui::IsItemFocused()) {
                 win.selected_index = static_cast<int>(j);
               }
 
-              const int copy_column = table_context_column(kFlatCols);
-              if (ImGui::BeginPopupContextItem()) {
+              if (ui_context_menu(is_selected, win.context_menu_column,
+                                  kFlatCols)) {
                 win.selected_index = static_cast<int>(j);
-                const String cell =
-                    smaps_cell_text(ctx.frame_arena, seg, copy_column);
+                const String cell = smaps_cell_text(ctx.frame_arena, seg,
+                                                    win.context_menu_column);
                 if (ImGui::MenuItemEx(
                         copy_cell_menu_label(ctx.frame_arena, cell).data,
                         ICON_MD_CONTENT_COPY)) {
@@ -635,7 +639,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ui_pop_mono_font();
             ImGui::EndTable();
 
-            if (copy_row_shortcut(win.selected_index, win.segments.size)) {
+            if (shortcut_copy_row(win.selected_index, win.segments.size)) {
               copy_smaps_row(view_state.notifications, ctx.frame_arena,
                              win.segments.data[win.selected_index]);
             }

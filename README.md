@@ -54,6 +54,7 @@ and environment — with controls to suspend, kill, or reprioritize processes.
 - Per-core and stacked CPU chart views
 - Zoom the UI in / out (Ctrl++ / Ctrl+-)
 - Command palette for all actions (Ctrl+P)
+- Context menu for the selected table row (Ctrl+Enter)
 - Menu bar, optionally shown only on Alt
 
 ### Appearance & Preferences

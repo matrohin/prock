@@ -127,6 +127,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
   win->status = eOnDemandViewerStatus_Loading;
   snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
   win->selected_tid = -1;
+  win->context_menu_column = 0;
   win->sorted_by = eThreadsViewerColumnId_CpuTotal;
   win->sorted_order = ImGuiSortDirection_Descending;
 
@@ -347,16 +348,16 @@ void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
             char label[32];
             snprintf(label, sizeof(label), "%d", line.tid);
             if (ImGui::Selectable(label, is_selected,
-                                  ImGuiSelectableFlags_SpanAllColumns)) {
+                                  ImGuiSelectableFlags_SpanAllColumns) ||
+                ImGui::IsItemFocused()) {
               win.selected_tid = line.tid;
             }
 
-            const int copy_column =
-                table_context_column(eThreadsViewerColumnId_Count);
-            if (ImGui::BeginPopupContextItem()) {
+            if (ui_context_menu(is_selected, win.context_menu_column,
+                                eThreadsViewerColumnId_Count)) {
               win.selected_tid = line.tid;
-              const String cell =
-                  thread_cell_text(ctx.frame_arena, line, copy_column);
+              const String cell = thread_cell_text(ctx.frame_arena, line,
+                                                   win.context_menu_column);
               if (ImGui::MenuItemEx(
                       copy_cell_menu_label(ctx.frame_arena, cell).data,
                       ICON_MD_CONTENT_COPY)) {
