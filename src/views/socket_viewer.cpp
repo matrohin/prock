@@ -15,10 +15,10 @@
 
 #include <cstring>
 
-static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
-
 const char *SOCKET_COPY_HEADER =
     "Protocol\tLocal Address\tRemote Address\tState\tRecv-Q\tSend-Q\n";
+
+static constexpr uint32_t CLEANUP_AFTER_N_UPDATES_SOCKETS = 5;
 
 static String socket_cell_text(BumpArena &arena, const SocketEntry &sock,
                                const int column) {
@@ -70,9 +70,9 @@ static void copy_all_sockets(Notifications &notifications, BumpArena &arena,
 }
 
 static void sort_sockets(const SocketViewerWindow &win) {
-  sort_bidirectional(win.sockets.data, win.sockets.size, win.sorted_order,
+  sort_bidirectional(win.sockets.data, win.sockets.size, win.od.sorted_order,
                      [&](const SocketEntry &a, const SocketEntry &b) {
-                       switch (win.sorted_by) {
+                       switch (win.od.sorted_by) {
                        case eSocketViewerColumnId_Protocol:
                          return a.protocol < b.protocol;
                        case eSocketViewerColumnId_LocalAddress: {
@@ -105,47 +105,35 @@ static bool send_socket_request(Sync &sync, const Pid pid) {
 void socket_viewer_request(SocketViewerState &state, Sync &sync, const Pid pid,
                            const char *comm, const ImGuiID dock_id,
                            const ProcessWindowFlags extra_flags) {
-  if (process_window_focus(state.windows, pid)) {
+  if (on_demand_focus(state.windows, pid)) {
     return;
   }
 
   ++state.updates_since_last_cleanup;
   SocketViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eOnDemandViewerStatus_Loading;
-  win->pid = pid;
-  win->dock_id = dock_id;
-  win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
-  snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
-  win->selected_index = -1;
-  win->context_menu_column = 0;
-  win->last_updated = 0.0;
+  on_demand_window_init(win->od, pid, comm, dock_id, extra_flags);
 
   if (!send_socket_request(sync, pid)) {
-    on_demand_mark_request_dropped(*win);
+    on_demand_mark_request_dropped(win->od);
   }
 
-  common_views_sort_added(state.windows);
+  on_demand_sort_added(state.windows);
 }
 
 void socket_viewer_update(SocketViewerState &state, Sync &sync) {
   SocketResponse response;
   while (sync.on_demand_reader.socket_response_queue.pop(response)) {
-    for (SocketViewerWindow &win : state.windows) {
-      if (win.pid == response.pid) {
-        if (response.error_code == 0 && response.netlink_error_code == 0) {
-          win.status = eOnDemandViewerStatus_Ready;
-          win.sockets = Array<SocketEntry>::create(state.cur_arena,
-                                                   response.sockets.size);
-          memcpy(win.sockets.data, response.sockets.data,
-                 response.sockets.size * sizeof(SocketEntry));
-          sort_sockets(win);
-          win.last_updated = ImGui::GetTime();
-        } else {
-          win.status = eOnDemandViewerStatus_Error;
-          win.error_code = response.error_code;
-          win.netlink_error_code = response.netlink_error_code;
-        }
-        break;
+    SocketViewerWindow *win = on_demand_find(state.windows, response.pid);
+    if (win) {
+      if (response.error_code == 0 && response.netlink_error_code == 0) {
+        on_demand_apply_response(win->od, 0);
+        win->sockets =
+            Array<SocketEntry>::copy_from(state.cur_arena, response.sockets);
+        sort_sockets(*win);
+      } else {
+        win->od.status = eOnDemandViewerStatus_Error;
+        win->od.error_code = response.error_code;
+        win->netlink_error_code = response.netlink_error_code;
       }
     }
     response.owner_arena.destroy();
@@ -177,54 +165,26 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     SocketViewerWindow &win = my_state.windows.data()[last];
-    const String title =
-        on_demand_viewer_title(ctx.frame_arena, win.status, "Sockets",
-                               win.sockets.size, win.process_name, win.pid);
-    process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title.data);
 
-    bool should_be_opened = true;
-    const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
-      process_window_check_close(win.flags, should_be_opened);
-
-      if (win.status == eOnDemandViewerStatus_Error) {
+    bool keep_open = true;
+    if (on_demand_window_begin(view_state, win.od, "Sockets", win.sockets.size,
+                               ctx.frame_arena, keep_open)) {
+      if (win.od.status == eOnDemandViewerStatus_Error) {
         if (win.netlink_error_code != 0) {
           draw_socket_query_error(win.netlink_error_code);
         } else {
-          draw_error_with_pkexec(win.error_code);
+          draw_error_with_pkexec(win.od.error_code);
         }
       } else if (win.sockets.size > 0 ||
-                 win.status == eOnDemandViewerStatus_Ready) {
+                 win.od.status == eOnDemandViewerStatus_Ready) {
         ImGuiTextFilter filter;
-        if (ImGui::BeginTable("Header", 4, ImGuiTableFlags_SizingStretchSame)) {
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
-                                  HEADER_SPACER_WEIGHT);
-          ImGui::TableNextRow();
-
-          ImGui::TableNextColumn();
-          ImGui::SetNextItemWidth(-FLT_MIN);
-          ui_filter_input(filter, "##SockFilter", win.filter_text,
-                          sizeof(win.filter_text));
-
-          ImGui::TableNextColumn();
-          if (ui_refresh_button()) {
-            // On a dropped request stay Ready: the old data is still shown and
-            // the refresh button remains available to retry.
-            win.status = send_socket_request(*view_state.sync, win.pid)
-                             ? eOnDemandViewerStatus_Loading
-                             : eOnDemandViewerStatus_Ready;
-          }
-
-          ImGui::TableNextColumn();
-          ui_last_updated(win.last_updated);
-
-          ImGui::TableNextColumn(); // spacer
-
-          ImGui::EndTable();
+        bool refresh = false;
+        if (on_demand_toolbar_begin(win.od, filter, "##SockFilter")) {
+          refresh = on_demand_toolbar_end(win.od);
+        }
+        if (refresh) {
+          on_demand_refresh_status(
+              win.od, send_socket_request(*view_state.sync, win.od.pid));
         }
 
         if (win.sockets.size == 0) {
@@ -251,7 +211,7 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                   0.0f, eSocketViewerColumnId_SendQ);
           ImGui::TableHeadersRow();
 
-          handle_table_sort_specs(win.sorted_by, win.sorted_order,
+          handle_table_sort_specs(win.od.sorted_by, win.od.sorted_order,
                                   [&] { sort_sockets(win); });
 
           for (uint32_t j = 0; j < win.sockets.size; ++j) {
@@ -269,7 +229,8 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 socket_state_name(sock.protocol, sock.state));
             if (!filter.PassFilter(filter_str.data)) continue;
 
-            const bool is_selected = win.selected_index == static_cast<int>(j);
+            const bool is_selected =
+                win.od.selected_index == static_cast<int>(j);
             ImGui::PushID(static_cast<int>(j));
             ImGui::TableNextRow();
 
@@ -278,14 +239,14 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (ImGui::Selectable(protocol_name(sock.protocol), is_selected,
                                   ImGuiSelectableFlags_SpanAllColumns) ||
                 ImGui::IsItemFocused()) {
-              win.selected_index = static_cast<int>(j);
+              win.od.selected_index = static_cast<int>(j);
             }
 
-            if (ui_context_menu(is_selected, win.context_menu_column,
+            if (ui_context_menu(is_selected, win.od.context_menu_column,
                                 eSocketViewerColumnId_Count)) {
-              win.selected_index = static_cast<int>(j);
+              win.od.selected_index = static_cast<int>(j);
               const String cell = socket_cell_text(ctx.frame_arena, sock,
-                                                   win.context_menu_column);
+                                                   win.od.context_menu_column);
               if (ImGui::MenuItemEx(
                       copy_cell_menu_label(ctx.frame_arena, cell).data,
                       ICON_MD_CONTENT_COPY)) {
@@ -337,16 +298,15 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::EndTable();
 
           // Ctrl+C to copy selected row
-          if (shortcut_copy_row(win.selected_index, win.sockets.size)) {
+          if (shortcut_copy_row(win.od.selected_index, win.sockets.size)) {
             copy_socket_row(view_state.notifications, ctx.frame_arena,
-                            win.sockets.data[win.selected_index]);
+                            win.sockets.data[win.od.selected_index]);
           }
         }
       }
     }
-    process_window_handle_focus(win.flags);
-    ImGui::End();
-    if (should_be_opened) {
+    on_demand_window_end(win.od);
+    if (keep_open) {
       ++last;
     } else {
       ++my_state.updates_since_last_cleanup;

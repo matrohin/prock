@@ -20,28 +20,26 @@ static void close_docked_children(const ImGuiID dock_id, ViewState &view_state,
   process_window_close(dock_id, view_state.cpu_chart_state.charts, pid);
   process_window_close(dock_id, view_state.mem_chart_state.charts, pid);
   process_window_close(dock_id, view_state.io_chart_state.charts, pid);
-  process_window_close(dock_id, view_state.properties_viewer_state.windows,
-                       pid);
-  process_window_close(dock_id, view_state.library_viewer_state.windows, pid);
-  process_window_close(dock_id, view_state.environ_viewer_state.windows, pid);
   process_window_close(dock_id, view_state.threads_viewer_state.windows, pid);
-  process_window_close(dock_id, view_state.socket_viewer_state.windows, pid);
-  process_window_close(dock_id, view_state.open_files_viewer_state.windows,
-                       pid);
-  process_window_close(dock_id, view_state.smaps_viewer_state.windows, pid);
+  on_demand_close(dock_id, view_state.properties_viewer_state.windows, pid);
+  on_demand_close(dock_id, view_state.library_viewer_state.windows, pid);
+  on_demand_close(dock_id, view_state.environ_viewer_state.windows, pid);
+  on_demand_close(dock_id, view_state.socket_viewer_state.windows, pid);
+  on_demand_close(dock_id, view_state.open_files_viewer_state.windows, pid);
+  on_demand_close(dock_id, view_state.smaps_viewer_state.windows, pid);
 }
 
 void process_host_restore_layout(ViewState &view_state, const Pid pid) {
   process_window_redock(view_state.cpu_chart_state.charts, pid);
   process_window_redock(view_state.mem_chart_state.charts, pid);
   process_window_redock(view_state.io_chart_state.charts, pid);
-  process_window_redock(view_state.properties_viewer_state.windows, pid);
-  process_window_redock(view_state.library_viewer_state.windows, pid);
-  process_window_redock(view_state.environ_viewer_state.windows, pid);
   process_window_redock(view_state.threads_viewer_state.windows, pid);
-  process_window_redock(view_state.socket_viewer_state.windows, pid);
-  process_window_redock(view_state.open_files_viewer_state.windows, pid);
-  process_window_redock(view_state.smaps_viewer_state.windows, pid);
+  on_demand_redock(view_state.properties_viewer_state.windows, pid);
+  on_demand_redock(view_state.library_viewer_state.windows, pid);
+  on_demand_redock(view_state.environ_viewer_state.windows, pid);
+  on_demand_redock(view_state.socket_viewer_state.windows, pid);
+  on_demand_redock(view_state.open_files_viewer_state.windows, pid);
+  on_demand_redock(view_state.smaps_viewer_state.windows, pid);
 }
 
 ImGuiID process_host_open(ProcessHostState &state, const Pid pid,

@@ -18,25 +18,10 @@ enum OpenFilesViewerColumnId {
 };
 
 struct OpenFilesViewerWindow {
-  OnDemandViewerStatus status;
-  Pid pid;
-  ImGuiID dock_id;
-  char process_name[64];
-  int error_code;
-  int selected_index; // -1 means no selection
-  int context_menu_column;
-  char filter_text[256];
-
-  ProcessWindowFlags flags;
+  OnDemandWindow od;
 
   // Data (owned by OpenFilesViewerState::cur_arena)
   Array<OpenFileEntry> files;
-
-  // Sorting
-  OpenFilesViewerColumnId sorted_by;
-  ImGuiSortDirection sorted_order;
-
-  double last_updated;
 };
 
 struct OpenFilesViewerState {

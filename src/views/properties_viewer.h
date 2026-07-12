@@ -10,14 +10,7 @@
 #include "on_demand_common.h"
 
 struct PropertiesViewerWindow {
-  OnDemandViewerStatus status;
-  Pid pid;
-  ImGuiID dock_id;
-  char process_name[64];
-  int error_code;
-  int selected_index; // -1 means no selection
-
-  ProcessWindowFlags flags;
+  OnDemandWindow od;
 
   // Strings owned by PropertiesViewerState::cur_arena.
   ProcessProperties props;

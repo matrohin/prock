@@ -48,14 +48,14 @@ static void environ_context_menu(FrameContext &ctx,
                                  Notifications &notifications,
                                  EnvironViewerWindow &win, const int index,
                                  const EnvironEntry &entry) {
-  if (ui_context_menu(win.selected_index == index &&
-                          win.selected_child_index < 0,
-                      win.context_menu_column, eEnvironViewerColumnId_Count)) {
-    win.selected_index = index;
+  if (ui_context_menu(
+          win.od.selected_index == index && win.selected_child_index < 0,
+          win.od.context_menu_column, eEnvironViewerColumnId_Count)) {
+    win.od.selected_index = index;
     win.selected_child_index = -1;
-    const String cell = win.context_menu_column == eEnvironViewerColumnId_Value
-                            ? entry.value
-                            : entry.name;
+    const String cell =
+        win.od.context_menu_column == eEnvironViewerColumnId_Value ? entry.value
+                                                                   : entry.name;
     if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
                           ICON_MD_CONTENT_COPY)) {
       clipboard_copy_cell(notifications, cell);
@@ -85,9 +85,9 @@ static bool is_expandable_value(const String &value) {
 }
 
 static void sort_environ(EnvironViewerWindow &win) {
-  sort_bidirectional(win.entries.data, win.entries.size, win.sorted_order,
+  sort_bidirectional(win.entries.data, win.entries.size, win.od.sorted_order,
                      [&](const EnvironEntry &a, const EnvironEntry &b) {
-                       switch (win.sorted_by) {
+                       switch (win.od.sorted_by) {
                        case eEnvironViewerColumnId_Name:
                          return strcmp(a.name.data, b.name.data) < 0;
                        case eEnvironViewerColumnId_Value:
@@ -96,6 +96,16 @@ static void sort_environ(EnvironViewerWindow &win) {
                          return false;
                        }
                      });
+}
+
+static Array<EnvironEntry> copy_entries(BumpArena &arena,
+                                        const Array<EnvironEntry> &src) {
+  Array<EnvironEntry> dst = Array<EnvironEntry>::copy_from(arena, src);
+  for (EnvironEntry &entry : dst) {
+    entry.name = String::copy_from(arena, entry.name);
+    entry.value = String::copy_from(arena, entry.value);
+  }
+  return dst;
 }
 
 static bool send_environ_request(Sync &sync, const Pid pid) {
@@ -107,51 +117,29 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
                             const Pid pid, const char *comm,
                             const ImGuiID dock_id,
                             const ProcessWindowFlags extra_flags) {
-  if (process_window_focus(state.windows, pid)) {
+  if (on_demand_focus(state.windows, pid)) {
     return;
   }
 
   ++state.updates_since_last_cleanup;
   EnvironViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eOnDemandViewerStatus_Loading;
-  win->pid = pid;
-  win->dock_id = dock_id;
-  win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
-  snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
-  win->selected_index = -1;
-  win->context_menu_column = 0;
+  on_demand_window_init(win->od, pid, comm, dock_id, extra_flags);
   win->selected_child_index = -1;
-  win->last_updated = 0.0;
 
   if (!send_environ_request(sync, pid)) {
-    on_demand_mark_request_dropped(*win);
+    on_demand_mark_request_dropped(win->od);
   }
 
-  common_views_sort_added(state.windows);
+  on_demand_sort_added(state.windows);
 }
 
 void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
   EnvironResponse response;
   while (sync.on_demand_reader.environ_response_queue.pop(response)) {
-    for (EnvironViewerWindow &win : state.windows) {
-      if (win.pid == response.pid) {
-        if (response.error_code == 0) {
-          win.status = eOnDemandViewerStatus_Ready;
-          win.entries =
-              Array<EnvironEntry>::copy_from(state.cur_arena, response.entries);
-          for (uint32_t j = 0; j < win.entries.size; ++j) {
-            EnvironEntry &dst = win.entries.data[j];
-            dst.name = String::copy_from(state.cur_arena, dst.name);
-            dst.value = String::copy_from(state.cur_arena, dst.value);
-          }
-          sort_environ(win);
-          win.last_updated = ImGui::GetTime();
-        } else {
-          win.status = eOnDemandViewerStatus_Error;
-          win.error_code = response.error_code;
-        }
-        break;
-      }
+    EnvironViewerWindow *win = on_demand_find(state.windows, response.pid);
+    if (win && on_demand_apply_response(win->od, response.error_code)) {
+      win->entries = copy_entries(state.cur_arena, response.entries);
+      sort_environ(*win);
     }
     response.owner_arena.destroy();
   }
@@ -164,14 +152,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
     state.windows.realloc(new_arena);
     for (EnvironViewerWindow &win : state.windows) {
       if (win.entries.size > 0) {
-        Array<EnvironEntry> new_entries =
-            Array<EnvironEntry>::copy_from(new_arena, win.entries);
-        for (uint32_t j = 0; j < win.entries.size; ++j) {
-          EnvironEntry &dst = new_entries.data[j];
-          dst.name = String::copy_from(new_arena, dst.name);
-          dst.value = String::copy_from(new_arena, dst.value);
-        }
-        win.entries = new_entries;
+        win.entries = copy_entries(new_arena, win.entries);
       }
     }
 
@@ -191,51 +172,22 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     EnvironViewerWindow &win = my_state.windows.data()[last];
-    const String title =
-        on_demand_viewer_title(ctx.frame_arena, win.status, "Environment",
-                               win.entries.size, win.process_name, win.pid);
 
-    process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title.data);
-
-    bool should_be_opened = true;
-    const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
-      process_window_check_close(win.flags, should_be_opened);
-
+    bool keep_open = true;
+    if (on_demand_window_begin(view_state, win.od, "Environment",
+                               win.entries.size, ctx.frame_arena, keep_open)) {
       // Content area - show previous data while loading, or error message
-      if (win.status == eOnDemandViewerStatus_Error) {
-        draw_error_with_pkexec(win.error_code);
+      if (win.od.status == eOnDemandViewerStatus_Error) {
+        draw_error_with_pkexec(win.od.error_code);
       } else if (win.entries.size > 0) {
         ImGuiTextFilter filter;
-        if (ImGui::BeginTable("Header", 4, ImGuiTableFlags_SizingStretchSame)) {
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
-                                  HEADER_SPACER_WEIGHT);
-          ImGui::TableNextRow();
-
-          ImGui::TableNextColumn();
-          ImGui::SetNextItemWidth(-FLT_MIN);
-          ui_filter_input(filter, "##EnvFilter", win.filter_text,
-                          sizeof(win.filter_text));
-
-          ImGui::TableNextColumn();
-          if (ui_refresh_button()) {
-            // On a dropped request stay Ready: the old data is still shown and
-            // the refresh button remains available to retry.
-            win.status = send_environ_request(*view_state.sync, win.pid)
-                             ? eOnDemandViewerStatus_Loading
-                             : eOnDemandViewerStatus_Ready;
-          }
-
-          ImGui::TableNextColumn();
-          ui_last_updated(win.last_updated);
-
-          ImGui::TableNextColumn(); // spacer
-
-          ImGui::EndTable();
+        bool refresh = false;
+        if (on_demand_toolbar_begin(win.od, filter, "##EnvFilter")) {
+          refresh = on_demand_toolbar_end(win.od);
+        }
+        if (refresh) {
+          on_demand_refresh_status(
+              win.od, send_environ_request(*view_state.sync, win.od.pid));
         }
 
         if (ImGui::BeginTable("Environment", eEnvironViewerColumnId_Count,
@@ -250,7 +202,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                   eEnvironViewerColumnId_Value);
           ImGui::TableHeadersRow();
 
-          handle_table_sort_specs(win.sorted_by, win.sorted_order,
+          handle_table_sort_specs(win.od.sorted_by, win.od.sorted_order,
                                   [&] { sort_environ(win); });
 
           for (uint32_t j = 0; j < win.entries.size; ++j) {
@@ -260,7 +212,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                 !filter.PassFilter(entry.value.data)) {
               continue;
             }
-            const bool is_selected = win.selected_index == static_cast<int>(j);
+            const bool is_selected =
+                win.od.selected_index == static_cast<int>(j);
             const bool expandable = is_expandable_value(entry.value);
 
             ImGui::TableNextRow();
@@ -281,7 +234,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               // Handle selection on click
               if ((ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) ||
                   ImGui::IsItemFocused()) {
-                win.selected_index = static_cast<int>(j);
+                win.od.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
               }
 
@@ -325,13 +278,13 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                     ImGui::TreeNodeEx(seg_label.data, leaf_flags);
 
                     if (ImGui::IsItemClicked() || ImGui::IsItemFocused()) {
-                      win.selected_index = static_cast<int>(j);
+                      win.od.selected_index = static_cast<int>(j);
                       win.selected_child_index = seg_idx;
                     }
 
                     // Context menu for child segment
                     if (ui_context_menu(child_selected)) {
-                      win.selected_index = static_cast<int>(j);
+                      win.od.selected_index = static_cast<int>(j);
                       win.selected_child_index = seg_idx;
                       const String path = String::copy_from(
                           ctx.frame_arena, seg_start, seg_end - seg_start);
@@ -364,7 +317,7 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (ImGui::Selectable(entry.name.data, is_selected,
                                     ImGuiSelectableFlags_SpanAllColumns) ||
                   ImGui::IsItemFocused()) {
-                win.selected_index = static_cast<int>(j);
+                win.od.selected_index = static_cast<int>(j);
                 win.selected_child_index = -1;
               }
 
@@ -387,8 +340,8 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
 
         // Ctrl+C to copy selected row or child segment
-        if (shortcut_copy_row(win.selected_index, win.entries.size)) {
-          const EnvironEntry &entry = win.entries.data[win.selected_index];
+        if (shortcut_copy_row(win.od.selected_index, win.entries.size)) {
+          const EnvironEntry &entry = win.entries.data[win.od.selected_index];
           if (win.selected_child_index >= 0) {
             // Copy specific path segment
             const char *seg_start = entry.value.data;
@@ -413,10 +366,9 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
         }
       }
     }
-    process_window_handle_focus(win.flags);
-    ImGui::End();
+    on_demand_window_end(win.od);
 
-    if (should_be_opened) {
+    if (keep_open) {
       ++last;
     } else {
       ++my_state.updates_since_last_cleanup;

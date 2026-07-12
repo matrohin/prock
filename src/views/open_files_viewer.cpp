@@ -105,9 +105,9 @@ static void copy_all_open_files(Notifications &notifications, BumpArena &arena,
 }
 
 static void sort_open_files(const OpenFilesViewerWindow &win) {
-  sort_bidirectional(win.files.data, win.files.size, win.sorted_order,
+  sort_bidirectional(win.files.data, win.files.size, win.od.sorted_order,
                      [&](const OpenFileEntry &a, const OpenFileEntry &b) {
-                       switch (win.sorted_by) {
+                       switch (win.od.sorted_by) {
                        case eOpenFilesViewerColumnId_Fd:
                          return a.fd < b.fd;
                        case eOpenFilesViewerColumnId_Type:
@@ -124,6 +124,15 @@ static void sort_open_files(const OpenFilesViewerWindow &win) {
                      });
 }
 
+static Array<OpenFileEntry> copy_files(BumpArena &arena,
+                                       const Array<OpenFileEntry> &src) {
+  Array<OpenFileEntry> dst = Array<OpenFileEntry>::copy_from(arena, src);
+  for (OpenFileEntry &file : dst) {
+    file.path = String::copy_from(arena, file.path);
+  }
+  return dst;
+}
+
 static bool send_open_files_request(Sync &sync, const Pid pid) {
   return on_demand_send_request(sync,
                                 sync.on_demand_reader.open_files_request_queue,
@@ -134,51 +143,30 @@ void open_files_viewer_request(OpenFilesViewerState &state, Sync &sync,
                                const Pid pid, const char *comm,
                                const ImGuiID dock_id,
                                const ProcessWindowFlags extra_flags) {
-  if (process_window_focus(state.windows, pid)) {
+  if (on_demand_focus(state.windows, pid)) {
     return;
   }
 
   ++state.updates_since_last_cleanup;
   OpenFilesViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eOnDemandViewerStatus_Loading;
-  win->pid = pid;
-  win->dock_id = dock_id;
-  win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
-  snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
-  win->selected_index = -1;
-  win->context_menu_column = 0;
-  win->sorted_by = eOpenFilesViewerColumnId_Fd;
-  win->sorted_order = ImGuiSortDirection_Ascending;
-  win->last_updated = 0.0;
+  on_demand_window_init(win->od, pid, comm, dock_id, extra_flags);
+  win->od.sorted_by = eOpenFilesViewerColumnId_Fd;
+  win->od.sorted_order = ImGuiSortDirection_Ascending;
 
   if (!send_open_files_request(sync, pid)) {
-    on_demand_mark_request_dropped(*win);
+    on_demand_mark_request_dropped(win->od);
   }
 
-  common_views_sort_added(state.windows);
+  on_demand_sort_added(state.windows);
 }
 
 void open_files_viewer_update(OpenFilesViewerState &state, Sync &sync) {
   OpenFilesResponse response;
   while (sync.on_demand_reader.open_files_response_queue.pop(response)) {
-    for (OpenFilesViewerWindow &win : state.windows) {
-      if (win.pid == response.pid) {
-        if (response.error_code == 0) {
-          win.status = eOnDemandViewerStatus_Ready;
-          win.files =
-              Array<OpenFileEntry>::copy_from(state.cur_arena, response.files);
-          for (uint32_t j = 0; j < win.files.size; ++j) {
-            win.files.data[j].path =
-                String::copy_from(state.cur_arena, win.files.data[j].path);
-          }
-          sort_open_files(win);
-          win.last_updated = ImGui::GetTime();
-        } else {
-          win.status = eOnDemandViewerStatus_Error;
-          win.error_code = response.error_code;
-        }
-        break;
-      }
+    OpenFilesViewerWindow *win = on_demand_find(state.windows, response.pid);
+    if (win && on_demand_apply_response(win->od, response.error_code)) {
+      win->files = copy_files(state.cur_arena, response.files);
+      sort_open_files(*win);
     }
     response.owner_arena.destroy();
   }
@@ -191,11 +179,7 @@ void open_files_viewer_update(OpenFilesViewerState &state, Sync &sync) {
     state.windows.realloc(new_arena);
     for (OpenFilesViewerWindow &win : state.windows) {
       if (win.files.size > 0) {
-        win.files = Array<OpenFileEntry>::copy_from(new_arena, win.files);
-        for (uint32_t j = 0; j < win.files.size; ++j) {
-          win.files.data[j].path =
-              String::copy_from(new_arena, win.files.data[j].path);
-        }
+        win.files = copy_files(new_arena, win.files);
       }
     }
 
@@ -215,50 +199,22 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     OpenFilesViewerWindow &win = my_state.windows.data()[last];
-    const String title =
-        on_demand_viewer_title(ctx.frame_arena, win.status, "Open Files",
-                               win.files.size, win.process_name, win.pid);
-    process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title.data);
 
-    bool should_be_opened = true;
-    const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
-      process_window_check_close(win.flags, should_be_opened);
-
-      if (win.status == eOnDemandViewerStatus_Error) {
-        draw_error_with_pkexec(win.error_code);
+    bool keep_open = true;
+    if (on_demand_window_begin(view_state, win.od, "Open Files", win.files.size,
+                               ctx.frame_arena, keep_open)) {
+      if (win.od.status == eOnDemandViewerStatus_Error) {
+        draw_error_with_pkexec(win.od.error_code);
       } else if (win.files.size > 0 ||
-                 win.status == eOnDemandViewerStatus_Ready) {
+                 win.od.status == eOnDemandViewerStatus_Ready) {
         ImGuiTextFilter filter;
-        if (ImGui::BeginTable("Header", 4, ImGuiTableFlags_SizingStretchSame)) {
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
-                                  HEADER_SPACER_WEIGHT);
-          ImGui::TableNextRow();
-
-          ImGui::TableNextColumn();
-          ImGui::SetNextItemWidth(-FLT_MIN);
-          ui_filter_input(filter, "##OpenFilesFilter", win.filter_text,
-                          sizeof(win.filter_text));
-
-          ImGui::TableNextColumn();
-          if (ui_refresh_button()) {
-            // On a dropped request stay Ready: the old data is still shown and
-            // the refresh button remains available to retry.
-            win.status = send_open_files_request(*view_state.sync, win.pid)
-                             ? eOnDemandViewerStatus_Loading
-                             : eOnDemandViewerStatus_Ready;
-          }
-
-          ImGui::TableNextColumn();
-          ui_last_updated(win.last_updated);
-
-          ImGui::TableNextColumn(); // spacer
-
-          ImGui::EndTable();
+        bool refresh = false;
+        if (on_demand_toolbar_begin(win.od, filter, "##OpenFilesFilter")) {
+          refresh = on_demand_toolbar_end(win.od);
+        }
+        if (refresh) {
+          on_demand_refresh_status(
+              win.od, send_open_files_request(*view_state.sync, win.od.pid));
         }
 
         if (win.files.size == 0) {
@@ -284,7 +240,7 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                   0.0f, eOpenFilesViewerColumnId_Path);
           ImGui::TableHeadersRow();
 
-          handle_table_sort_specs(win.sorted_by, win.sorted_order,
+          handle_table_sort_specs(win.od.sorted_by, win.od.sorted_order,
                                   [&] { sort_open_files(win); });
 
           for (uint32_t j = 0; j < win.files.size; ++j) {
@@ -296,7 +252,8 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                 fd_access_name(file.access), file.path.data);
             if (!filter.PassFilter(filter_str.data)) continue;
 
-            const bool is_selected = win.selected_index == static_cast<int>(j);
+            const bool is_selected =
+                win.od.selected_index == static_cast<int>(j);
             ImGui::PushID(static_cast<int>(j));
             ImGui::TableNextRow();
 
@@ -307,14 +264,14 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (ImGui::Selectable(fd_label.data, is_selected,
                                   ImGuiSelectableFlags_SpanAllColumns) ||
                 ImGui::IsItemFocused()) {
-              win.selected_index = static_cast<int>(j);
+              win.od.selected_index = static_cast<int>(j);
             }
 
-            if (ui_context_menu(is_selected, win.context_menu_column,
+            if (ui_context_menu(is_selected, win.od.context_menu_column,
                                 eOpenFilesViewerColumnId_Count)) {
-              win.selected_index = static_cast<int>(j);
-              const String cell = open_file_cell_text(ctx.frame_arena, file,
-                                                      win.context_menu_column);
+              win.od.selected_index = static_cast<int>(j);
+              const String cell = open_file_cell_text(
+                  ctx.frame_arena, file, win.od.context_menu_column);
               if (ImGui::MenuItemEx(
                       copy_cell_menu_label(ctx.frame_arena, cell).data,
                       ICON_MD_CONTENT_COPY)) {
@@ -364,16 +321,15 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           ImGui::EndTable();
 
           // Ctrl+C to copy selected row
-          if (shortcut_copy_row(win.selected_index, win.files.size)) {
+          if (shortcut_copy_row(win.od.selected_index, win.files.size)) {
             copy_open_file_row(view_state.notifications, ctx.frame_arena,
-                               win.files.data[win.selected_index]);
+                               win.files.data[win.od.selected_index]);
           }
         }
       }
     }
-    process_window_handle_focus(win.flags);
-    ImGui::End();
-    if (should_be_opened) {
+    on_demand_window_end(win.od);
+    if (keep_open) {
       ++last;
     } else {
       ++my_state.updates_since_last_cleanup;

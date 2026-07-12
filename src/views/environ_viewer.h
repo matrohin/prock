@@ -15,27 +15,13 @@ enum EnvironViewerColumnId {
 };
 
 struct EnvironViewerWindow {
-  OnDemandViewerStatus status;
-  Pid pid;
-  ImGuiID dock_id;
-  char process_name[64];
-  int error_code;
-  int selected_index;       // -1 means no selection
+  OnDemandWindow od;
+
   int selected_child_index; // -1 means parent selected, >= 0 means child
                             // segment
-  int context_menu_column;
-  char filter_text[256];
-
-  ProcessWindowFlags flags;
 
   // Data (owned by EnvironViewerState::cur_arena)
   Array<EnvironEntry> entries;
-
-  // Sorting and selection
-  EnvironViewerColumnId sorted_by;
-  ImGuiSortDirection sorted_order;
-
-  double last_updated;
 };
 
 struct EnvironViewerState {
@@ -53,6 +39,3 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync, Pid pid,
                             ProcessWindowFlags extra_flags = 0);
 void environ_viewer_update(EnvironViewerState &state, Sync &sync);
 void environ_viewer_draw(FrameContext &ctx, ViewState &view_state);
-void environ_viewer_close_if_docked_in(EnvironViewerState &state, Pid pid,
-                                       ImGuiID dockspace_id);
-void environ_viewer_restore_layout_by_pid(EnvironViewerState &state, Pid pid);

@@ -22,28 +22,13 @@ enum SmapsViewerColumnId {
 };
 
 struct SmapsViewerWindow {
-  OnDemandViewerStatus status;
-  Pid pid;
-  ImGuiID dock_id;
-  char process_name[64];
-  int error_code;
-  int selected_index;
-  int context_menu_column;
-  char filter_text[256];
-
-  ProcessWindowFlags flags;
-
-  // Data (owned by SmapsViewerState::cur_arena)
-  Array<SmapsSegment> segments;
+  OnDemandWindow od;
 
   bool grouped;
   bool refresh_pending;
 
-  // Sorting
-  SmapsViewerColumnId sorted_by;
-  ImGuiSortDirection sorted_order;
-
-  double last_updated;
+  // Data (owned by SmapsViewerState::cur_arena)
+  Array<SmapsSegment> segments;
 };
 
 struct SmapsViewerState {

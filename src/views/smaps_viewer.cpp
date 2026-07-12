@@ -131,9 +131,9 @@ static void copy_all_smaps_groups(Notifications &notifications,
 }
 
 static void sort_segments(SmapsViewerWindow &win) {
-  sort_bidirectional(win.segments.data, win.segments.size, win.sorted_order,
+  sort_bidirectional(win.segments.data, win.segments.size, win.od.sorted_order,
                      [&](const SmapsSegment &a, const SmapsSegment &b) {
-                       switch (win.sorted_by) {
+                       switch (win.od.sorted_by) {
                        case eSmapsViewerColumnId_Address:
                          return a.start_addr < b.start_addr;
                        case eSmapsViewerColumnId_Perms:
@@ -157,6 +157,17 @@ static void sort_segments(SmapsViewerWindow &win) {
                      });
 }
 
+static Array<SmapsSegment> copy_segments(BumpArena &arena,
+                                         const Array<SmapsSegment> &src) {
+  Array<SmapsSegment> dst = Array<SmapsSegment>::copy_from(arena, src);
+  for (SmapsSegment &seg : dst) {
+    if (seg.path.data) {
+      seg.path = String::copy_from(arena, seg.path);
+    }
+  }
+  return dst;
+}
+
 static bool send_smaps_request(Sync &sync, const Pid pid) {
   return on_demand_send_request(sync, sync.on_demand_reader.smaps_request_queue,
                                 SmapsRequest{pid});
@@ -165,57 +176,34 @@ static bool send_smaps_request(Sync &sync, const Pid pid) {
 void smaps_viewer_request(SmapsViewerState &state, Sync &sync, const Pid pid,
                           const char *comm, const ImGuiID dock_id,
                           const ProcessWindowFlags extra_flags) {
-  if (process_window_focus(state.windows, pid)) {
+  if (on_demand_focus(state.windows, pid)) {
     return;
   }
 
   ++state.updates_since_last_cleanup;
   SmapsViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eOnDemandViewerStatus_Loading;
-  win->pid = pid;
-  win->dock_id = dock_id;
-  win->flags |= eProcessWindowFlags_RedockRequested | extra_flags;
-  snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
-  win->selected_index = -1;
-  win->context_menu_column = 0;
-  win->last_updated = 0.0;
+  on_demand_window_init(win->od, pid, comm, dock_id, extra_flags);
 
   if (!send_smaps_request(sync, pid)) {
-    on_demand_mark_request_dropped(*win);
+    on_demand_mark_request_dropped(win->od);
   }
 
-  common_views_sort_added(state.windows);
+  on_demand_sort_added(state.windows);
 }
 
 void smaps_viewer_update(SmapsViewerState &state, Sync &sync) {
   SmapsResponse response;
   while (sync.on_demand_reader.smaps_response_queue.pop(response)) {
-    for (SmapsViewerWindow &win : state.windows) {
-      if (win.pid == response.pid) {
-        if (win.segments.size > 0) {
-          // Old segments will be abandoned in the arena — count as wasted.
-          ++state.updates_since_last_cleanup;
-        }
-        win.refresh_pending = false;
-        if (response.error_code == 0) {
-          win.status = eOnDemandViewerStatus_Ready;
-          win.segments = Array<SmapsSegment>::create(state.cur_arena,
-                                                     response.segments.size);
-          memcpy(win.segments.data, response.segments.data,
-                 response.segments.size * sizeof(SmapsSegment));
-          for (uint32_t j = 0; j < win.segments.size; ++j) {
-            SmapsSegment &dst = win.segments.data[j];
-            if (dst.path.data) {
-              dst.path = String::copy_from(state.cur_arena, dst.path);
-            }
-          }
-          sort_segments(win);
-          win.last_updated = ImGui::GetTime();
-        } else {
-          win.status = eOnDemandViewerStatus_Error;
-          win.error_code = response.error_code;
-        }
-        break;
+    SmapsViewerWindow *win = on_demand_find(state.windows, response.pid);
+    if (win) {
+      if (win->segments.size > 0) {
+        // Old segments will be abandoned in the arena — count as wasted.
+        ++state.updates_since_last_cleanup;
+      }
+      win->refresh_pending = false;
+      if (on_demand_apply_response(win->od, response.error_code)) {
+        win->segments = copy_segments(state.cur_arena, response.segments);
+        sort_segments(*win);
       }
     }
     response.owner_arena.destroy();
@@ -227,13 +215,7 @@ void smaps_viewer_update(SmapsViewerState &state, Sync &sync) {
 
     state.windows.realloc(new_arena);
     for (SmapsViewerWindow &win : state.windows) {
-      win.segments = Array<SmapsSegment>::copy_from(new_arena, win.segments);
-      for (uint32_t j = 0; j < win.segments.size; ++j) {
-        SmapsSegment &dst = win.segments.data[j];
-        if (dst.path.data) {
-          dst.path = String::copy_from(new_arena, dst.path);
-        }
-      }
+      win.segments = copy_segments(new_arena, win.segments);
     }
 
     state.cur_arena = new_arena;
@@ -257,52 +239,25 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
       my_state.windows.data()[last] = my_state.windows.data()[i];
     }
     SmapsViewerWindow &win = my_state.windows.data()[last];
-    const String title =
-        on_demand_viewer_title(ctx.frame_arena, win.status, "Memory Maps",
-                               win.segments.size, win.process_name, win.pid);
 
-    process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title.data);
-
-    bool should_be_opened = true;
-    const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
-      process_window_check_close(win.flags, should_be_opened);
-
-      if (win.status == eOnDemandViewerStatus_Error) {
-        draw_error_with_pkexec(win.error_code);
-      } else if (win.status == eOnDemandViewerStatus_Ready) {
+    bool keep_open = true;
+    if (on_demand_window_begin(view_state, win.od, "Memory Maps",
+                               win.segments.size, ctx.frame_arena, keep_open)) {
+      if (win.od.status == eOnDemandViewerStatus_Error) {
+        draw_error_with_pkexec(win.od.error_code);
+      } else if (win.od.status == eOnDemandViewerStatus_Ready) {
         ImGuiTextFilter filter;
-        if (ImGui::BeginTable("Header", 5, ImGuiTableFlags_SizingStretchSame)) {
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch,
-                                  HEADER_SPACER_WEIGHT);
-          ImGui::TableNextRow();
-
-          ImGui::TableNextColumn();
-          ImGui::SetNextItemWidth(-FLT_MIN);
-          ui_filter_input(filter, "##SmapsFilter", win.filter_text,
-                          sizeof(win.filter_text));
-
+        bool refresh = false;
+        if (on_demand_toolbar_begin(win.od, filter, "##SmapsFilter", 1)) {
           ImGui::TableNextColumn();
           if (ImGui::Checkbox("Group", &win.grouped)) {
-            win.selected_index = -1;
+            win.od.selected_index = -1;
           }
-
-          ImGui::TableNextColumn();
-          if (ui_refresh_button(win.refresh_pending)) {
-            win.refresh_pending = send_smaps_request(*view_state.sync, win.pid);
-          }
-
-          ImGui::TableNextColumn();
-          ui_last_updated(win.last_updated);
-
-          ImGui::TableNextColumn(); // spacer
-
-          ImGui::EndTable();
+          refresh = on_demand_toolbar_end(win.od, win.refresh_pending);
+        }
+        if (refresh) {
+          win.refresh_pending =
+              send_smaps_request(*view_state.sync, win.od.pid);
         }
 
         // Pre-pass: compute totals over filtered segments (used by both modes)
@@ -374,7 +329,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           // Sort groups
           const auto group_lt = [&](const SmapsGroup &a, const SmapsGroup &b) {
-            switch (win.sorted_by) {
+            switch (win.od.sorted_by) {
             case eSmapsViewerColumnId_SegmentCount:
               return a.count < b.count;
             case eSmapsViewerColumnId_Size:
@@ -393,7 +348,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               return a.pss_kb < b.pss_kb;
             }
           };
-          if (win.sorted_order == ImGuiSortDirection_Ascending) {
+          if (win.od.sorted_order == ImGuiSortDirection_Ascending) {
             std::stable_sort(groups.begin(), groups.end(), group_lt);
           } else {
             std::stable_sort(groups.begin(), groups.end(),
@@ -435,8 +390,8 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                     0.0f, eSmapsViewerColumnId_Mapping);
             ImGui::TableHeadersRow();
 
-            handle_table_sort_specs(win.sorted_by, win.sorted_order, [&] {
-              if (win.sorted_order == ImGuiSortDirection_Ascending) {
+            handle_table_sort_specs(win.od.sorted_by, win.od.sorted_order, [&] {
+              if (win.od.sorted_order == ImGuiSortDirection_Ascending) {
                 std::stable_sort(groups.begin(), groups.end(), group_lt);
               } else {
                 std::stable_sort(groups.begin(), groups.end(),
@@ -449,7 +404,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             for (uint32_t j = 0; j < groups.size(); ++j) {
               const SmapsGroup &g = groups.data()[j];
               const bool is_selected =
-                  win.selected_index == static_cast<int>(j);
+                  win.od.selected_index == static_cast<int>(j);
               ImGui::PushID(static_cast<int>(j));
               ImGui::TableNextRow();
 
@@ -460,14 +415,14 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (ImGui::Selectable(seg_count.data, is_selected,
                                     ImGuiSelectableFlags_SpanAllColumns) ||
                   ImGui::IsItemFocused()) {
-                win.selected_index = static_cast<int>(j);
+                win.od.selected_index = static_cast<int>(j);
               }
 
-              if (ui_context_menu(is_selected, win.context_menu_column,
+              if (ui_context_menu(is_selected, win.od.context_menu_column,
                                   kGroupedCols)) {
-                win.selected_index = static_cast<int>(j);
+                win.od.selected_index = static_cast<int>(j);
                 const String cell = smaps_group_cell_text(
-                    ctx.frame_arena, g, win.context_menu_column);
+                    ctx.frame_arena, g, win.od.context_menu_column);
                 if (ImGui::MenuItemEx(
                         copy_cell_menu_label(ctx.frame_arena, cell).data,
                         ICON_MD_CONTENT_COPY)) {
@@ -515,9 +470,9 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ui_pop_mono_font();
             ImGui::EndTable();
 
-            if (shortcut_copy_row(win.selected_index, groups.size())) {
+            if (shortcut_copy_row(win.od.selected_index, groups.size())) {
               copy_smaps_group(view_state.notifications, ctx.frame_arena,
-                               groups.data()[win.selected_index]);
+                               groups.data()[win.od.selected_index]);
             }
           }
         } else {
@@ -556,7 +511,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
                                     eSmapsViewerColumnId_Mapping);
             ImGui::TableHeadersRow();
 
-            handle_table_sort_specs(win.sorted_by, win.sorted_order,
+            handle_table_sort_specs(win.od.sorted_by, win.od.sorted_order,
                                     [&] { sort_segments(win); });
 
             for (uint32_t j = 0; j < win.segments.size; ++j) {
@@ -566,7 +521,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (!filter.PassFilter(filter_str.data)) continue;
 
               const bool is_selected =
-                  win.selected_index == static_cast<int>(j);
+                  win.od.selected_index == static_cast<int>(j);
               ImGui::PushID(static_cast<int>(j));
               ImGui::TableNextRow();
 
@@ -577,14 +532,14 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
               if (ImGui::Selectable(addr_buf.data, is_selected,
                                     ImGuiSelectableFlags_SpanAllColumns) ||
                   ImGui::IsItemFocused()) {
-                win.selected_index = static_cast<int>(j);
+                win.od.selected_index = static_cast<int>(j);
               }
 
-              if (ui_context_menu(is_selected, win.context_menu_column,
+              if (ui_context_menu(is_selected, win.od.context_menu_column,
                                   kFlatCols)) {
-                win.selected_index = static_cast<int>(j);
+                win.od.selected_index = static_cast<int>(j);
                 const String cell = smaps_cell_text(ctx.frame_arena, seg,
-                                                    win.context_menu_column);
+                                                    win.od.context_menu_column);
                 if (ImGui::MenuItemEx(
                         copy_cell_menu_label(ctx.frame_arena, cell).data,
                         ICON_MD_CONTENT_COPY)) {
@@ -636,17 +591,16 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             ui_pop_mono_font();
             ImGui::EndTable();
 
-            if (shortcut_copy_row(win.selected_index, win.segments.size)) {
+            if (shortcut_copy_row(win.od.selected_index, win.segments.size)) {
               copy_smaps_row(view_state.notifications, ctx.frame_arena,
-                             win.segments.data[win.selected_index]);
+                             win.segments.data[win.od.selected_index]);
             }
           }
         }
       }
     }
-    process_window_handle_focus(win.flags);
-    ImGui::End();
-    if (should_be_opened) {
+    on_demand_window_end(win.od);
+    if (keep_open) {
       ++last;
     } else {
       ++my_state.updates_since_last_cleanup;

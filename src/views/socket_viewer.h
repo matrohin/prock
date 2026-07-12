@@ -19,26 +19,12 @@ enum SocketViewerColumnId {
 };
 
 struct SocketViewerWindow {
-  OnDemandViewerStatus status;
-  Pid pid;
-  ImGuiID dock_id;
-  char process_name[64];
-  int error_code;
-  int netlink_error_code;
-  int selected_index;
-  int context_menu_column;
-  char filter_text[256];
+  OnDemandWindow od;
 
-  ProcessWindowFlags flags;
+  int netlink_error_code;
 
   // Data (owned by SocketViewerState::cur_arena)
   Array<SocketEntry> sockets;
-
-  // Sorting
-  SocketViewerColumnId sorted_by;
-  ImGuiSortDirection sorted_order;
-
-  double last_updated;
 };
 
 struct SocketViewerState {

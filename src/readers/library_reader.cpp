@@ -52,6 +52,7 @@ LibraryResponse library_reader_read(BumpArena &temp_arena,
 
     char *pathname = line + chars_read;
     // chars_read is sscanf's %n, bounded by the matched prefix of line.
+    // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
     while (*pathname == ' ')
       ++pathname;
     uint32_t plen = static_cast<uint32_t>(strlen(pathname));

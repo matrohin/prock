@@ -152,26 +152,20 @@ void properties_viewer_request(PropertiesViewerState &state, Sync &sync,
                                const Pid pid, const char *comm,
                                const ImGuiID dock_id,
                                const ProcessWindowFlags extra_flags) {
-  if (process_window_focus(state.windows, pid)) {
+  if (on_demand_focus(state.windows, pid)) {
     return;
   }
 
   ++state.updates_since_last_cleanup;
   PropertiesViewerWindow *win = state.windows.emplace_back(state.cur_arena);
-  win->status = eOnDemandViewerStatus_Loading;
-  win->pid = pid;
-  win->dock_id = dock_id;
-  win->error_code = 0;
-  win->selected_index = -1;
-  win->flags = eProcessWindowFlags_RedockRequested | extra_flags;
+  on_demand_window_init(win->od, pid, comm, dock_id, extra_flags);
   win->props = {};
-  snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
 
   if (!send_properties_request(sync, pid)) {
-    on_demand_mark_request_dropped(*win);
+    on_demand_mark_request_dropped(win->od);
   }
 
-  common_views_sort_added(state.windows);
+  on_demand_sort_added(state.windows);
 }
 
 static void copy_props_into(BumpArena &arena, ProcessProperties &p) {
@@ -197,18 +191,10 @@ static void copy_props_into(BumpArena &arena, ProcessProperties &p) {
 void properties_viewer_update(PropertiesViewerState &state, Sync &sync) {
   PropertiesResponse response;
   while (sync.on_demand_reader.properties_response_queue.pop(response)) {
-    for (PropertiesViewerWindow &win : state.windows) {
-      if (win.pid == response.pid) {
-        if (response.error_code == 0) {
-          win.status = eOnDemandViewerStatus_Ready;
-          win.props = response.props;
-          copy_props_into(state.cur_arena, win.props);
-        } else {
-          win.status = eOnDemandViewerStatus_Error;
-          win.error_code = response.error_code;
-        }
-        break;
-      }
+    PropertiesViewerWindow *win = on_demand_find(state.windows, response.pid);
+    if (win && on_demand_apply_response(win->od, response.error_code)) {
+      win->props = response.props;
+      copy_props_into(state.cur_arena, win->props);
     }
     response.owner_arena.destroy();
   }
@@ -220,7 +206,7 @@ void properties_viewer_update(PropertiesViewerState &state, Sync &sync) {
 
     state.windows.realloc(new_arena);
     for (PropertiesViewerWindow &win : state.windows) {
-      if (win.status == eOnDemandViewerStatus_Ready) {
+      if (win.od.status == eOnDemandViewerStatus_Ready) {
         copy_props_into(new_arena, win.props);
       }
     }
@@ -274,15 +260,15 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
       ImGui::TableSetColumnIndex(0);
       ImGui::PushID(static_cast<int>(i));
 
-      const bool is_selected = win.selected_index == static_cast<int>(i);
+      const bool is_selected = win.od.selected_index == static_cast<int>(i);
       if (ImGui::Selectable(entry.label, is_selected,
                             ImGuiSelectableFlags_SpanAllColumns) ||
           ImGui::IsItemFocused()) {
-        win.selected_index = static_cast<int>(i);
+        win.od.selected_index = static_cast<int>(i);
       }
 
       if (ui_context_menu(is_selected)) {
-        win.selected_index = static_cast<int>(i);
+        win.od.selected_index = static_cast<int>(i);
         if (ImGui::MenuItemEx(
                 copy_cell_menu_label(ctx.frame_arena, entry.value).data,
                 ICON_MD_CONTENT_COPY, "Ctrl+C")) {
@@ -303,9 +289,9 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
     ImGui::EndTable();
   }
 
-  if (shortcut_copy_row(win.selected_index, count)) {
+  if (shortcut_copy_row(win.od.selected_index, count)) {
     clipboard_copy_cell(view_state.notifications,
-                        entries[win.selected_index].value);
+                        entries[win.od.selected_index].value);
   }
 }
 
@@ -336,32 +322,25 @@ void properties_viewer_draw(FrameContext &ctx, ViewState &view_state,
 
     PropEntry entries[48];
     uint32_t count = 0;
-    if (win.status == eOnDemandViewerStatus_Ready) {
+    if (win.od.status == eOnDemandViewerStatus_Ready) {
       count = build_property_rows(ctx.frame_arena, win.props, state, entries,
                                   IM_ARRAYSIZE(entries));
     }
 
-    const String title = properties_window_title(ctx.frame_arena, win.status,
-                                                 win.process_name, win.pid);
+    const String title = properties_window_title(
+        ctx.frame_arena, win.od.status, win.od.process_name, win.od.pid);
 
-    process_window_handle_docking_and_pos(view_state, win.dock_id, win.flags,
-                                          title.data);
-
-    bool should_be_opened = true;
-    const ImGuiWindowFlags win_flags = process_window_flags(win.flags);
-    if (ImGui::Begin(title.data, &should_be_opened, win_flags)) {
-      process_window_check_close(win.flags, should_be_opened);
-
-      if (win.status == eOnDemandViewerStatus_Error) {
-        draw_error_with_pkexec(win.error_code);
-      } else if (win.status == eOnDemandViewerStatus_Ready) {
+    bool keep_open = true;
+    if (on_demand_window_begin(view_state, win.od, title.data, keep_open)) {
+      if (win.od.status == eOnDemandViewerStatus_Error) {
+        draw_error_with_pkexec(win.od.error_code);
+      } else if (win.od.status == eOnDemandViewerStatus_Ready) {
         draw_properties_content(ctx, view_state, win, entries, count);
       }
     }
-    process_window_handle_focus(win.flags);
-    ImGui::End();
+    on_demand_window_end(win.od);
 
-    if (should_be_opened) {
+    if (keep_open) {
       ++last;
     } else {
       ++my_state.updates_since_last_cleanup;
