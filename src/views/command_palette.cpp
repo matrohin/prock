@@ -157,11 +157,8 @@ void command_palette_draw(ViewState &vs) {
   int run = -1;
   bool nav_moved = false;
   if (match_count > 0) {
-    const bool ctrl = ImGui::GetIO().KeyCtrl;
-    const bool down = ImGui::IsKeyPressed(ImGuiKey_DownArrow) ||
-                      (ctrl && ImGui::IsKeyPressed(ImGuiKey_J));
-    const bool up = ImGui::IsKeyPressed(ImGuiKey_UpArrow) ||
-                    (ctrl && ImGui::IsKeyPressed(ImGuiKey_K));
+    const bool down = ImGui::IsKeyPressed(ImGuiKey_DownArrow);
+    const bool up = ImGui::IsKeyPressed(ImGuiKey_UpArrow);
     if (down) {
       cs.selected = (cs.selected + 1) % match_count;
       nav_moved = true;

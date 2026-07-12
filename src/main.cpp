@@ -74,6 +74,7 @@ void sock_notify_data_ready(Sync &sync) {
 #include "views/system_mem_chart.cpp"
 #include "views/system_net_chart.cpp"
 #include "views/threads_viewer.cpp"
+#include "views/vim_nav.cpp"
 
 // See https://github.com/ocornut/imgui/issues/1206
 // Sometimes imgui needs second frame update to handle some UI without delays.
@@ -85,6 +86,15 @@ static bool g_framebuffer_resized = false;
 
 static void maintaining_second_update(GLFWwindow * /*window*/, int /*button*/,
                                       int /*action*/, int /*mods*/) {
+  g_needs_updates = 2;
+}
+
+// Keyboard nav applies a move request one frame after scoring it, and held
+// keys autorepeat as GLFW_REPEAT events that enqueue no ImGui event — both
+// need follow-up frames the wait-for-events loop would not produce otherwise.
+static void key_maintaining_second_update(GLFWwindow * /*window*/, int /*key*/,
+                                          int /*scancode*/, int /*action*/,
+                                          int /*mods*/) {
   g_needs_updates = 2;
 }
 
@@ -307,6 +317,7 @@ static void draw(FrameContext &frame_ctx, GLFWwindow *window, const ImGuiIO &io,
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
+  vim_nav_translate_events();
   {
     ZoneScopedN("ImGui frame");
     ImGui::NewFrame();
@@ -505,6 +516,7 @@ int main(int, char **) {
 
   // Setup Platform/Renderer backends
   glfwSetMouseButtonCallback(window, maintaining_second_update);
+  glfwSetKeyCallback(window, key_maintaining_second_update);
   constexpr bool install_callbacks = true;
   ImGui_ImplGlfw_InitForOpenGL(window, install_callbacks);
   ImGui_ImplOpenGL3_Init(glsl_version);
