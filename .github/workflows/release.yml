@@ -21,7 +21,9 @@ jobs:
       - uses: mlugg/setup-zig@v2
       - name: Build portable binary
         run: |
-          cmake --preset publish
+          # zig cc doesn't report Debian/Ubuntu multiarch lib dirs to CMake, so
+          # find_library can't locate OpenGL/X11/Freetype there. Point it at them.
+          cmake --preset publish -DCMAKE_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
           cmake --build build/Publish
       - name: Publish draft release
         env:
