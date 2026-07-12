@@ -1,0 +1,30 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            libwayland-dev libxkbcommon-dev xorg-dev \
+            libgles2-mesa-dev libfreetype-dev
+      - uses: mlugg/setup-zig@v2
+      - name: Build portable binary
+        run: |
+          cmake --preset publish
+          cmake --build build/Publish
+      - name: Publish draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" build/Publish/prock --draft --generate-notes
