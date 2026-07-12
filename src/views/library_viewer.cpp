@@ -70,13 +70,9 @@ static void sort_libraries(LibraryViewerWindow &win) {
                      });
 }
 
-static void send_library_request(Sync &sync, const Pid pid) {
-  const LibraryRequest req = {pid};
-  {
-    std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_reader.library_request_queue.push(req);
-  }
-  sync.on_demand_reader.request_read_cv.notify_one();
+static bool send_library_request(Sync &sync, const Pid pid) {
+  return on_demand_send_request(
+      sync, sync.on_demand_reader.library_request_queue, LibraryRequest{pid});
 }
 
 void library_viewer_request(LibraryViewerState &state, Sync &sync,
@@ -98,7 +94,9 @@ void library_viewer_request(LibraryViewerState &state, Sync &sync,
   win->context_menu_column = 0;
   win->last_updated = 0.0;
 
-  send_library_request(sync, pid);
+  if (!send_library_request(sync, pid)) {
+    on_demand_mark_request_dropped(*win);
+  }
 
   common_views_sort_added(state.windows);
 }
@@ -193,8 +191,11 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           ImGui::TableNextColumn();
           if (ui_refresh_button()) {
-            win.status = eOnDemandViewerStatus_Loading;
-            send_library_request(*view_state.sync, win.pid);
+            // On a dropped request stay Ready: the old data is still shown and
+            // the refresh button remains available to retry.
+            win.status = send_library_request(*view_state.sync, win.pid)
+                             ? eOnDemandViewerStatus_Loading
+                             : eOnDemandViewerStatus_Ready;
           }
           ImGui::TableNextColumn();
           ui_last_updated(win.last_updated);

@@ -4,6 +4,7 @@
 #include <cstdint>
 
 template <class T, uint32_t N> struct Channel {
+  static_assert(N > 0 && (N & (N - 1)) == 0, "N must be a power of two");
   static constexpr uint32_t MASK = N - 1;
   std::atomic<uint32_t> head;
   std::atomic<uint32_t> tail;

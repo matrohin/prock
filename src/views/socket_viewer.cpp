@@ -97,13 +97,9 @@ static void sort_sockets(const SocketViewerWindow &win) {
                      });
 }
 
-static void send_socket_request(Sync &sync, const Pid pid) {
-  const SocketRequest req = {pid};
-  {
-    std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_reader.socket_request_queue.push(req);
-  }
-  sync.on_demand_reader.request_read_cv.notify_one();
+static bool send_socket_request(Sync &sync, const Pid pid) {
+  return on_demand_send_request(
+      sync, sync.on_demand_reader.socket_request_queue, SocketRequest{pid});
 }
 
 void socket_viewer_request(SocketViewerState &state, Sync &sync, const Pid pid,
@@ -124,7 +120,9 @@ void socket_viewer_request(SocketViewerState &state, Sync &sync, const Pid pid,
   win->context_menu_column = 0;
   win->last_updated = 0.0;
 
-  send_socket_request(sync, pid);
+  if (!send_socket_request(sync, pid)) {
+    on_demand_mark_request_dropped(*win);
+  }
 
   common_views_sort_added(state.windows);
 }
@@ -214,8 +212,11 @@ void socket_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           ImGui::TableNextColumn();
           if (ui_refresh_button()) {
-            win.status = eOnDemandViewerStatus_Loading;
-            send_socket_request(*view_state.sync, win.pid);
+            // On a dropped request stay Ready: the old data is still shown and
+            // the refresh button remains available to retry.
+            win.status = send_socket_request(*view_state.sync, win.pid)
+                             ? eOnDemandViewerStatus_Loading
+                             : eOnDemandViewerStatus_Ready;
           }
 
           ImGui::TableNextColumn();

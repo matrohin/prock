@@ -79,6 +79,6 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, Pid pid,
                          const char *comm, ImGuiID dock_id = 0,
                          ProcessWindowFlags extra_flags = 0);
 void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
-                           const State &state_data);
+                           Sync &sync, const State &state_data);
 void threads_viewer_draw(FrameContext &ctx, ViewState &view_state,
                          const State &state);

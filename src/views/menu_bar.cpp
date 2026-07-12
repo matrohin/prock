@@ -4,6 +4,7 @@
 #include "style_control.h"
 #include "views/common.h"
 #include "views/licenses.h"
+#include "views/on_demand_common.h"
 #include "views/process_host.h"
 #include "views/view_state.h"
 
@@ -378,12 +379,8 @@ void menu_bar_update(ViewState &view_state) {
   }
 
   if (prefs.show_preferences_modal && !prefs.font_list_requested) {
-    {
-      std::lock_guard<std::mutex> lock(sync.quit_mutex);
-      sync.on_demand_reader.font_list_request_queue.push({});
-    }
-    sync.on_demand_reader.request_read_cv.notify_one();
-    prefs.font_list_requested = true;
+    prefs.font_list_requested = on_demand_send_request(
+        sync, sync.on_demand_reader.font_list_request_queue, FontListRequest{});
   }
 
   FontListResponse response;

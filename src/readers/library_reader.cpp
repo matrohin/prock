@@ -37,18 +37,28 @@ LibraryResponse library_reader_read(BumpArena &temp_arena,
 
   char line[PATH_MAX + 256];
   while (fgets(line, sizeof(line), file)) {
-    // Parse line format: addr_start-addr_end perms offset dev inode pathname
+    // Parse line format: addr_start-addr_end perms offset dev inode pathname.
     unsigned long addr_start, addr_end;
     char perms[8] = {};
     unsigned long offset;
     char dev[16] = {};
     unsigned long inode;
-    char pathname[PATH_MAX] = {};
+    int chars_read = 0;
 
-    const int n = sscanf(line, "%lx-%lx %7s %lx %15s %lu %4095s", &addr_start,
-                         &addr_end, perms, &offset, dev, &inode, pathname);
+    if (sscanf(line, "%lx-%lx %7s %lx %15s %lu%n", &addr_start, &addr_end,
+               perms, &offset, dev, &inode, &chars_read) != 6) {
+      continue;
+    }
 
-    if (n < 7 || pathname[0] == '\0') continue;
+    char *pathname = line + chars_read;
+    // chars_read is sscanf's %n, bounded by the matched prefix of line.
+    while (*pathname == ' ')
+      ++pathname;
+    uint32_t plen = static_cast<uint32_t>(strlen(pathname));
+    while (plen > 0 &&
+           (pathname[plen - 1] == '\n' || pathname[plen - 1] == '\r'))
+      --plen;
+    pathname[plen] = '\0';
 
     // Skip non-.so files and special entries
     if (pathname[0] != '/') continue;

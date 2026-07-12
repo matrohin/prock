@@ -135,7 +135,7 @@ void threads_viewer_open(ThreadsViewerState &state, Sync &sync, const Pid pid,
 }
 
 void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
-                           const State &state_data) {
+                           Sync &sync, const State &state_data) {
   ZoneScoped;
 
   const double per_core_ticks = state_data.snapshot.per_core_ticks;
@@ -143,6 +143,32 @@ void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
 
   // Process thread snapshots from the current update
   const Array<ThreadSnapshot> &snapshots = state_data.snapshot.thread_snapshots;
+
+  // Reconcile the gatherer's watch list with the open windows: the watch and
+  // unwatch pushes in open/draw are dropped when their channel is full, so
+  // re-request the difference each update. The gatherer snapshots every
+  // watched pid (even dead ones), so "no snapshot entry" means "not watched",
+  // and both requests are idempotent on the gatherer side.
+  for (const ThreadSnapshot &snap : snapshots) {
+    bool has_window = false;
+    for (const ThreadsViewerWindow &win : state.windows) {
+      if (win.pid == snap.pid) {
+        has_window = true;
+        break;
+      }
+    }
+    if (!has_window) sync.thread_unwatch_queue.push(snap.pid);
+  }
+  for (const ThreadsViewerWindow &win : state.windows) {
+    bool has_snapshot = false;
+    for (const ThreadSnapshot &snap : snapshots) {
+      if (snap.pid == win.pid) {
+        has_snapshot = true;
+        break;
+      }
+    }
+    if (!has_snapshot) sync.thread_watch_queue.push(win.pid);
+  }
 
   for (uint32_t w = 0; w < state.windows.size(); ++w) {
     ThreadsViewerWindow &win = state.windows.data()[w];

@@ -3,6 +3,7 @@
 #include <cstdint>
 
 template <uint32_t N> struct RingTrack {
+  static_assert(N > 0 && (N & (N - 1)) == 0, "N must be a power of two");
   static constexpr uint32_t MASK = N - 1;
   uint32_t head;
   uint32_t size;

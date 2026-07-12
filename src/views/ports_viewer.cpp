@@ -4,6 +4,7 @@
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/notifications.h"
+#include "views/on_demand_common.h"
 #include "views/socket_format.h"
 #include "views/ui.h"
 #include "views/view_state.h"
@@ -21,12 +22,9 @@ static const char *PORTS_TITLE = "Ports";
 const char *PORTS_COPY_HEADER =
     "Protocol\tLocal Address\tRemote Address\tState\tPID\tProcess\n";
 
-static void send_port_scan_request(Sync &sync) {
-  {
-    std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_reader.port_scan_request_queue.push({});
-  }
-  sync.on_demand_reader.request_read_cv.notify_one();
+static bool send_port_scan_request(Sync &sync) {
+  return on_demand_send_request(
+      sync, sync.on_demand_reader.port_scan_request_queue, PortScanRequest{});
 }
 
 static void sort_ports(PortsViewerState &state) {
@@ -162,9 +160,12 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
   // Scan whenever the tab is brought to the foreground; data is otherwise
   // static until the user hits Refresh.
   if (visible && !state.was_visible) {
-    state.status = ePortsViewerStatus_Loading;
+    // On a dropped request stay Ready so the refresh button remains available
+    // to retry.
+    state.status = send_port_scan_request(*view_state.sync)
+                       ? ePortsViewerStatus_Loading
+                       : ePortsViewerStatus_Ready;
     state.focus_filter = true;
-    send_port_scan_request(*view_state.sync);
   }
   state.was_visible = visible;
 
@@ -210,8 +211,9 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
     ImGui::TableNextColumn();
     if (ui_refresh_button(state.status == ePortsViewerStatus_Loading)) {
-      state.status = ePortsViewerStatus_Loading;
-      send_port_scan_request(*view_state.sync);
+      state.status = send_port_scan_request(*view_state.sync)
+                         ? ePortsViewerStatus_Loading
+                         : ePortsViewerStatus_Ready;
     }
 
     ImGui::TableNextColumn();

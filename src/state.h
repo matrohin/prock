@@ -13,15 +13,19 @@ struct SystemInfo {
   uint64_t boot_time_epoch_sec; // /proc/stat "btime", constant for the session
 };
 
-// Rate between two samples of a monotonically increasing kernel counter. A
+// Delta between two samples of a monotonically increasing kernel counter. A
 // "current" below "previous" means the counter was reset (e.g. a network
-// interface bouncing or a reboot), so clamp the delta to zero instead of
-// letting the unsigned subtraction wrap into a huge spike. The caller
-// guarantees divisor > 0.
+// interface bouncing, CPU hot(un)plug shifting /proc/stat lines, or a reboot),
+// so clamp the delta to zero instead of letting the unsigned subtraction wrap
+// into a huge spike.
+inline ulonglong counter_delta(const ulonglong cur, const ulonglong prev) {
+  return cur >= prev ? cur - prev : 0;
+}
+
+// Rate form of counter_delta. The caller guarantees divisor > 0.
 inline double counter_rate(const ulonglong cur, const ulonglong prev,
                            const double scale, const double divisor) {
-  const ulonglong delta = cur >= prev ? cur - prev : 0;
-  return static_cast<double>(delta) * scale / divisor;
+  return static_cast<double>(counter_delta(cur, prev)) * scale / divisor;
 }
 
 // Rescale the one-core jiffy budget to a task's own sampling window, since

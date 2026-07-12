@@ -98,13 +98,9 @@ static void sort_environ(EnvironViewerWindow &win) {
                      });
 }
 
-static void send_environ_request(Sync &sync, const Pid pid) {
-  const EnvironRequest req = {pid};
-  {
-    std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_reader.environ_request_queue.push(req);
-  }
-  sync.on_demand_reader.request_read_cv.notify_one();
+static bool send_environ_request(Sync &sync, const Pid pid) {
+  return on_demand_send_request(
+      sync, sync.on_demand_reader.environ_request_queue, EnvironRequest{pid});
 }
 
 void environ_viewer_request(EnvironViewerState &state, Sync &sync,
@@ -127,7 +123,9 @@ void environ_viewer_request(EnvironViewerState &state, Sync &sync,
   win->selected_child_index = -1;
   win->last_updated = 0.0;
 
-  send_environ_request(sync, pid);
+  if (!send_environ_request(sync, pid)) {
+    on_demand_mark_request_dropped(*win);
+  }
 
   common_views_sort_added(state.windows);
 }
@@ -225,8 +223,11 @@ void environ_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           ImGui::TableNextColumn();
           if (ui_refresh_button()) {
-            win.status = eOnDemandViewerStatus_Loading;
-            send_environ_request(*view_state.sync, win.pid);
+            // On a dropped request stay Ready: the old data is still shown and
+            // the refresh button remains available to retry.
+            win.status = send_environ_request(*view_state.sync, win.pid)
+                             ? eOnDemandViewerStatus_Loading
+                             : eOnDemandViewerStatus_Ready;
           }
 
           ImGui::TableNextColumn();

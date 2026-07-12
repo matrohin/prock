@@ -26,6 +26,10 @@ struct String {
     va_copy(args_copy, args);
 
     const int size = vsnprintf(nullptr, 0, format, args);
+    if (size < 0) { // encoding error; don't turn it into a huge len
+      va_end(args_copy);
+      return String{"", 0};
+    }
     const int full_size = size + 1;
     char *res = static_cast<char *>(arena.alloc_raw(full_size, 1));
     vsnprintf(res, full_size, format, args_copy);

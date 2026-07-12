@@ -288,11 +288,20 @@ static void send_dump_request(ViewState &view_state, const Pid pid,
                                        "Dumping %s (%d)...", comm, pid);
 
   Sync &sync = *view_state.sync;
+  bool pushed = false;
   {
     std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_actions.dump_request_queue.push(req);
+    pushed = sync.on_demand_actions.dump_request_queue.push(req);
   }
-  sync.on_demand_actions.request_cv.notify_one();
+  if (pushed) {
+    sync.on_demand_actions.request_cv.notify_one();
+  } else {
+    // Queue full: the request was dropped, so no reply will ever resolve the
+    // progress toast - remove it and report the drop instead.
+    notifications_remove(view_state.notifications, req.id);
+    notify_error(view_state.notifications, 0,
+                 "Cannot dump %s (%d): too many dumps in progress", comm, pid);
+  }
 }
 
 // Backing data for the "Copy path" toast button. Lives in the notifications

@@ -157,13 +157,9 @@ static void sort_segments(SmapsViewerWindow &win) {
                      });
 }
 
-static void send_smaps_request(Sync &sync, const Pid pid) {
-  const SmapsRequest req = {pid};
-  {
-    std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_reader.smaps_request_queue.push(req);
-  }
-  sync.on_demand_reader.request_read_cv.notify_one();
+static bool send_smaps_request(Sync &sync, const Pid pid) {
+  return on_demand_send_request(sync, sync.on_demand_reader.smaps_request_queue,
+                                SmapsRequest{pid});
 }
 
 void smaps_viewer_request(SmapsViewerState &state, Sync &sync, const Pid pid,
@@ -184,7 +180,9 @@ void smaps_viewer_request(SmapsViewerState &state, Sync &sync, const Pid pid,
   win->context_menu_column = 0;
   win->last_updated = 0.0;
 
-  send_smaps_request(sync, pid);
+  if (!send_smaps_request(sync, pid)) {
+    on_demand_mark_request_dropped(*win);
+  }
 
   common_views_sort_added(state.windows);
 }
@@ -296,8 +294,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
           ImGui::TableNextColumn();
           if (ui_refresh_button(win.refresh_pending)) {
-            win.refresh_pending = true;
-            send_smaps_request(*view_state.sync, win.pid);
+            win.refresh_pending = send_smaps_request(*view_state.sync, win.pid);
           }
 
           ImGui::TableNextColumn();

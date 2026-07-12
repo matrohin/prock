@@ -38,7 +38,8 @@ void entry_views_update(FrameContext &ctx, ViewState &view_state,
   system_io_chart_update(view_state.system_io_chart_state, state);
   system_net_chart_update(view_state.system_net_chart_state, state);
   if (!paused)
-    threads_viewer_update(ctx, view_state.threads_viewer_state, state);
+    threads_viewer_update(ctx, view_state.threads_viewer_state,
+                          *view_state.sync, state);
 }
 
 void entry_views_on_demand_update(ViewState &view_state) {

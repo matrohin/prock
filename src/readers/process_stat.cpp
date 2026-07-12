@@ -158,7 +158,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena,
   ZoneScoped;
   DIR *proc_dir = opendir("/proc");
   if (!proc_dir) {
-    printf("Couldn't get a process list");
+    fprintf(stderr, "Couldn't get a process list\n");
     return {};
   }
 

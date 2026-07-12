@@ -142,13 +142,10 @@ static uint32_t build_property_rows(BumpArena &arena,
   return n;
 }
 
-static void send_properties_request(Sync &sync, const Pid pid) {
-  const PropertiesRequest req = {pid};
-  {
-    std::lock_guard<std::mutex> lock(sync.quit_mutex);
-    sync.on_demand_reader.properties_request_queue.push(req);
-  }
-  sync.on_demand_reader.request_read_cv.notify_one();
+static bool send_properties_request(Sync &sync, const Pid pid) {
+  return on_demand_send_request(sync,
+                                sync.on_demand_reader.properties_request_queue,
+                                PropertiesRequest{pid});
 }
 
 void properties_viewer_request(PropertiesViewerState &state, Sync &sync,
@@ -170,7 +167,9 @@ void properties_viewer_request(PropertiesViewerState &state, Sync &sync,
   win->props = {};
   snprintf(win->process_name, sizeof(win->process_name), "%s", comm);
 
-  send_properties_request(sync, pid);
+  if (!send_properties_request(sync, pid)) {
+    on_demand_mark_request_dropped(*win);
+  }
 
   common_views_sort_added(state.windows);
 }
