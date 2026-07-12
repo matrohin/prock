@@ -107,11 +107,7 @@ inline void ui_filter_input(ImGuiTextFilter &filter, const char *id,
     }
   }
 
-  // Suppress the keyboard-nav focus ring: SetKeyboardFocusHere() leaves its
-  // visibility to leftover nav state, so the border would appear erratically
-  ImGui::PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
   ImGui::InputTextWithHint(id, hint, filter_text, filter_text_size);
-  ImGui::PopStyleColor();
 
   if (filter_text[0] != '\0') {
     strncpy(filter.InputBuf, filter_text, sizeof(filter.InputBuf));
