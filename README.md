@@ -12,6 +12,13 @@ and environment — with controls to suspend, kill, or reprioritize processes.
 
 ![Prock process tree with live system charts (Nord theme)](./images/shot-nord.png)
 
+## How to try it?
+
+There are two ways to try it:
+- Clone the repo and run the [install script](#install--update) (provides a desktop entry and easy updates, so a bit more convenient).
+- Download the single binary from the [releases page](https://github.com/matrohin/prock/releases).
+
+
 ## Features
 
 ### Process Monitoring
