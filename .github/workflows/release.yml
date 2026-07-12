@@ -21,9 +21,18 @@ jobs:
       - uses: mlugg/setup-zig@v2
       - name: Build portable binary
         run: |
-          # zig cc doesn't report Debian/Ubuntu multiarch lib dirs to CMake, so
+          # zig cc looks like Clang, so CMake picks llvm-ar/llvm-ranlib.
+          # Wrap zig's bundled archiver instead.
+          mkdir -p "$RUNNER_TEMP/zig-tools"
+          printf '#!/bin/sh\nexec zig ar "$@"\n'     > "$RUNNER_TEMP/zig-tools/ar"
+          printf '#!/bin/sh\nexec zig ranlib "$@"\n' > "$RUNNER_TEMP/zig-tools/ranlib"
+          chmod +x "$RUNNER_TEMP/zig-tools/ar" "$RUNNER_TEMP/zig-tools/ranlib"
+          # zig cc also doesn't report Debian/Ubuntu multiarch lib dirs, so
           # find_library can't locate OpenGL/X11/Freetype there. Point it at them.
-          cmake --preset publish -DCMAKE_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
+          cmake --preset publish \
+            -DCMAKE_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
+            -DCMAKE_AR="$RUNNER_TEMP/zig-tools/ar" \
+            -DCMAKE_RANLIB="$RUNNER_TEMP/zig-tools/ranlib"
           cmake --build build/Publish
       - name: Publish draft release
         env:
