@@ -119,8 +119,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
           // for the first line if it was hidden by the user:
           ImPlot::SetupLock();
           for (int i = 0; i < my_state.num_cores; ++i) {
-            char label[16];
-            snprintf(label, sizeof(label), "Core %d", i);
+            const char *label =
+                String::sprintf(ctx.frame_arena, "Core %d", i).data;
 
             const ImPlotItem *item =
                 ImPlot::GetCurrentPlot()->Items.GetItem(label);
@@ -147,8 +147,8 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
         ImPlotSpec spec = chart_spec();
         spec.Offset = my_state.track.head;
         for (int i = 0; i < my_state.num_cores; ++i) {
-          char label[16];
-          snprintf(label, sizeof(label), "Core %d", i);
+          const char *label =
+              String::sprintf(ctx.frame_arena, "Core %d", i).data;
           ImPlot::PlotLine(label, my_state.times, my_state.core_usage[i],
                            my_state.track.size, spec);
         }

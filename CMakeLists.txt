@@ -23,6 +23,22 @@ target_compile_options(project_warnings
     -Wnull-dereference # warn if a null dereference is detected
 )
 
+# Sanitizers:
+option(PROCK_SANITIZE "Build with ASan (+ UBSan on first-party code)" OFF)
+add_library(project_sanitizers INTERFACE)
+if(PROCK_SANITIZE)
+  # vptr: excluded because prock is built -fno-rtti (Clang errors on vptr+no-rtti).
+  # float-cast-overflow: excluded because of double->int narrowing in stats/UI.
+  # detect_leaks is turned off at runtime in base.cpp.
+  target_compile_options(project_sanitizers INTERFACE
+    -fsanitize=address,undefined
+    -fno-sanitize=vptr,float-cast-overflow
+    -fno-sanitize-recover=all
+    -fno-omit-frame-pointer)
+  target_link_options(project_sanitizers INTERFACE -fsanitize=address,undefined)
+  target_compile_definitions(project_sanitizers INTERFACE PROCK_SANITIZE)
+endif()
+
 # ImGui/ImPlot static library (no project warnings):
 add_library(imgui_all STATIC src/imgui_all.cpp)
 target_include_directories(imgui_all PRIVATE
@@ -34,6 +50,10 @@ target_compile_definitions(imgui_all PRIVATE "IMPLOT_CUSTOM_NUMERIC_TYPES=(doubl
 # the library on the active font loader and stay ABI-consistent.
 target_compile_definitions(imgui_all PUBLIC IMGUI_ENABLE_FREETYPE)
 target_link_libraries(imgui_all PRIVATE glfw OpenGL::GLES2 Freetype::Freetype)
+target_compile_options(imgui_all PRIVATE -fno-exceptions -fno-rtti)
+if(PROCK_SANITIZE)
+  target_compile_options(imgui_all PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+endif()
 
 # Main executable:
 include(GNUInstallDirs)
@@ -51,11 +71,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   third-party/jetbrains-mono
   ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE imgui_all glfw OpenGL::GLES2 X11::X11 tracy project_warnings)
+target_link_libraries(${PROJECT_NAME} PRIVATE imgui_all glfw OpenGL::GLES2 X11::X11 tracy project_warnings project_sanitizers)
 
-# Our code never throws/catches and uses no RTTI, so drop the unwinding tables
-# and typeinfo. Scoped to this target: not the vendored libs, and not the test
-# target (doctest's REQUIRE throws).
 target_compile_options(${PROJECT_NAME} PRIVATE -fno-exceptions -fno-rtti)
 
 # clang-tidy is opt-in per preset via PROCK_CLANG_TIDY (empty = off): on for the
@@ -97,7 +114,7 @@ if(BUILD_TESTS)
     third-party/imgui
     third-party/implot
   )
-  target_link_libraries(prock_tests PRIVATE tracy project_warnings)
+  target_link_libraries(prock_tests PRIVATE tracy project_warnings project_sanitizers)
 
   enable_testing()
   add_test(NAME prock_tests COMMAND prock_tests WORKING_DIRECTORY ${UNIT_TEST_BIN_OUTPUT_DIR})

@@ -31,7 +31,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "ENABLE_TRACY": "OFF",
-        "PROCK_CLANG_TIDY": "clang-tidy"
+        "PROCK_CLANG_TIDY": "clang-tidy",
+        "PROCK_SANITIZE": "ON"
       }
     },
     {
