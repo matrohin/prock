@@ -70,7 +70,7 @@ void io_chart_draw(ViewState &view_state) {
                     view_state.preferences_state.auto_follow,
                     view_state.preferences_state.y_auto_fit);
 
-        ImPlotSpec spec = {};
+        ImPlotSpec spec = chart_spec();
         spec.FillAlpha = FILL_ALPHA_LOW;
         spec.Offset = chart.track.head;
         ImPlot::PlotShaded(TITLE_READ, chart.times, chart.read_kb_per_sec,

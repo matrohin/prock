@@ -45,6 +45,19 @@ static void apply_window_opacity(ImGuiStyle &style, const float opacity) {
   }
 }
 
+static void apply_plot_scale(const float scale) {
+  const ImPlotStyle defaults;
+  ImPlotStyle &live = ImPlot::GetStyle();
+  const auto scaled = [scale](const ImVec2 v) {
+    return ImVec2(v.x * scale, v.y * scale);
+  };
+  live.PlotBorderSize = defaults.PlotBorderSize * scale;
+  live.MajorTickSize = scaled(defaults.MajorTickSize);
+  live.MinorTickSize = scaled(defaults.MinorTickSize);
+  live.MajorGridSize = scaled(defaults.MajorGridSize);
+  live.MinorGridSize = scaled(defaults.MinorGridSize);
+}
+
 static void apply_plot_opacity(const float opacity) {
   ImPlotStyle &plot_style = ImPlot::GetStyle();
   plot_style.Colors[ImPlotCol_FrameBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -72,6 +85,7 @@ void style_control_rebuild(const int zoom_pct, const int opacity_pct) {
   live.ScaleAllSizes(g_monitor_scale * zoom);
   live.WindowRounding = 0.0f;
   apply_window_opacity(live, opacity);
+  apply_plot_scale(g_monitor_scale * zoom);
   apply_plot_opacity(opacity);
 
   io.FontGlobalScale = zoom;

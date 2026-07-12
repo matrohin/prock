@@ -76,7 +76,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
 
       const bool per_core = view_state.preferences_state.cpu_per_core;
       if (!per_core) {
-        ImPlotSpec spec = {};
+        ImPlotSpec spec = chart_spec();
         spec.FillAlpha = FILL_ALPHA_LOW;
         spec.Offset = my_state.track.head;
         ImPlot::PlotShaded(TITLE_TOTAL, my_state.times, my_state.total_usage,
@@ -109,6 +109,9 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
           Array<double> curr = Array<double>::create(ctx.frame_arena, n);
           memset(prev.data, 0, n * sizeof(double));
 
+          // Unscaled hairline on purpose: these lines only separate the
+          // stacked bands, and zoom-scaled strokes would swallow the thin
+          // per-core bands on many-core machines.
           ImPlotSpec fill = {};
           fill.FillAlpha = FILL_ALPHA_HIGH;
           fill.Offset = my_state.track.head;
@@ -141,7 +144,7 @@ void system_cpu_chart_draw(FrameContext &ctx, ViewState &view_state) {
         }
       } else {
         // Separate lines per-core view
-        ImPlotSpec spec = {};
+        ImPlotSpec spec = chart_spec();
         spec.Offset = my_state.track.head;
         for (int i = 0; i < my_state.num_cores; ++i) {
           char label[16];

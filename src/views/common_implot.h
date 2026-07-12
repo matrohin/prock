@@ -4,6 +4,13 @@
 #include "imgui.h"
 #include "implot.h"
 #include "views/common_charts.h"
+#include "views/ui.h"
+
+inline ImPlotSpec chart_spec() {
+  ImPlotSpec spec;
+  spec.LineWeight = ui_scale();
+  return spec;
+}
 
 // Show tooltip with top process on chart hover
 // format_value :: (double, char *, int, void *)

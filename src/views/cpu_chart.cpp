@@ -100,19 +100,20 @@ void cpu_chart_draw(ViewState &view_state) {
         CpuChartScaledData kernel_data = {chart.times, chart.cpu_kernel_perc,
                                           scale, chart.track.head};
 
-        ImPlotSpec fill = {};
-        fill.FillAlpha = FILL_ALPHA_LOW;
+        ImPlotSpec spec = chart_spec();
+        spec.FillAlpha = FILL_ALPHA_LOW;
         ImPlot::PlotShadedG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
                             cpu_chart_baseline_getter, &total_data,
-                            chart.track.size, fill);
+                            chart.track.size, spec);
         ImPlot::PlotShadedG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
                             cpu_chart_baseline_getter, &kernel_data,
-                            chart.track.size, fill);
+                            chart.track.size, spec);
 
+        spec.FillAlpha = FILL_ALPHA_FULL;
         ImPlot::PlotLineG(TITLE_KERNEL, cpu_chart_scaled_getter, &kernel_data,
-                          chart.track.size);
+                          chart.track.size, spec);
         ImPlot::PlotLineG(TITLE_TOTAL, cpu_chart_scaled_getter, &total_data,
-                          chart.track.size);
+                          chart.track.size, spec);
 
         chart_add_tooltip(TITLE_TOTAL, "utime + stime from /proc/[pid]/stat");
         chart_add_tooltip(TITLE_KERNEL, "stime from /proc/[pid]/stat");

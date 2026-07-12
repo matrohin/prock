@@ -68,7 +68,7 @@ void mem_chart_draw(ViewState &view_state) {
                     view_state.preferences_state.auto_follow,
                     view_state.preferences_state.y_auto_fit);
 
-        ImPlotSpec spec = {};
+        ImPlotSpec spec = chart_spec();
         spec.FillAlpha = FILL_ALPHA_LOW;
         spec.Offset = chart.track.head;
         ImPlot::PlotShaded(TITLE_USED, chart.times, chart.mem_resident_kb,
