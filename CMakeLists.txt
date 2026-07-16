@@ -107,7 +107,7 @@ if(BUILD_TESTS)
     src/readers/proc_util.cpp
     src/readers/username.cpp
     src/views/brief_table_logic.cpp
-    src/state.cpp)
+    src/state/state.cpp)
   target_include_directories(prock_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/tests

@@ -4,7 +4,8 @@
 #include "base/const_string.h"
 #include "base/ring_track.h"
 #include "readers/proc_util.h"
-#include "state.h"
+#include "state/raw_stats.h"
+#include "state/state.h"
 
 constexpr uint32_t CHART_HISTORY_SIZE = 4096;
 using ChartTrack = RingTrack<CHART_HISTORY_SIZE>;

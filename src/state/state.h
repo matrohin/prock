@@ -2,16 +2,11 @@
 
 #include "base/base.h"
 #include "base/containers.h"
-#include "readers/process_stat.h"
+#include "state/raw_stats.h"
+#include "state/system_info.h"
 
 struct State;
 struct UpdateSnapshot;
-
-struct SystemInfo {
-  uint64_t ticks_in_second;
-  uint64_t mem_page_size;
-  uint64_t boot_time_epoch_sec; // /proc/stat "btime", constant for the session
-};
 
 // Delta between two samples of a monotonically increasing kernel counter. A
 // "current" below "previous" means the counter was reset (e.g. a network

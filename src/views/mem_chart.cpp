@@ -5,7 +5,8 @@
 #include "views/common_charts.h"
 #include "views/view_state.h"
 
-#include "state.h"
+#include "state/raw_stats.h"
+#include "state/state.h"
 
 #include "implot.h"
 #include "tracy/Tracy.hpp"

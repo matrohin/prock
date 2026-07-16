@@ -1,10 +1,9 @@
 #include "system_net_chart.h"
 
 #include "common_implot.h"
+#include "state/state.h"
 #include "views/common.h"
 #include "views/view_state.h"
-
-#include "state.h"
 
 #include "imgui.h"
 #include "implot.h"

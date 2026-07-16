@@ -1,7 +1,7 @@
 #include "threads_viewer.h"
 
 #include "base/algorithms.h"
-#include "state.h"
+#include "state/state.h"
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/process_window_flags.h"

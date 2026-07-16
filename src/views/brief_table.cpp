@@ -15,7 +15,7 @@
 #include "views/view_state.h"
 
 #include "base/containers.h"
-#include "state.h"
+#include "state/state.h"
 #include "sync.h"
 #include "themes.h"
 

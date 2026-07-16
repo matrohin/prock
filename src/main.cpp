@@ -2,7 +2,7 @@
 #include "base/channel.h"
 #include "constants.h"
 #include "readers/process_stat.h"
-#include "state.h"
+#include "state/state.h"
 #include "sync.h"
 #include "views/icons.h"
 
@@ -46,7 +46,7 @@ void sock_notify_data_ready(Sync &sync) {
 #include "readers/sock_diag.cpp"
 #include "readers/socket_reader.cpp"
 #include "readers/username.cpp"
-#include "state.cpp"
+#include "state/state.cpp"
 #include "style_control.cpp"
 #include "tracy/Tracy.hpp"
 #include "views/brief_table.cpp"

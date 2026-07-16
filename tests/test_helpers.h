@@ -1,7 +1,8 @@
 #pragma once
 
 #include "base/base.h"
-#include "state.h"
+#include "state/raw_stats.h"
+#include "state/state.h"
 #include "views/brief_table.h"
 
 // Helper to create a BriefTableLine with the fields the tests care about

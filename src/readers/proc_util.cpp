@@ -1,5 +1,7 @@
 #include "proc_util.h"
 
+#include "state/raw_stats.h"
+
 #include <cstdio>
 #include <cstring>
 

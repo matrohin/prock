@@ -1,6 +1,8 @@
 #pragma once
 
-#include "process_stat.h"
+#include "base/base.h"
+
+struct ProcessStat;
 
 // Parse /proc/[pid]/stat and /proc/[pid]/statm content.
 // Sets: state, ppid, utime, stime, nice, num_threads, starttime, vsize,

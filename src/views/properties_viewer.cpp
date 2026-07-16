@@ -1,6 +1,7 @@
 #include "properties_viewer.h"
 
-#include "state.h"
+#include "state/raw_stats.h"
+#include "state/state.h"
 #include "views/common.h"
 #include "views/icons.h"
 #include "views/shortcut.h"

@@ -2,6 +2,7 @@
 #include "proc_util.h"
 
 #include "base/containers.h"
+#include "state/raw_stats.h"
 #include "sync.h"
 #include "tracy/Tracy.hpp"
 

@@ -7,9 +7,10 @@
 using ImPlotShadedFlags = int;
 
 #include "readers/proc_util.h"
-#include "sync.h"
 #include "readers/username.h"
-#include "state.h"
+#include "state/raw_stats.h"
+#include "state/state.h"
+#include "sync.h"
 #include "test_helpers.h"
 #include "views/brief_table_logic.h"
 #include "views/common.h"

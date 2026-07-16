@@ -1,31 +1,13 @@
 #pragma once
 
 #include "actions/on_demand_actions.h"
-#include "base/base.h"
 #include "base/channel.h"
-#include "base/containers.h"
 #include "readers/on_demand_reader.h"
 #include "readers/process_stat.h"
+#include "state/snapshot.h"
 
 #include <condition_variable>
 #include <mutex>
-
-struct ThreadSnapshot {
-  Pid pid;
-  Array<ProcessStat> threads; // Reuse ProcessStat - same format for threads
-};
-
-struct UpdateSnapshot {
-  BumpArena owner_arena;
-  Array<ProcessStat> stats;
-  Array<CpuCoreStat> cpu_stats; // [0]=total, [1..n]=per-core
-  MemInfo mem_info;
-  DiskIoStat disk_io_stats;
-  NetIoStat net_io_stats;
-  Array<ThreadSnapshot> thread_snapshots; // Per-watched-pid thread data
-  SteadyTimePoint at;
-  SystemTimePoint system_time;
-};
 
 struct Sync {
   std::atomic<bool> quit;
