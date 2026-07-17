@@ -256,7 +256,7 @@ TEST_CASE("state_snapshot_update") {
     // 100-jiffy delta over 1 core gives a per-core budget of 100 ticks.
     CpuCoreStat old_cpu[2] = {};
     CpuCoreStat new_cpu[2] = {};
-    new_cpu[0].idle = 100; // aggregate gains 100 jiffies over the interval
+    new_cpu[0].total = 100; // aggregate gains 100 jiffies over the interval
 
     old_state.snapshot.stats.data = &old_proc;
     old_state.snapshot.stats.size = 1;
@@ -400,28 +400,14 @@ TEST_CASE("state_snapshot_update") {
     old_state.snapshot.at = SteadyTimePoint{};
 
     // Old CPU stats: 100 user, 50 system, 850 idle = 1000 total
-    CpuCoreStat old_cpu = {};
-    old_cpu.user = 100;
-    old_cpu.nice = 0;
-    old_cpu.system = 50;
-    old_cpu.idle = 850;
-    old_cpu.iowait = 0;
-    old_cpu.irq = 0;
-    old_cpu.softirq = 0;
+    CpuCoreStat old_cpu = cpu_core_stat_from_ticks(100, 0, 50, 850, 0, 0, 0);
 
     old_state.snapshot.cpu_stats.data = &old_cpu;
     old_state.snapshot.cpu_stats.size = 1;
 
     // New CPU stats: 200 user, 100 system, 900 idle = 1200 total
     // Delta: 100 user, 50 system, 50 idle = 200 total
-    CpuCoreStat new_cpu = {};
-    new_cpu.user = 200;
-    new_cpu.nice = 0;
-    new_cpu.system = 100;
-    new_cpu.idle = 900;
-    new_cpu.iowait = 0;
-    new_cpu.irq = 0;
-    new_cpu.softirq = 0;
+    CpuCoreStat new_cpu = cpu_core_stat_from_ticks(200, 0, 100, 900, 0, 0, 0);
 
     UpdateSnapshot update = {};
     update.cpu_stats.data = &new_cpu;
@@ -458,7 +444,7 @@ TEST_CASE("state_snapshot_update") {
 
     CpuCoreStat old_cpu[2] = {};
     CpuCoreStat new_cpu[2] = {};
-    new_cpu[0].idle = 100; // 100-jiffy aggregate delta over 1 core
+    new_cpu[0].total = 100; // 100-jiffy aggregate delta over 1 core
 
     old_state.snapshot.stats.data = old_procs;
     old_state.snapshot.stats.size = 2;
@@ -1137,46 +1123,39 @@ TEST_CASE("scale_cpu_perc") {
 }
 
 // ============================================================================
-// CpuCoreStat method Tests
+// cpu_core_stat_from_ticks Tests
 // ============================================================================
 
-TEST_CASE("CpuCoreStat methods") {
-  CpuCoreStat cpu = {};
-  cpu.user = 100;
-  cpu.nice = 10;
-  cpu.system = 50;
-  cpu.idle = 800;
-  cpu.iowait = 20;
-  cpu.irq = 5;
-  cpu.softirq = 15;
+TEST_CASE("cpu_core_stat_from_ticks aggregates") {
+  const CpuCoreStat cpu = cpu_core_stat_from_ticks(100, 10, 50, 800, 20, 5, 15);
 
-  SUBCASE("total() sums all fields") {
-    CHECK(cpu.total() == 100 + 10 + 50 + 800 + 20 + 5 + 15);
-    CHECK(cpu.total() == 1000);
+  SUBCASE("total sums all columns") {
+    CHECK(cpu.total == 100 + 10 + 50 + 800 + 20 + 5 + 15);
+    CHECK(cpu.total == 1000);
   }
 
-  SUBCASE("busy() excludes idle and iowait") {
+  SUBCASE("busy excludes idle and iowait") {
     // busy = user + nice + system + irq + softirq
-    CHECK(cpu.busy() == 100 + 10 + 50 + 5 + 15);
-    CHECK(cpu.busy() == 180);
+    CHECK(cpu.busy == 100 + 10 + 50 + 5 + 15);
+    CHECK(cpu.busy == 180);
   }
 
-  SUBCASE("kernel() = system + irq + softirq") {
-    CHECK(cpu.kernel() == 50 + 5 + 15);
-    CHECK(cpu.kernel() == 70);
+  SUBCASE("kernel = system + irq + softirq") {
+    CHECK(cpu.kernel == 50 + 5 + 15);
+    CHECK(cpu.kernel == 70);
   }
 
-  SUBCASE("interrupts() = irq + softirq") {
-    CHECK(cpu.interrupts() == 5 + 15);
-    CHECK(cpu.interrupts() == 20);
+  SUBCASE("interrupts = irq + softirq") {
+    CHECK(cpu.interrupts == 5 + 15);
+    CHECK(cpu.interrupts == 20);
   }
 
   SUBCASE("all zeros") {
-    CpuCoreStat zero = {};
-    CHECK(zero.total() == 0);
-    CHECK(zero.busy() == 0);
-    CHECK(zero.kernel() == 0);
-    CHECK(zero.interrupts() == 0);
+    const CpuCoreStat zero = cpu_core_stat_from_ticks(0, 0, 0, 0, 0, 0, 0);
+    CHECK(zero.total == 0);
+    CHECK(zero.busy == 0);
+    CHECK(zero.kernel == 0);
+    CHECK(zero.interrupts == 0);
   }
 }
 

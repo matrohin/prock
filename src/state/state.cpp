@@ -18,8 +18,8 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   // below and stays accurate when the gathering interval jitters under load.
   double per_core_ticks = 0.0;
   if (snapshot.cpu_stats.size > 1 && old.cpu_stats.size > 1) {
-    const uint64_t total_delta = counter_delta(
-        snapshot.cpu_stats.data[0].total(), old.cpu_stats.data[0].total());
+    const uint64_t total_delta = counter_delta(snapshot.cpu_stats.data[0].total,
+                                               old.cpu_stats.data[0].total);
     const uint32_t num_cores = snapshot.cpu_stats.size - 1;
     per_core_ticks = static_cast<double>(total_delta) / num_cores;
   }
@@ -75,11 +75,11 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
        ++i) {
     const CpuCoreStat &cur = snapshot.cpu_stats.data[i];
     const CpuCoreStat &prev = old.cpu_stats.data[i];
-    const uint64_t total_delta = counter_delta(cur.total(), prev.total());
-    const uint64_t busy_delta = counter_delta(cur.busy(), prev.busy());
-    const uint64_t kernel_delta = counter_delta(cur.kernel(), prev.kernel());
+    const uint64_t total_delta = counter_delta(cur.total, prev.total);
+    const uint64_t busy_delta = counter_delta(cur.busy, prev.busy);
+    const uint64_t kernel_delta = counter_delta(cur.kernel, prev.kernel);
     const uint64_t interrupts_delta =
-        counter_delta(cur.interrupts(), prev.interrupts());
+        counter_delta(cur.interrupts, prev.interrupts);
     cpu_perc.total.data[i] =
         total_delta > 0 ? busy_delta * 100.0 / total_delta : 0.0;
     cpu_perc.kernel.data[i] =

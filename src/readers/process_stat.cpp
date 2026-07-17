@@ -240,7 +240,8 @@ static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
           softirq = 0;
     sscanf(p, "%lu %lu %lu %lu %lu %lu %lu", &user, &nice, &system, &idle,
            &iowait, &irq, &softirq);
-    stat = {user, nice, system, idle, iowait, irq, softirq};
+    stat = cpu_core_stat_from_ticks(user, nice, system, idle, iowait, irq,
+                                    softirq);
     ++idx;
   }
 
@@ -477,18 +478,8 @@ static MemInfo read_mem_info() {
     if (sscanf(line, "%63[^:]: %lu kB", key, &value) == 2) {
       if (strcmp(key, "MemTotal") == 0) {
         result.mem_total = value;
-      } else if (strcmp(key, "MemFree") == 0) {
-        result.mem_free = value;
       } else if (strcmp(key, "MemAvailable") == 0) {
         result.mem_available = value;
-      } else if (strcmp(key, "Buffers") == 0) {
-        result.buffers = value;
-      } else if (strcmp(key, "Cached") == 0) {
-        result.cached = value;
-      } else if (strcmp(key, "SwapTotal") == 0) {
-        result.swap_total = value;
-      } else if (strcmp(key, "SwapFree") == 0) {
-        result.swap_free = value;
       }
     }
   }

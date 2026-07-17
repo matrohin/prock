@@ -31,33 +31,27 @@ struct ProcessStat {
   char state;
 };
 
-// From /proc/stat - all values are cumulative ticks
+// From /proc/stat - cumulative tick aggregates
 struct CpuCoreStat {
-  uint64_t user;
-  uint64_t nice;
-  uint64_t system;
-  uint64_t idle;
-  uint64_t iowait;
-  uint64_t irq;
-  uint64_t softirq;
-
-  uint64_t total() const {
-    return user + nice + system + idle + iowait + irq + softirq;
-  }
-  uint64_t busy() const { return user + nice + system + irq + softirq; }
-  uint64_t kernel() const { return system + irq + softirq; }
-  uint64_t interrupts() const { return irq + softirq; }
+  uint64_t total;      // user+nice+system+idle+iowait+irq+softirq
+  uint64_t busy;       // user+nice+system+irq+softirq
+  uint64_t kernel;     // system+irq+softirq
+  uint64_t interrupts; // irq+softirq
 };
+
+inline CpuCoreStat cpu_core_stat_from_ticks(ulong user, ulong nice,
+                                            ulong system, ulong idle,
+                                            ulong iowait, ulong irq,
+                                            ulong softirq) {
+  return {user + nice + system + idle + iowait + irq + softirq,
+          user + nice + system + irq + softirq, system + irq + softirq,
+          irq + softirq};
+}
 
 // From /proc/meminfo - values in kB
 struct MemInfo {
   uint64_t mem_total;
-  uint64_t mem_free;
   uint64_t mem_available;
-  uint64_t buffers;
-  uint64_t cached;
-  uint64_t swap_total;
-  uint64_t swap_free;
 };
 
 // From /proc/diskstats - cumulative system-wide I/O
