@@ -13,12 +13,12 @@ struct UpdateSnapshot;
 // interface bouncing, CPU hot(un)plug shifting /proc/stat lines, or a reboot),
 // so clamp the delta to zero instead of letting the unsigned subtraction wrap
 // into a huge spike.
-inline ulonglong counter_delta(const ulonglong cur, const ulonglong prev) {
+inline uint64_t counter_delta(const uint64_t cur, const uint64_t prev) {
   return cur >= prev ? cur - prev : 0;
 }
 
 // Rate form of counter_delta. The caller guarantees divisor > 0.
-inline double counter_rate(const ulonglong cur, const ulonglong prev,
+inline double counter_rate(const uint64_t cur, const uint64_t prev,
                            const double scale, const double divisor) {
   return static_cast<double>(counter_delta(cur, prev)) * scale / divisor;
 }
@@ -93,7 +93,7 @@ struct State {
   BumpArena frozen_snapshot_arena; // used when the view is paused
   StateSnapshot snapshot;
 
-  uint update_count;
+  uint32_t update_count;
   SystemTimePoint update_system_time;
 };
 

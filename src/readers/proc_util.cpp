@@ -76,15 +76,31 @@ bool proc_util_parse_stat(const char *stat_buf, const char *statm_buf,
     return false;
   }
 
+  char state = 0;
+  int ppid = 0, last_cpu = 0;
+  ulong utime = 0, stime = 0, vsize = 0;
+  long nice = 0, num_threads = 0;
+  ulonglong starttime = 0;
   sscanf(after_comm + 1,
          " %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d "
          "%*d %ld %ld %*d %llu %lu "
          // skip rss..exit_signal (fields 24-38) to reach processor (field 39)
          "%*d %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*d %d",
-         &out->state, &out->ppid, &out->utime, &out->stime, &out->nice,
-         &out->num_threads, &out->starttime, &out->vsize, &out->last_cpu);
+         &state, &ppid, &utime, &stime, &nice, &num_threads, &starttime, &vsize,
+         &last_cpu);
+  out->state = state;
+  out->ppid = ppid;
+  out->utime = utime;
+  out->stime = stime;
+  out->nice = nice;
+  out->num_threads = num_threads;
+  out->starttime = starttime;
+  out->vsize = vsize;
+  out->last_cpu = last_cpu;
 
-  sscanf(statm_buf, "%*u %lu", &out->statm_resident);
+  ulong statm_resident = 0;
+  sscanf(statm_buf, "%*u %lu", &statm_resident);
+  out->statm_resident = statm_resident;
 
   return true;
 }

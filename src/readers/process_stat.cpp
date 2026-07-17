@@ -236,8 +236,11 @@ static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
       ++p;
 
     CpuCoreStat &stat = result.data[idx];
-    sscanf(p, "%lu %lu %lu %lu %lu %lu %lu", &stat.user, &stat.nice,
-           &stat.system, &stat.idle, &stat.iowait, &stat.irq, &stat.softirq);
+    ulong user = 0, nice = 0, system = 0, idle = 0, iowait = 0, irq = 0,
+          softirq = 0;
+    sscanf(p, "%lu %lu %lu %lu %lu %lu %lu", &user, &nice, &system, &idle,
+           &iowait, &irq, &softirq);
+    stat = {user, nice, system, idle, iowait, irq, softirq};
     ++idx;
   }
 

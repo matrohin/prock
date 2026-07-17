@@ -13,7 +13,7 @@
 using uint = unsigned int;
 using ulong = unsigned long;
 using ulonglong = unsigned long long;
-using Pid = int;
+using Pid = int32_t;
 using Seconds = std::chrono::duration<double, std::chrono::seconds::period>;
 using SteadyClock = std::chrono::steady_clock;
 using SteadyTimePoint = std::chrono::time_point<SteadyClock>;
