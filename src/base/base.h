@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <thread>
 
 #include "base/vm.h"
 
@@ -15,8 +16,28 @@ using ulong = unsigned long;
 using ulonglong = unsigned long long;
 using Pid = int32_t;
 using Seconds = std::chrono::duration<double, std::chrono::seconds::period>;
+using DataSeconds = double;
 using SteadyClock = std::chrono::steady_clock;
-using SteadyTimePoint = std::chrono::time_point<SteadyClock>;
+using SteadyTimePoint = SteadyClock::time_point;
+
+inline constexpr double NS_IN_SEC = 1'000'000'000;
+
+struct SteadyTimeDataPoint {
+  int64_t at_ns;
+
+  static SteadyTimeDataPoint now() {
+    return {std::chrono::steady_clock::now().time_since_epoch().count()};
+  }
+
+  SteadyTimeDataPoint shifted(const DataSeconds seconds) const {
+    return {at_ns + static_cast<int64_t>(seconds * NS_IN_SEC)};
+  }
+
+  DataSeconds elapsed_seconds(const SteadyTimeDataPoint old) const {
+    const int64_t ns = at_ns - old.at_ns;
+    return ns * 1.0 / NS_IN_SEC;
+  }
+};
 
 using SystemClock = std::chrono::system_clock;
 using SystemTimePoint = std::chrono::time_point<SystemClock>;

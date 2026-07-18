@@ -185,7 +185,7 @@ void brief_table_update(FrameContext &ctx, BriefTableState &my_state,
                         InternTable &string_interner, State &state) {
   const StateSnapshot &new_snapshot = state.snapshot;
   const Array<BriefTableLine> &old_lines = my_state.lines;
-  const int64_t now_ns = new_snapshot.at.time_since_epoch().count();
+  const int64_t now_ns = new_snapshot.at.at_ns;
 
   const Array<bool> added =
       Array<bool>::create(ctx.frame_arena, new_snapshot.stats.size);

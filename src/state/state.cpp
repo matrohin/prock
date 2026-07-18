@@ -10,8 +10,7 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   const Array<ProcessDerivedStat> derived_stats =
       Array<ProcessDerivedStat>::create(arena, snapshot.stats.size);
 
-  const double time_delta =
-      std::chrono::duration_cast<Seconds>(snapshot.at - old.at).count();
+  const double time_delta = snapshot.at.elapsed_seconds(old.at);
 
   // Normalize per-process CPU% against the /proc/stat jiffy budget for one core
   // (same unit as utime/stime), not wall-clock time. This matches system CPU%
@@ -47,8 +46,9 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
         new_stat.pid == old.stats.data[old_state_idx].pid) {
       const ProcessStat &old_stat = old.stats.data[old_state_idx];
       if (per_core_ticks > 0) {
-        const double effective_ticks = effective_core_ticks(
-            new_stat.read_time, old_stat.read_time, per_core_ticks, time_delta);
+        const double effective_ticks =
+            effective_core_ticks(new_stat.read_time_ns, old_stat.read_time_ns,
+                                 per_core_ticks, time_delta);
         result.cpu_user_perc = counter_rate(new_stat.utime, old_stat.utime,
                                             100.0, effective_ticks);
         result.cpu_kernel_perc = counter_rate(new_stat.stime, old_stat.stime,

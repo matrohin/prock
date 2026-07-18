@@ -42,7 +42,7 @@ static bool read_thread_stat(const int tid, const char *stat_path,
     fclose(stat_file);
     return false;
   }
-  stat.read_time = SteadyClock::now();
+  stat.read_time_ns = SteadyTimeDataPoint::now();
   char comm_buf[64];
   if (fgets(comm_buf, sizeof(comm_buf), comm_file)) {
     size_t len = strlen(comm_buf);
@@ -100,7 +100,7 @@ static bool read_process(const Pid pid, BumpArena &arena, ProcessStat *out,
     fclose(stat_file);
     return false;
   }
-  stat.read_time = SteadyClock::now();
+  stat.read_time_ns = SteadyTimeDataPoint::now();
   if (!fgets(statm_buf, sizeof(statm_buf), statm_file)) {
     fclose(statm_file);
     fclose(stat_file);
@@ -498,7 +498,10 @@ void process_stat_gather(GatheringState &state, Sync &sync) {
         return sync.quit.load() || sync.update_period.load() > 0.0f;
       });
     } else {
-      sync.quit_cv.wait_until(lock, state.last_update + Seconds{period_secs});
+      sync.quit_cv.wait_until(
+          lock,
+          SteadyTimePoint{std::chrono::nanoseconds{
+              state.last_update.shifted(DataSeconds{period_secs}).at_ns}});
     }
   }
   if (sync.quit.load()) {
@@ -540,7 +543,7 @@ void process_stat_gather(GatheringState &state, Sync &sync) {
   const auto net_io_stats = read_net_io_stats();
   const auto thread_snapshots = read_watched_threads(state.watched_pids, arena);
 
-  state.last_update = SteadyClock::now();
+  state.last_update = SteadyTimeDataPoint::now();
   const SystemTimePoint system_now = SystemClock::now();
   const bool pushed = sync.update_queue.push(UpdateSnapshot{
       arena, process_stats, cpu_stats, mem_info, disk_io_stats, net_io_stats,

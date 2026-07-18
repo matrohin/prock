@@ -264,7 +264,7 @@ TEST_CASE("state_snapshot_update") {
     old_state.snapshot.derived_stats.size = 1;
     old_state.snapshot.cpu_stats.data = old_cpu;
     old_state.snapshot.cpu_stats.size = 2;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     // New snapshot: 1100 user ticks, 550 kernel ticks after 1 second
     UpdateSnapshot update = {};
@@ -278,7 +278,7 @@ TEST_CASE("state_snapshot_update") {
     update.stats.size = 1;
     update.cpu_stats.data = new_cpu;
     update.cpu_stats.size = 2;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
@@ -303,7 +303,7 @@ TEST_CASE("state_snapshot_update") {
     old_state.snapshot.stats.size = 1;
     old_state.snapshot.derived_stats.data = &old_derived;
     old_state.snapshot.derived_stats.size = 1;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     UpdateSnapshot update = {};
     ProcessStat new_proc = {};
@@ -312,7 +312,7 @@ TEST_CASE("state_snapshot_update") {
 
     update.stats.data = &new_proc;
     update.stats.size = 1;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
@@ -338,7 +338,7 @@ TEST_CASE("state_snapshot_update") {
     old_state.snapshot.stats.size = 1;
     old_state.snapshot.derived_stats.data = &old_derived;
     old_state.snapshot.derived_stats.size = 1;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     UpdateSnapshot update = {};
     ProcessStat new_proc = {};
@@ -348,7 +348,7 @@ TEST_CASE("state_snapshot_update") {
 
     update.stats.data = &new_proc;
     update.stats.size = 1;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
@@ -369,7 +369,7 @@ TEST_CASE("state_snapshot_update") {
     // Old snapshot is empty
     old_state.snapshot.stats.size = 0;
     old_state.snapshot.derived_stats.size = 0;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     UpdateSnapshot update = {};
     ProcessStat new_proc = {};
@@ -380,7 +380,7 @@ TEST_CASE("state_snapshot_update") {
 
     update.stats.data = &new_proc;
     update.stats.size = 1;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
@@ -397,7 +397,7 @@ TEST_CASE("state_snapshot_update") {
     State old_state = {};
     old_state.system.ticks_in_second = 100;
     old_state.system.mem_page_size = 4096;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     // Old CPU stats: 100 user, 50 system, 850 idle = 1000 total
     CpuCoreStat old_cpu = cpu_core_stat_from_ticks(100, 0, 50, 850, 0, 0, 0);
@@ -412,7 +412,7 @@ TEST_CASE("state_snapshot_update") {
     UpdateSnapshot update = {};
     update.cpu_stats.data = &new_cpu;
     update.cpu_stats.size = 1;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
@@ -432,7 +432,7 @@ TEST_CASE("state_snapshot_update") {
     State old_state = {};
     old_state.system.ticks_in_second = 100;
     old_state.system.mem_page_size = 4096;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     ProcessStat old_procs[2] = {};
     old_procs[0].pid = 50; // dead by the new snapshot
@@ -463,7 +463,7 @@ TEST_CASE("state_snapshot_update") {
     update.stats.size = 1;
     update.cpu_stats.data = new_cpu;
     update.cpu_stats.size = 2;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
@@ -478,7 +478,7 @@ TEST_CASE("state_snapshot_update") {
     State old_state = {};
     old_state.system.ticks_in_second = 100;
     old_state.system.mem_page_size = 4096;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     // Old disk stats: 1000 sectors read, 500 sectors written
     old_state.snapshot.disk_io_stats.sectors_read = 1000;
@@ -489,7 +489,7 @@ TEST_CASE("state_snapshot_update") {
     UpdateSnapshot update = {};
     update.disk_io_stats.sectors_read = 3000;
     update.disk_io_stats.sectors_written = 1500;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
@@ -613,7 +613,7 @@ TEST_CASE("brief_table_update dead process handling") {
     SnapshotBuilder builder(arena);
     builder.add(20, 0, "proc_b");
     state.snapshot = builder.build();
-    state.snapshot.at = SteadyTimePoint{} + std::chrono::seconds(3);
+    state.snapshot.at = SteadyTimeDataPoint{}.shifted(3);
 
     // Old lines had PID 10 and PID 20
     BriefTableState my_state = {};
@@ -648,7 +648,7 @@ TEST_CASE("brief_table_update dead process handling") {
     SnapshotBuilder builder(arena);
     builder.add(20, 0, "proc_b");
     state.snapshot = builder.build();
-    state.snapshot.at = SteadyTimePoint{} + std::chrono::seconds(10);
+    state.snapshot.at = SteadyTimeDataPoint{}.shifted(10);
 
     // Old lines: PID 10 died at t=5s (5 seconds ago, > 2s threshold)
     BriefTableState my_state = {};
@@ -657,9 +657,7 @@ TEST_CASE("brief_table_update dead process handling") {
     my_state.lines = Array<BriefTableLine>::create(arena, 2);
     my_state.lines.data[0] = make_brief_table_line("proc_a", 10, 0);
     my_state.lines.data[0].death_time_ns =
-        (SteadyTimePoint{} + std::chrono::seconds(5))
-            .time_since_epoch()
-            .count();
+        SteadyTimeDataPoint{}.shifted(5).at_ns;
     my_state.lines.data[1] = make_brief_table_line("proc_b", 20, 0);
 
     brief_table_update(frame_ctx, my_state, interner, state);
@@ -678,7 +676,7 @@ TEST_CASE("brief_table_update dead process handling") {
     SnapshotBuilder builder(arena);
     builder.add(10, 0, "proc_a");
     state.snapshot = builder.build();
-    state.snapshot.at = SteadyTimePoint{} + std::chrono::seconds(1);
+    state.snapshot.at = SteadyTimeDataPoint{}.shifted(1);
 
     // Empty old lines (first update)
     BriefTableState my_state = {};
@@ -702,7 +700,7 @@ TEST_CASE("brief_table_update dead process handling") {
     builder.add(10, 0, "proc_a");
     builder.add(20, 0, "proc_b");
     state.snapshot = builder.build();
-    state.snapshot.at = SteadyTimePoint{} + std::chrono::seconds(5);
+    state.snapshot.at = SteadyTimeDataPoint{}.shifted(5);
 
     // Old lines had only PID 10
     BriefTableState my_state = {};
@@ -717,9 +715,7 @@ TEST_CASE("brief_table_update dead process handling") {
     REQUIRE(my_state.lines.size == 2);
     // PID 10 should keep old first_seen_ns
     // PID 20 should get now_ns as first_seen_ns
-    const int64_t now_ns = (SteadyTimePoint{} + std::chrono::seconds(5))
-                               .time_since_epoch()
-                               .count();
+    const int64_t now_ns = SteadyTimeDataPoint{}.shifted(5).at_ns;
     for (size_t i = 0; i < my_state.lines.size; ++i) {
       if (my_state.lines.data[i].pid == 10) {
         CHECK(my_state.lines.data[i].first_seen_ns == 1000000000);
@@ -1243,7 +1239,7 @@ TEST_CASE("state_snapshot_update network I/O") {
     State old_state = {};
     old_state.system.ticks_in_second = 100;
     old_state.system.mem_page_size = 4096;
-    old_state.snapshot.at = SteadyTimePoint{};
+    old_state.snapshot.at = SteadyTimeDataPoint{};
 
     // Old network stats
     old_state.snapshot.net_io_stats.bytes_received = 10'000'000;
@@ -1255,7 +1251,7 @@ TEST_CASE("state_snapshot_update network I/O") {
     UpdateSnapshot update = {};
     update.net_io_stats.bytes_received = 10'000'000 + 1048576;
     update.net_io_stats.bytes_transmitted = 5'000'000 + 524288;
-    update.at = old_state.snapshot.at + std::chrono::seconds(1);
+    update.at = old_state.snapshot.at.shifted(1);
 
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 

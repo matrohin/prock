@@ -26,12 +26,11 @@ inline double counter_rate(const uint64_t cur, const uint64_t prev,
 // Rescale the one-core jiffy budget to a task's own sampling window, since
 // tasks are read at different instants within a process_stat_gather pass. Falls
 // back to the shared budget when either interval is unusable.
-inline double effective_core_ticks(const SteadyTimePoint cur_read,
-                                   const SteadyTimePoint prev_read,
+inline double effective_core_ticks(const SteadyTimeDataPoint cur_read,
+                                   const SteadyTimeDataPoint prev_read,
                                    const double per_core_ticks,
                                    const double interval_secs) {
-  const double dt =
-      std::chrono::duration_cast<Seconds>(cur_read - prev_read).count();
+  const double dt = cur_read.elapsed_seconds(prev_read);
   return dt > 0 && interval_secs > 0 ? per_core_ticks * dt / interval_secs
                                      : per_core_ticks;
 }
@@ -77,7 +76,7 @@ struct StateSnapshot {
   NetIoStat net_io_stats;
   NetIoRate net_io_rate;
   Array<ThreadSnapshot> thread_snapshots;
-  SteadyTimePoint at;
+  SteadyTimeDataPoint at;
   // /proc/stat jiffy budget for one core over this interval; the basis for
   // per-process and per-thread CPU% (see state_snapshot_update).
   double per_core_ticks;

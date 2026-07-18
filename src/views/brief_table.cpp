@@ -903,7 +903,7 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       }
     }
 
-    const int64_t now_ns = state.snapshot.at.time_since_epoch().count();
+    const int64_t now_ns = state.snapshot.at.at_ns;
 
     const bool filter_active = filter.IsActive();
     if (filter_active) {

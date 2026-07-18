@@ -23,7 +23,7 @@ struct ThreadCpuSample {
   Pid pid;
   ulong utime;
   ulong stime;
-  SteadyTimePoint read_time;
+  SteadyTimeDataPoint read_time;
 };
 
 enum ThreadsViewerColumnId {

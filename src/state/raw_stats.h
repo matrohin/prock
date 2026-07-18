@@ -23,7 +23,7 @@ struct ProcessStat {
   uint64_t io_read_bytes;
   uint64_t io_write_bytes;
 
-  SteadyTimePoint read_time; // When utime/stime were sampled
+  SteadyTimeDataPoint read_time_ns; // When utime/stime were sampled
 
   Pid pid;
   Pid ppid;

@@ -226,7 +226,7 @@ void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
           prev_threads.data[prev_idx].pid == thread.pid && per_core_ticks > 0) {
         const ThreadCpuSample &prev = prev_threads.data[prev_idx];
         const double effective_ticks = effective_core_ticks(
-            thread.read_time, prev.read_time, per_core_ticks, interval_secs);
+            thread.read_time_ns, prev.read_time, per_core_ticks, interval_secs);
         line.cpu_user_perc =
             counter_rate(thread.utime, prev.utime, 100.0, effective_ticks);
         line.cpu_kernel_perc =
@@ -239,7 +239,7 @@ void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
         Array<ThreadCpuSample>::create(state.cur_arena, snap->threads.size);
     for (uint32_t i = 0; i < snap->threads.size; ++i) {
       const ProcessStat &t = snap->threads.data[i];
-      win.prev_threads.data[i] = {t.pid, t.utime, t.stime, t.read_time};
+      win.prev_threads.data[i] = {t.pid, t.utime, t.stime, t.read_time_ns};
     }
 
     // Rebuild lines in previous display order (dead threads dropped, new ones

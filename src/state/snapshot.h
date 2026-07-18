@@ -17,6 +17,6 @@ struct UpdateSnapshot {
   DiskIoStat disk_io_stats;
   NetIoStat net_io_stats;
   Array<ThreadSnapshot> thread_snapshots; // Per-watched-pid thread data
-  SteadyTimePoint at;
+  SteadyTimeDataPoint at;
   SystemTimePoint system_time;
 };
