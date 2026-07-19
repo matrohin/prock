@@ -14,10 +14,18 @@
 #include <cstdint>
 
 struct Command {
-  const char *label;     // shown in the palette
+  const char *label;     // static label shown in the palette
   ImGuiKeyChord binding; // fixed shortcut (0 = palette-only)
   void (*execute)(ViewState &);
+
+  // Optional: overrides `label` with live state (e.g. "(now: ON)")
+  const char *(*dynamic_label)(ViewState &, char *buf, size_t n) = nullptr;
 };
+
+static const char *command_label(const Command &cmd, ViewState &vs, char *buf,
+                                 const size_t n) {
+  return cmd.dynamic_label ? cmd.dynamic_label(vs, buf, n) : cmd.label;
+}
 
 static void cmd_open_palette(ViewState &vs) {
   vs.command_state.show_palette = true;
@@ -62,6 +70,9 @@ static void cmd_show_licenses(ViewState &vs) {
 static void cmd_show_about(ViewState &vs) {
   vs.preferences_state.show_about_modal = true;
 }
+static void cmd_toggle_recording(ViewState &vs) {
+  vs.recorder.toggle_request = true;
+}
 
 // Entries are listed in CommandId order. A 0 chord means the command has no
 // global shortcut and is reachable only through the palette (or an existing
@@ -81,6 +92,8 @@ static const Command g_commands[eCommand_Count] = {
     {"Open command palette", ImGuiMod_Ctrl | ImGuiKey_P, cmd_open_palette},
     {"Show third-party licenses", 0, cmd_show_licenses},
     {"About Prock", 0, cmd_show_about},
+    {"Toggle recording", ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_R,
+     cmd_toggle_recording, recorder_toggle_label},
 };
 
 void command_dispatch(ViewState &vs) {
@@ -145,7 +158,9 @@ void command_palette_draw(ViewState &vs) {
   int matches[eCommand_Count];
   int match_count = 0;
   for (uint32_t i = 0; i < eCommand_Count; ++i) {
-    if (filter.IsActive() && !filter.PassFilter(g_commands[i].label)) {
+    char lbuf[96];
+    const char *label = command_label(g_commands[i], vs, lbuf, sizeof(lbuf));
+    if (filter.IsActive() && !filter.PassFilter(label)) {
       continue;
     }
     matches[match_count++] = static_cast<int>(i);
@@ -201,7 +216,9 @@ void command_palette_draw(ViewState &vs) {
       }
 
       const float text_y = row_min.y + text_off;
-      dl->AddText(ImVec2(row_min.x + pad_x, text_y), label_col, cmd.label);
+      char lbuf[96];
+      const char *label = command_label(cmd, vs, lbuf, sizeof(lbuf));
+      dl->AddText(ImVec2(row_min.x + pad_x, text_y), label_col, label);
       if (cmd.binding != 0) {
         const char *key = ImGui::GetKeyChordName(cmd.binding);
         const float key_w = ImGui::CalcTextSize(key).x;

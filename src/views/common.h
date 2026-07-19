@@ -210,6 +210,49 @@ inline void clipboard_copy_row(Notifications &notifications, const char *text) {
   notify_info(notifications, "Copied row");
 }
 
+// Backing data for a "Copy path" toast button; lives in the notifications arena
+// (which outlives the toast) so the click handler can still read it.
+struct CopyPathAction {
+  Notifications *notifications;
+  String text;
+};
+
+inline void copy_path_action_fn(const void *user_data) {
+  const auto *action = static_cast<const CopyPathAction *>(user_data);
+  clipboard_copy_cell(*action->notifications, action->text);
+}
+
+// Toast with a "Copy path" button that copies `path` to the clipboard on click.
+// The message is the usual printf fmt/args (typically naming `path`).
+inline void vnotify_copy_path(Notifications &notifications,
+                              const NotificationSeverity severity,
+                              const char *path, const char *fmt, va_list args) {
+  CopyPathAction *action = notifications.arena.alloc<CopyPathAction>();
+  action->notifications = &notifications;
+  action->text = String::sprintf(notifications.arena, "%s", path);
+  notifications_vpush_action(notifications, severity, "Copy path",
+                             copy_path_action_fn, action, fmt, args);
+}
+
+inline void notify_info_copy_path(Notifications &notifications,
+                                  const char *path, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vnotify_copy_path(notifications, eNotificationSeverity_Info, path, fmt, args);
+  va_end(args);
+}
+
+// Error variant: for a failure that still left a usable file on disk (e.g. a
+// recording that stopped mid-write, keeping the records written so far).
+inline void notify_error_copy_path(Notifications &notifications,
+                                   const char *path, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vnotify_copy_path(notifications, eNotificationSeverity_Error, path, fmt,
+                    args);
+  va_end(args);
+}
+
 // Menu label like: Copy "esbuild". Long values are elided; the ### suffix
 // keeps the item ID stable regardless of the value.
 inline String copy_cell_menu_label(BumpArena &arena, const String &cell) {

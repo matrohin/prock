@@ -33,6 +33,8 @@ void sock_notify_data_ready(Sync &sync) {
 #include "actions/dump_writer.cpp"
 #include "actions/on_demand_actions.cpp"
 #include "base/base.cpp"
+#include "paths.cpp"
+#include "playback/recorder.cpp"
 #include "readers/environ_reader.cpp"
 #include "readers/font_list_reader.cpp"
 #include "readers/library_reader.cpp"
@@ -46,6 +48,7 @@ void sock_notify_data_ready(Sync &sync) {
 #include "readers/sock_diag.cpp"
 #include "readers/socket_reader.cpp"
 #include "readers/username.cpp"
+#include "state/serialize.cpp"
 #include "state/state.cpp"
 #include "style_control.cpp"
 #include "tracy/Tracy.hpp"
@@ -160,6 +163,12 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     if (len < sizeof(view_state->preferences_state.dump_dir)) {
       memcpy(view_state->preferences_state.dump_dir, path, len + 1);
     }
+  } else if (strncmp(line, "RecordingsDir=", 14) == 0) {
+    const char *path = line + 14;
+    const uint32_t len = static_cast<uint32_t>(strlen(path));
+    if (len < sizeof(view_state->preferences_state.recordings_dir)) {
+      memcpy(view_state->preferences_state.recordings_dir, path, len + 1);
+    }
   }
 }
 
@@ -198,6 +207,10 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   }
   if (view_state->preferences_state.dump_dir[0] != '\0') {
     buf->appendf("DumpDir=%s\n", view_state->preferences_state.dump_dir);
+  }
+  if (view_state->preferences_state.recordings_dir[0] != '\0') {
+    buf->appendf("RecordingsDir=%s\n",
+                 view_state->preferences_state.recordings_dir);
   }
   buf->append("\n");
 
@@ -239,8 +252,8 @@ static bool state_init(State &state) {
 }
 
 static void state_update(FrameContext &frame_ctx, State &state,
-                         ViewState &view_state,
-                         const UpdateSnapshot &snapshot) {
+                         ViewState &view_state, UpdateSnapshot &snapshot,
+                         Sync &sync) {
   BumpArena old_arena = state.snapshot_arena;
 
   state.snapshot_arena = snapshot.owner_arena;
@@ -249,6 +262,7 @@ static void state_update(FrameContext &frame_ctx, State &state,
   state.update_system_time = snapshot.system_time;
 
   entry_views_update(frame_ctx, view_state, state);
+  recorder_update(view_state, snapshot, sync);
 
   // Save the old arena to continue to show it in all the tables:
   const bool paused = !view_state.preferences_state.auto_follow;
@@ -268,7 +282,7 @@ static bool update(FrameContext &frame_ctx, State &state, ViewState &view_state,
   UpdateSnapshot snapshot = {};
   bool updated = false;
   while (sync.update_queue.pop(snapshot)) {
-    state_update(frame_ctx, state, view_state, snapshot);
+    state_update(frame_ctx, state, view_state, snapshot, sync);
     updated = true;
   }
   return updated;
@@ -404,6 +418,7 @@ Stacked=0
 )";
 
 [[maybe_unused]] constexpr const char *MAIN_FRAME = "main_frame";
+constexpr const char *USAGE = "Usage: prock [--replay <file.prck>]\n";
 
 int main(int, char **) {
   glfwSetErrorCallback(glfw_error_callback);
@@ -506,6 +521,10 @@ int main(int, char **) {
     dump_writer_default_dir(view_state.preferences_state.dump_dir,
                             sizeof(view_state.preferences_state.dump_dir));
   }
+  if (view_state.preferences_state.recordings_dir[0] == '\0') {
+    recorder_default_dir(view_state.preferences_state.recordings_dir,
+                         sizeof(view_state.preferences_state.recordings_dir));
+  }
 
   style_control_init(view_state.preferences_state.theme, main_scale,
                      view_state.preferences_state.target_fps);
@@ -555,6 +574,11 @@ int main(int, char **) {
     on_demand_actions_loop(sync);
   }};
 
+  std::thread recorder_thread{[&sync] {
+    pthread_setname_np(pthread_self(), "recorder");
+    recorder_loop(sync);
+  }};
+
   while (!glfwWindowShouldClose(window)) {
     FrameMark;
 
@@ -598,6 +622,14 @@ int main(int, char **) {
                                view_state.preferences_state.mono_font_path);
     }
 
+    // Recording start/stop is requested from the menu/palette (draw phase) and
+    // performed here where State/Sync are mutable; responses become toasts.
+    if (view_state.recorder.toggle_request) {
+      view_state.recorder.toggle_request = false;
+      recorder_toggle(view_state, state, sync);
+    }
+    recorder_drain_responses(view_state, sync);
+
     draw(frame_ctx, window, io, state, view_state);
     frame_ctx.frame_arena.destroy();
 
@@ -626,9 +658,11 @@ int main(int, char **) {
   sync.quit_cv.notify_one();
   sync.on_demand_reader.request_read_cv.notify_one();
   sync.on_demand_actions.request_cv.notify_one();
+  sync.recorder.request_cv.notify_one();
   gathering_thread.join();
   proc_reader_thread.join();
   actions_thread.join();
+  recorder_thread.join();
 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();

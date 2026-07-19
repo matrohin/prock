@@ -581,3 +581,83 @@ TEST_CASE("reading past a truncated stream fails gracefully") {
   serialize_record_header(&r, &rh);
   CHECK(r.failed); // hit EOF, no crash
 }
+
+TEST_CASE("SerializeBuffer sink produces a readable recording") {
+  // Exercises the exact byte path the recorder uses: header + system preamble
+  // then N snapshot records, all through the in-memory SerializeBuffer sink.
+  // The bytes are then read back through a FILE* (as a real .prck file would
+  // be), proving the sink is byte-for-byte equivalent to the file writer and
+  // that buffer growth + the record-length back-patch (write_at) are correct.
+  BumpArena arena = BumpArena::create();
+  InternTable intern = InternTable::create(&arena);
+
+  const SystemInfo sys_in = {100, 4096, 1700000000};
+
+  SerializeBuffer buffer = {};
+  SerializeControl w = {};
+  w.out_buffer = &buffer;
+  w.is_writing = true;
+  serialize_header(&w);
+  SystemInfo sys_copy = sys_in;
+  serialize(&w, &sys_copy);
+
+  constexpr int N = 64; // enough records to grow the buffer past its initial cap
+  UpdateSnapshot snaps[N];
+  for (int i = 0; i < N; ++i) {
+    snaps[i] = make_snapshot(static_cast<uint64_t>(i) * 10);
+    RecordHeader wh = {};
+    wh.record_type = eSerRecordType_UpdateSnapshot;
+    wh.at = &snaps[i].at;
+    serialize_record_header(&w, &wh);
+    serialize(&w, &snaps[i]);
+    serialize_record_footer(&w, &wh);
+  }
+  REQUIRE_FALSE(w.failed);
+  REQUIRE(buffer.size > 4096); // grew past the initial capacity
+
+  // Read the produced bytes back through a FILE*, exactly like a .prck file.
+  FILE *file = fmemopen(buffer.data, buffer.size, "rb");
+  REQUIRE(file != nullptr);
+  SerializeControl r = {};
+  r.arena = &arena;
+  r.intern_table = &intern;
+  r.file = file;
+  r.is_writing = false;
+
+  serialize_header(&r);
+  REQUIRE_FALSE(r.failed);
+  CHECK(r.data_version == eSerVer_Latest);
+
+  SystemInfo sys_out = {};
+  serialize(&r, &sys_out);
+  CHECK(sys_out.ticks_in_second == sys_in.ticks_in_second);
+  CHECK(sys_out.mem_page_size == sys_in.mem_page_size);
+  CHECK(sys_out.boot_time_epoch_sec == sys_in.boot_time_epoch_sec);
+
+  UpdateSnapshot outs[N] = {};
+  int count = 0;
+  while (count < N) {
+    RecordHeader rh = {};
+    rh.at = &outs[count].at;
+    serialize_record_header(&r, &rh);
+    if (r.failed) break;
+    serialize(&r, &outs[count]);
+    serialize_record_footer(&r, &rh);
+    if (r.failed) break;
+    ++count;
+  }
+  REQUIRE(count == N);
+  for (int i = 0; i < N; ++i) {
+    check_snapshot_eq(snaps[i], outs[i]);
+    CHECK(outs[i].at.at_ns == snaps[i].at.at_ns);
+  }
+
+  fclose(file);
+  buffer.destroy();
+  for (int i = 0; i < N; ++i) {
+    outs[i].owner_arena.destroy();
+    snaps[i].owner_arena.destroy();
+  }
+  intern.destroy();
+  arena.destroy();
+}

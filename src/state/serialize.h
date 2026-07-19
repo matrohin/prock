@@ -19,14 +19,61 @@ enum SerRecordType : uint32_t {
   eSerRecordType_Invalid = 1
 };
 
+// Contiguous, page-mapped growth buffer used as an in-memory serialization sink
+// (see SerializeControl::out_buffer). Backed directly by vm_alloc/vm_free: an
+// arena is pointless here since its abandoned-on-grow slabs and 256KB
+// granularity would waste memory per buffer. Grows by mapping a bigger block
+// and copying; destroy() unmaps it. Handed to the recorder thread by value,
+// which destroys it after writing.
+struct SerializeBuffer {
+  uint8_t *data;
+  uint32_t size;
+  uint32_t capacity;
+
+  void reserve(const uint32_t needed) {
+    if (needed <= capacity) return;
+    // The first allocation honors an explicit reserve() hint as-is, so a caller
+    // can size the buffer to ~1.2x the previous record and (almost) never grow;
+    // any later overflow doubles to stay amortized. 4096 floors tiny buffers.
+    uint32_t new_capacity = capacity ? capacity * 2 : needed;
+    if (new_capacity < needed) new_capacity = needed;
+    if (new_capacity < 4096) new_capacity = 4096;
+    uint8_t *new_data = static_cast<uint8_t *>(vm_alloc(new_capacity));
+    if (size > 0) memcpy(new_data, data, size);
+    vm_free(data, capacity); // no-op when data is null
+    data = new_data;
+    capacity = new_capacity;
+  }
+
+  void append(const void *src, const uint32_t n) {
+    reserve(size + n);
+    memcpy(data + size, src, n);
+    size += n;
+  }
+
+  // Overwrite already-written bytes (record-length back-patch). offset + n must
+  // lie within the written region.
+  void write_at(const uint32_t offset, const void *src, const uint32_t n) {
+    memcpy(data + offset, src, n);
+  }
+
+  void destroy() {
+    vm_free(data, capacity);
+    *this = {};
+  }
+};
+
 struct SerializeControl {
   BumpArena *arena;
   InternTable *intern_table;
 
   FILE *file;
+  SerializeBuffer *out_buffer;
+
   uint32_t data_version;
   bool is_writing;
 
+  // TODO: At some point we should have a readable error here:
   bool failed;
 };
 

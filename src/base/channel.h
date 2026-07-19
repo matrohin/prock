@@ -34,4 +34,6 @@ template <class T, uint32_t N> struct Channel {
     out = data[loaded_head];
     return true;
   }
+
+  bool has_data() const { return head.load() != tail.load(); }
 };

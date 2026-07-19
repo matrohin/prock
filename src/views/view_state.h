@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/const_string.h"
+#include "playback/recorder.h"
 #include "views/brief_table.h"
 #include "views/command_palette.h"
 #include "views/common.h"
@@ -22,6 +23,7 @@
 #include "views/system_mem_chart.h"
 #include "views/system_net_chart.h"
 #include "views/threads_viewer.h"
+#include "views/ui.h"
 
 #include "imgui_internal.h"
 
@@ -93,4 +95,5 @@ struct ViewState {
   PortsViewerState ports_viewer_state;
   PropertiesViewerState properties_viewer_state;
   Notifications notifications;
+  RecorderViewState recorder;
 };

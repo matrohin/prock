@@ -17,6 +17,7 @@ enum CommandId {
   eCommand_OpenPalette,
   eCommand_ShowLicenses,
   eCommand_ShowAbout,
+  eCommand_ToggleRecording,
   eCommand_Count,
 };
 

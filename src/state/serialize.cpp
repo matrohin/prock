@@ -4,13 +4,39 @@
 
 static constexpr uint32_t MAGIC_HEADER = 0x7072636b; // PRCK
 
+static long ser_tell(SerializeControl *control) {
+  return control->out_buffer ? static_cast<long>(control->out_buffer->size)
+                             : ftell(control->file);
+}
+
+static void ser_write_bytes(SerializeControl *control, const void *src,
+                            const size_t n) {
+  if (control->out_buffer) {
+    control->out_buffer->append(src, static_cast<uint32_t>(n));
+  } else if (fwrite(src, n, 1, control->file) != 1) {
+    control->failed = true;
+  }
+}
+
+static void ser_write_at(SerializeControl *control, const long pos,
+                         const void *src, const size_t n) {
+  if (control->out_buffer) {
+    control->out_buffer->write_at(static_cast<uint32_t>(pos), src,
+                                  static_cast<uint32_t>(n));
+    return;
+  }
+  const long end = ftell(control->file);
+  fseek(control->file, pos, SEEK_SET);
+  if (fwrite(src, n, 1, control->file) != 1) control->failed = true;
+  fseek(control->file, end, SEEK_SET);
+}
+
 template <class T>
 static void serialize_primitive(SerializeControl *control, T *datum) {
   CHECK_FAILURE();
 
   if (control->is_writing) {
-    const size_t written = fwrite(datum, sizeof(T), 1, control->file);
-    VALIDATE(written == 1);
+    ser_write_bytes(control, datum, sizeof(T));
   } else {
     const size_t read = fread(datum, sizeof(T), 1, control->file);
     VALIDATE(read == 1);
@@ -59,8 +85,7 @@ void serialize_with_limit(SerializeControl *control, const char **datum,
   VALIDATE(len < limit);
 
   if (control->is_writing) {
-    const size_t written = fwrite(*datum, len, 1, control->file);
-    VALIDATE(written == 1);
+    ser_write_bytes(control, *datum, len);
   } else {
     char *buf = control->arena->alloc_string(len);
     const size_t read = fread(buf, len, 1, control->file);
@@ -175,22 +200,20 @@ void serialize_record_header(SerializeControl *control, RecordHeader *header) {
   serialize(control, header->at);
   CHECK_FAILURE();
 
-  header->len_pos = ftell(control->file);
+  header->len_pos = ser_tell(control);
   serialize(control, &header->len);
 }
 
 void serialize_record_footer(SerializeControl *control, RecordHeader *header) {
   CHECK_FAILURE();
 
-  const long end = ftell(control->file);
+  const long end = ser_tell(control);
   const long body_len =
       end - header->len_pos - static_cast<long>(sizeof(header->len));
 
   if (control->is_writing) {
     header->len = static_cast<uint32_t>(body_len);
-    fseek(control->file, header->len_pos, SEEK_SET);
-    serialize(control, &header->len);
-    fseek(control->file, end, SEEK_SET);
+    ser_write_at(control, header->len_pos, &header->len, sizeof(header->len));
   } else {
     VALIDATE(header->len == static_cast<uint32_t>(body_len));
   }

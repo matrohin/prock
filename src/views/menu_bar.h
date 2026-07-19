@@ -11,7 +11,9 @@ struct PreferencesState {
   int window_opacity_pct = 100;
   char font_path[512] = {};      // Custom UI TTF path, empty = default
   char mono_font_path[512] = {}; // Custom monospace TTF path, empty = default
-  char dump_dir[512] = {};       // Core dump folder, empty = ~/prock-dumps
+  char dump_dir[512] = {};       // Core dump folder, empty = ~/prock/dumps
+  char recordings_dir[512] =
+      {}; // Recordings folder, empty = ~/prock/recordings
   Theme theme = Theme::Light;
   bool show_preferences_modal = false;
   bool show_about_modal = false;

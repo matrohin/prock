@@ -1,5 +1,6 @@
 #include "actions/dump_writer.h"
 
+#include "paths.h"
 #include "tracy/Tracy.hpp"
 
 #include <cerrno>
@@ -18,21 +19,7 @@
 extern char **environ;
 
 void dump_writer_default_dir(char *out, const uint32_t size) {
-  const char *home = getenv("HOME");
-  snprintf(out, size, "%s/prock-dumps", home ? home : "/tmp");
-}
-
-// Ensure the directory holding out_path exists. Best-effort; failures surface
-// later when gcore cannot write its file.
-static void ensure_parent_dir(const char *out_path) {
-  char dir[PATH_MAX];
-  snprintf(dir, sizeof(dir), "%s", out_path);
-  char *slash = strrchr(dir, '/');
-  if (!slash || slash == dir) {
-    return;
-  }
-  *slash = '\0';
-  mkdir(dir, 0700); // ignore EEXIST and other errors
+  return paths_default_out_dir(out, size, "dumps");
 }
 
 DumpResponse dump_writer_write(const DumpRequest &request,
@@ -45,7 +32,7 @@ DumpResponse dump_writer_write(const DumpRequest &request,
   snprintf(response.out_path, sizeof(response.out_path), "%s",
            request.out_path);
 
-  ensure_parent_dir(request.out_path);
+  paths_ensure_parent_dir(request.out_path);
 
   char pid_str[16];
   snprintf(pid_str, sizeof(pid_str), "%d", request.pid);

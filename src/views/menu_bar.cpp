@@ -246,6 +246,16 @@ static void draw_preferences_modal(PreferencesState &prefs) {
                              prefs.dump_dir, sizeof(prefs.dump_dir));
 
     ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::SeparatorText("Recordings");
+    setting_label("Folder");
+    ImGui::SetNextItemWidth(UI_ELEMENT_WIDTH * scale);
+    ImGui::InputTextWithHint(
+        "##RecordingsDir", "Folder for playback recordings",
+        prefs.recordings_dir, sizeof(prefs.recordings_dir));
+
+    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 
@@ -439,6 +449,12 @@ void menu_bar_draw(ViewState &view_state) {
     if (ImGui::BeginMenu("Edit")) {
       if (ImGui::MenuItem("Command Palette...", "Ctrl+P")) {
         view_state.command_state.show_palette = true;
+      }
+      char rec_label[64];
+      if (ImGui::MenuItem(
+              recorder_toggle_label(view_state, rec_label, sizeof(rec_label)),
+              "Ctrl+Shift+R")) {
+        view_state.recorder.toggle_request = true;
       }
       if (ImGui::MenuItem("Preferences...")) {
         view_state.preferences_state.show_preferences_modal = true;

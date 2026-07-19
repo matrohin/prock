@@ -2,6 +2,7 @@
 
 #include "actions/on_demand_actions.h"
 #include "base/channel.h"
+#include "playback/recorder.h"
 #include "readers/on_demand_reader.h"
 #include "readers/process_stat.h"
 #include "state/snapshot.h"
@@ -23,6 +24,7 @@ struct Sync {
 
   OnDemandReaderSync on_demand_reader;
   OnDemandActionsSync on_demand_actions;
+  RecorderSync recorder;
 };
 
 void sock_notify_data_ready(Sync &sync);
