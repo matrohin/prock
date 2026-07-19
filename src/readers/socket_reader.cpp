@@ -74,6 +74,7 @@ SocketResponse socket_reader_read(BumpArena &temp_arena,
       Array<SocketEntry>::create(response.owner_arena, inodes.size);
   uint32_t j = 0;
   for (const SocketEntry &socket : all_sockets) {
+    if (j >= response.sockets.size) break;
     if (std::binary_search(inodes.data, inodes.data + inodes.size,
                            socket.inode)) {
       response.sockets.data[j++] = socket;

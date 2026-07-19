@@ -24,8 +24,12 @@ static void filename_to_name(const char *path, char *out, const size_t out_sz) {
   out[len] = '\0';
 }
 
+static constexpr int SCAN_MAX_DEPTH = 8;
+
 static void scan_dir(const char *dir_path, BumpArena &temp_arena,
-                     GrowingArray<FontEntry> &entries) {
+                     GrowingArray<FontEntry> &entries, const int depth = 0) {
+  if (depth > SCAN_MAX_DEPTH) return;
+
   DIR *dir = opendir(dir_path);
   if (!dir) return;
 
@@ -53,7 +57,7 @@ static void scan_dir(const char *dir_path, BumpArena &temp_arena,
     }
 
     if (d_type == DT_DIR) {
-      scan_dir(sub_path, temp_arena, entries);
+      scan_dir(sub_path, temp_arena, entries, depth + 1);
     } else if (d_type == DT_REG) {
       const size_t name_len = strlen(ent->d_name);
       if (name_len < 5) continue;

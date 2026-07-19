@@ -21,12 +21,6 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
   GrowingArray<SocketEntry> result = {};
   int first_errno = 0;
 
-  const int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_SOCK_DIAG);
-  if (fd < 0) {
-    out_errno = errno;
-    return {};
-  }
-
   // Query for TCP and UDP sockets (AF_INET and AF_INET6)
   struct ProtocolQuery {
     int family;
@@ -41,6 +35,12 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
   };
 
   for (const auto &q : queries) {
+    const int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_SOCK_DIAG);
+    if (fd < 0) {
+      if (first_errno == 0) first_errno = errno;
+      continue;
+    }
+
     struct {
       nlmsghdr nlh;
       inet_diag_req_v2 req;
@@ -59,6 +59,7 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
 
     if (send(fd, &request, sizeof(request), 0) < 0) {
       if (first_errno == 0) first_errno = errno;
+      close(fd);
       continue;
     }
 
@@ -66,6 +67,7 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
     char buf[16384];
     while (!done) {
       ssize_t len = recv(fd, buf, sizeof(buf), 0);
+      if (len < 0 && errno == EINTR) continue;
       if (len <= 0) {
         if (len < 0 && first_errno == 0) first_errno = errno;
         break;
@@ -88,6 +90,10 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
           done = true;
           break;
         }
+
+        // Short of a full inet_diag_msg the body is not there to read, and the
+        // rta_len below would underflow into a walk past the buffer.
+        if (h->nlmsg_len < NLMSG_LENGTH(sizeof(inet_diag_msg))) continue;
 
         inet_diag_msg *diag = static_cast<inet_diag_msg *>(NLMSG_DATA(h));
         const unsigned long inode = diag->idiag_inode;
@@ -133,9 +139,9 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
       }
 #pragma GCC diagnostic pop
     }
-  }
 
-  close(fd);
+    close(fd);
+  }
 
   if (result.size() == 0 && first_errno != 0) out_errno = first_errno;
 

@@ -24,7 +24,14 @@ void paths_ensure_parent_dir(const char *out_path) {
     return;
   }
   *slash = '\0';
-  mkdir(dir, 0700); // ignore EEXIST and other errors
+
+  for (char *p = dir + 1; *p; ++p) {
+    if (*p != '/') continue;
+    *p = '\0';
+    mkdir(dir, 0700); // ignore EEXIST and other errors
+    *p = '/';
+  }
+  mkdir(dir, 0700);
 }
 
 void paths_format_time_suffix(char *out, const uint32_t size) {

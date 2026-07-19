@@ -131,7 +131,7 @@ template <class T>
 void serialize_with_limit(SerializeControl *control, Array<T> *datum,
                           const uint32_t limit) {
   ADD_TO(eSerVer_Init, &datum->size);
-  VALIDATE(datum->size < limit);
+  VALIDATE(datum->size <= limit);
 
   if (!control->is_writing) {
     *datum = Array<T>::create(*control->arena, datum->size);

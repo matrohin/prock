@@ -403,11 +403,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
         }
       }
       // Kill children first, parent last: reverse the discovery order.
-      for (int lo = 0, hi = tree_count - 1; lo < hi; ++lo, --hi) {
-        const Pid tmp = tree_pids[lo];
-        tree_pids[lo] = tree_pids[hi];
-        tree_pids[hi] = tmp;
-      }
+      std::reverse(tree_pids, tree_pids + tree_count);
       direct_kill_many(sync, view_state.notifications, tree_pids, tree_count,
                        SIGKILL, "kill");
     }

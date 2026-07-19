@@ -98,7 +98,7 @@ struct SlabCache {
   }
 
   ArenaSlab *pop() {
-    uintptr_t old_head = head.load(std::memory_order_relaxed);
+    uintptr_t old_head = head.load(std::memory_order_acquire);
     ArenaSlab *node;
     uintptr_t new_head;
     do {
@@ -107,7 +107,7 @@ struct SlabCache {
       new_head = pack(node->prev, (old_head & TAG_MASK) + 1);
     } while (!head.compare_exchange_weak(old_head, new_head,
                                          std::memory_order_acquire,
-                                         std::memory_order_relaxed));
+                                         std::memory_order_acquire));
     return node;
   }
 };
