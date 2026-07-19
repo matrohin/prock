@@ -10,6 +10,7 @@
 #include "views/ports_viewer.h"
 #include "views/process_host.h"
 #include "views/properties_viewer.h"
+#include "views/replay_controls.h"
 #include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/system_cpu_chart.h"
@@ -40,6 +41,20 @@ void entry_views_update(FrameContext &ctx, ViewState &view_state,
   if (!paused)
     threads_viewer_update(ctx, view_state.threads_viewer_state,
                           *view_state.sync, state);
+}
+
+void entry_views_reset_history(ViewState &view_state) {
+  common_charts_clear(view_state.cpu_chart_state.charts);
+  common_charts_clear(view_state.mem_chart_state.charts);
+  common_charts_clear(view_state.io_chart_state.charts);
+  view_state.system_cpu_chart_state.track = {};
+  view_state.system_mem_chart_state.track = {};
+  view_state.system_io_chart_state.track = {};
+  view_state.system_net_chart_state.track = {};
+  // Drop the process rows so the restarted pass recomputes new/old highlighting
+  // from scratch instead of measuring ages against the previous pass's
+  // timestamps (which would flag every row as new and never expire dead ones).
+  view_state.brief_table_state.lines = {};
 }
 
 void entry_views_on_demand_update(ViewState &view_state) {
@@ -81,8 +96,10 @@ void entry_views_draw(FrameContext &ctx, ViewState &view_state,
   smaps_viewer_draw(ctx, view_state);
   ports_viewer_draw(ctx, view_state);
   brief_table_draw(ctx, view_state, state);
+  replay_overlay_draw(view_state);
   notifications_draw(ctx, view_state.notifications);
 
   command_dispatch(view_state);
   command_palette_draw(view_state);
+  replay_open_dialog_draw(view_state);
 }

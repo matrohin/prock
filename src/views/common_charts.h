@@ -60,6 +60,14 @@ constexpr const char *TITLE_AVAILABLE = "Available";
 constexpr const char *TITLE_RECV = "Recv";
 constexpr const char *TITLE_SEND = "Send";
 
+// Drop every per-process chart's accumulated history (keeps the windows open;
+// their ring buffers just restart empty). Used when replay seeks back to the
+// start so the old pass's points don't linger.
+template <class T> void common_charts_clear(GrowingArray<T> &charts) {
+  for (T &chart : charts)
+    chart.track = {};
+}
+
 template <class T, class F>
 void common_charts_update(GrowingArray<T> &charts, const State &state, F f) {
   const StateSnapshot &new_snapshot = state.snapshot;

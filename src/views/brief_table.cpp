@@ -1,5 +1,6 @@
 #include "brief_table.h"
 
+#include "actions/direct.h"
 #include "views/common.h"
 #include "views/cpu_chart.h"
 #include "views/environ_viewer.h"
@@ -28,9 +29,7 @@
 #include <chrono>
 #include <cstring>
 #include <ctime>
-#include <sched.h>
 #include <signal.h>
-#include <sys/resource.h>
 #include <unistd.h>
 
 // Highlight durations (must match brief_table_logic.cpp)
@@ -176,55 +175,6 @@ static void copy_process_row(Notifications &notifications, BumpArena &arena,
       derived.mem_virtual_bytes / 1024.0, derived.io_read_kb_per_sec,
       derived.io_write_kb_per_sec, line.nice, line.cmdline);
   clipboard_copy_row(notifications, str.data);
-}
-
-static bool get_process_affinity(const Pid pid, uint64_t &mask,
-                                 const int num_cpus) {
-  cpu_set_t cpu_set;
-  CPU_ZERO(&cpu_set);
-  if (sched_getaffinity(pid, sizeof(cpu_set), &cpu_set) != 0) return false;
-  mask = 0;
-  for (int i = 0; i < num_cpus && i < 64; ++i) {
-    if (CPU_ISSET(i, &cpu_set)) mask |= 1ULL << i;
-  }
-  return true;
-}
-
-static bool set_process_affinity(Notifications &notifications, const Pid pid,
-                                 const uint64_t mask) {
-  if (mask == 0) {
-    notify_error(notifications, 0, "At least one CPU must be selected");
-    return false;
-  }
-  cpu_set_t cpu_set;
-  CPU_ZERO(&cpu_set);
-  for (int i = 0; i < 64; ++i) {
-    if (mask & (1ULL << i)) CPU_SET(i, &cpu_set);
-  }
-  if (sched_setaffinity(pid, sizeof(cpu_set), &cpu_set) != 0) {
-    const int err = errno;
-    notify_error(notifications, err, "Failed to set affinity for PID %d: %s",
-                 pid, strerror(err));
-    return false;
-  }
-  return true;
-}
-
-static int get_process_nice(const Pid pid) {
-  errno = 0;
-  const int nice = getpriority(PRIO_PROCESS, pid);
-  return nice == -1 && errno != 0 ? 0 : nice;
-}
-
-static bool set_process_nice(Notifications &notifications, const Pid pid,
-                             const int nice_val) {
-  if (setpriority(PRIO_PROCESS, pid, nice_val) != 0) {
-    const int err = errno;
-    notify_error(notifications, err, "Failed to set priority for PID %d: %s",
-                 pid, strerror(err));
-    return false;
-  }
-  return true;
 }
 
 static void copy_all_processes(Notifications &notifications, BumpArena &arena,
@@ -403,50 +353,38 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                            line.name.data);
     }
     ImGui::Separator();
+    Sync &sync = *view_state.sync;
+    const bool replay = sync.replay_mode;
+    ImGui::BeginDisabled(replay);
     if (ImGui::MenuItemEx("Set Affinity...", ICON_MD_SETTINGS)) {
       my_state.control_edit_pid = pid;
-      get_process_affinity(pid, my_state.affinity_edit_mask, num_cpus);
+      direct_get_affinity(pid, my_state.affinity_edit_mask, num_cpus);
       my_state.show_affinity_popup = true;
     }
     if (ImGui::MenuItem("Set Priority...")) {
       my_state.control_edit_pid = pid;
-      my_state.priority_edit_nice = get_process_nice(pid);
+      my_state.priority_edit_nice = line.nice;
       my_state.show_priority_popup = true;
     }
     if (ImGui::MenuItem("Suspend Process")) {
-      if (kill(pid, SIGSTOP) != 0) {
-        const int err = errno;
-        notify_error(view_state.notifications, err, "Failed to suspend %d: %s",
-                     pid, strerror(err));
-      }
+      direct_kill(sync, view_state.notifications, pid, SIGSTOP, "suspend");
     }
     if (ImGui::MenuItem("Resume Process")) {
-      if (kill(pid, SIGCONT) != 0) {
-        const int err = errno;
-        notify_error(view_state.notifications, err, "Failed to resume %d: %s",
-                     pid, strerror(err));
-      }
+      direct_kill(sync, view_state.notifications, pid, SIGCONT, "resume");
     }
     if (ImGui::MenuItem("Create Dump File")) {
       send_dump_request(view_state, pid, line.name.data);
       ImGui::CloseCurrentPopup();
     }
     ImGui::Separator();
-    if (ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del") ||
-        ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-      if (kill(pid, SIGTERM) != 0) {
-        const int err = errno;
-        notify_error(view_state.notifications, err, "Failed to kill %d: %s",
-                     pid, strerror(err));
-      }
+    const bool kill_clicked =
+        ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del");
+    if (kill_clicked || (!replay && ImGui::IsKeyPressed(ImGuiKey_Delete))) {
+      direct_kill(sync, view_state.notifications, pid, SIGTERM, "kill");
       ImGui::CloseCurrentPopup();
     }
     if (ImGui::MenuItem("Force Kill")) {
-      if (kill(pid, SIGKILL) != 0) {
-        const int err = errno;
-        notify_error(view_state.notifications, err, "Failed to kill %d: %s",
-                     pid, strerror(err));
-      }
+      direct_kill(sync, view_state.notifications, pid, SIGKILL, "kill");
     }
     if (ImGui::MenuItem("Kill Process Tree")) {
       // Collect all descendant PIDs by walking ppid relationships
@@ -464,15 +402,16 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
           }
         }
       }
-      // Kill in reverse order (children first, parent last).
-      for (int ti = tree_count - 1; ti >= 0; --ti) {
-        if (kill(tree_pids[ti], SIGKILL) != 0) {
-          const int err = errno;
-          notify_error(view_state.notifications, err, "Failed to kill %d: %s",
-                       tree_pids[ti], strerror(err));
-        }
+      // Kill children first, parent last: reverse the discovery order.
+      for (int lo = 0, hi = tree_count - 1; lo < hi; ++lo, --hi) {
+        const Pid tmp = tree_pids[lo];
+        tree_pids[lo] = tree_pids[hi];
+        tree_pids[hi] = tmp;
       }
+      direct_kill_many(sync, view_state.notifications, tree_pids, tree_count,
+                       SIGKILL, "kill");
     }
+    ImGui::EndDisabled();
     ImGui::EndPopup();
   }
 }
@@ -595,7 +534,7 @@ static void data_columns_draw(const BriefTableLine &line, const int num_cpus,
 }
 
 static void affinity_popup_draw(FrameContext &ctx, BriefTableState &my_state,
-                                Notifications &notifications,
+                                Sync &sync, Notifications &notifications,
                                 const int num_cpus) {
   if (my_state.show_affinity_popup) {
     ImGui::OpenPopup(CPU_AFFINITY_TITLE);
@@ -633,8 +572,8 @@ static void affinity_popup_draw(FrameContext &ctx, BriefTableState &my_state,
     ImGui::Separator();
 
     if (ImGui::Button("Apply")) {
-      if (set_process_affinity(notifications, my_state.control_edit_pid,
-                               my_state.affinity_edit_mask)) {
+      if (direct_set_affinity(sync, notifications, my_state.control_edit_pid,
+                              my_state.affinity_edit_mask)) {
         ImGui::CloseCurrentPopup();
       }
     }
@@ -646,7 +585,7 @@ static void affinity_popup_draw(FrameContext &ctx, BriefTableState &my_state,
   }
 }
 
-static void priority_popup_draw(BriefTableState &my_state,
+static void priority_popup_draw(BriefTableState &my_state, Sync &sync,
                                 Notifications &notifications) {
   if (my_state.show_priority_popup) {
     ImGui::OpenPopup(PROCESS_PRIORITY_TITLE);
@@ -670,8 +609,8 @@ static void priority_popup_draw(BriefTableState &my_state,
     ImGui::Separator();
 
     if (ImGui::Button("Apply")) {
-      if (set_process_nice(notifications, my_state.control_edit_pid,
-                           my_state.priority_edit_nice)) {
+      if (direct_set_nice(sync, notifications, my_state.control_edit_pid,
+                          my_state.priority_edit_nice)) {
         ImGui::CloseCurrentPopup();
       }
     }
@@ -1088,19 +1027,17 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
       }
     }
 
-    // Del key to kill selected process
-    if (ImGui::Shortcut(ImGuiKey_Delete)) {
-      if (kill(my_state.selected_pid, SIGTERM) != 0) {
-        const int err = errno;
-        notify_error(view_state.notifications, err, "Failed to kill %d: %s",
-                     my_state.selected_pid, strerror(err));
-      }
+    // Del key to kill selected process (disabled while replaying)
+    if (!view_state.sync->replay_mode && ImGui::Shortcut(ImGuiKey_Delete)) {
+      direct_kill(*view_state.sync, view_state.notifications,
+                  my_state.selected_pid, SIGTERM, "kill");
     }
   }
 
   // Draw popups for affinity/priority controls
-  affinity_popup_draw(ctx, my_state, view_state.notifications, num_cpus);
-  priority_popup_draw(my_state, view_state.notifications);
+  affinity_popup_draw(ctx, my_state, *view_state.sync, view_state.notifications,
+                      num_cpus);
+  priority_popup_draw(my_state, *view_state.sync, view_state.notifications);
 
   ImGui::End();
 }

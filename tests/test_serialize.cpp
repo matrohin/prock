@@ -331,14 +331,21 @@ TEST_CASE("serialize string field round-trip") {
     CHECK(strcmp(out, "") == 0);
   }
 
-  SUBCASE("over limit fails") {
+  SUBCASE("over limit truncates") {
     SerFixture fix;
     REQUIRE(fix.file != nullptr);
 
-    const char *in = "abcdef"; // len 7 including the terminator
+    const char *in = "abcdef"; // 7 bytes with the terminator, past the limit
     auto w = fix.writer();
     serialize_with_limit(&w, &in, 4);
-    CHECK(w.failed);
+    CHECK_FALSE(w.failed);
+
+    const char *out = nullptr;
+    auto r = fix.reader();
+    serialize_with_limit(&r, &out, 4);
+    CHECK_FALSE(r.failed);
+    REQUIRE(out != nullptr);
+    CHECK(strcmp(out, "abc") == 0); // truncated to (limit - 1) chars + NUL
   }
 }
 
@@ -601,7 +608,8 @@ TEST_CASE("SerializeBuffer sink produces a readable recording") {
   SystemInfo sys_copy = sys_in;
   serialize(&w, &sys_copy);
 
-  constexpr int N = 64; // enough records to grow the buffer past its initial cap
+  constexpr int N =
+      64; // enough records to grow the buffer past its initial cap
   UpdateSnapshot snaps[N];
   for (int i = 0; i < N; ++i) {
     snaps[i] = make_snapshot(static_cast<uint64_t>(i) * 10);

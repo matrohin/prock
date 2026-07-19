@@ -1,5 +1,6 @@
 #include "ports_viewer.h"
 
+#include "actions/direct.h"
 #include "base/containers.h"
 #include "views/common.h"
 #include "views/icons.h"
@@ -75,18 +76,14 @@ void ports_viewer_update(PortsViewerState &state, Sync &sync) {
   }
 }
 
-static void kill_selected(const PortsViewerState &state,
+static void kill_selected(const PortsViewerState &state, Sync &sync,
                           Notifications &notifications, const int sig) {
   if (state.selected_index < 0 ||
       state.selected_index >= static_cast<int>(state.entries.size)) {
     return;
   }
   const Pid pid = state.entries.data[state.selected_index].pid;
-  if (kill(pid, sig) == 0) {
-    return;
-  }
-  const int err = errno;
-  notify_error(notifications, err, "Failed to kill %d: %s", pid, strerror(err));
+  direct_kill(sync, notifications, pid, sig, "kill");
 }
 
 static String port_cell_text(BumpArena &arena, const PortEntry &e,
@@ -297,12 +294,16 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
           copy_all_ports(view_state.notifications, ctx.frame_arena, state);
         }
         ImGui::Separator();
+        ImGui::BeginDisabled(view_state.sync->replay_mode);
         if (ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del")) {
-          kill_selected(state, view_state.notifications, SIGTERM);
+          kill_selected(state, *view_state.sync, view_state.notifications,
+                        SIGTERM);
         }
         if (ImGui::MenuItem("Force Kill")) {
-          kill_selected(state, view_state.notifications, SIGKILL);
+          kill_selected(state, *view_state.sync, view_state.notifications,
+                        SIGKILL);
         }
+        ImGui::EndDisabled();
         ImGui::EndPopup();
       }
 
@@ -329,8 +330,9 @@ void ports_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
   // Honor Delete only when the selected row is visible in the current
   // (possibly filtered) list, so a hidden selection can't be killed blindly.
-  if (selected_visible && ImGui::Shortcut(ImGuiKey_Delete)) {
-    kill_selected(state, view_state.notifications, SIGTERM);
+  if (selected_visible && !view_state.sync->replay_mode &&
+      ImGui::Shortcut(ImGuiKey_Delete)) {
+    kill_selected(state, *view_state.sync, view_state.notifications, SIGTERM);
   }
   if (selected_visible && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
     copy_port_row(view_state.notifications, ctx.frame_arena,

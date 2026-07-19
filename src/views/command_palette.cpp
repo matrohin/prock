@@ -2,7 +2,9 @@
 
 #include "constants.h"
 #include "style_control.h"
+#include "sync.h"
 #include "views/common.h"
+#include "views/replay_controls.h"
 #include "views/ui.h"
 #include "views/view_state.h"
 
@@ -12,6 +14,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cstdint>
+#include <cstdio>
 
 struct Command {
   const char *label;     // static label shown in the palette
@@ -30,48 +33,77 @@ static const char *command_label(const Command &cmd, ViewState &vs, char *buf,
 static void cmd_open_palette(ViewState &vs) {
   vs.command_state.show_palette = true;
 }
+
 static void cmd_toggle_auto_follow(ViewState &vs) {
+  if (vs.sync->replay_mode) {
+    replay_toggle_pause(*vs.sync);
+    return;
+  }
   vs.preferences_state.auto_follow = !vs.preferences_state.auto_follow;
 }
+
+static const char *auto_follow_label(ViewState &vs, char *buf, const size_t n) {
+  if (vs.sync->replay_mode) {
+    snprintf(buf, n, "%s replay",
+             vs.sync->playback.paused.load() ? "Resume" : "Pause");
+    return buf;
+  }
+  return "Toggle auto-follow";
+}
+
 static void cmd_toggle_auto_fit_y(ViewState &vs) {
   vs.preferences_state.y_auto_fit = !vs.preferences_state.y_auto_fit;
 }
+
 static void cmd_open_preferences(ViewState &vs) {
   vs.preferences_state.show_preferences_modal = true;
 }
+
 static void cmd_toggle_per_core_cpu(ViewState &vs) {
   vs.preferences_state.cpu_per_core = !vs.preferences_state.cpu_per_core;
   vs.system_cpu_chart_state.y_axis_fitted = 0;
   // bust the cache so that the new lines get consistent colors always
   ImPlot::BustColorCache();
 }
+
 static void cmd_toggle_stacked(ViewState &vs) {
   vs.system_cpu_chart_state.stacked = !vs.system_cpu_chart_state.stacked;
   vs.system_cpu_chart_state.y_axis_fitted = 0;
 }
+
 static void cmd_toggle_menu_on_alt(ViewState &vs) {
   vs.preferences_state.show_menu_on_alt =
       !vs.preferences_state.show_menu_on_alt;
 }
+
 static void apply_zoom(ViewState &vs, const int delta_pct) {
   PreferencesState &prefs = vs.preferences_state;
   prefs.zoom_scale_pct =
       std::clamp(prefs.zoom_scale_pct + delta_pct, ZOOM_MIN_PCT, ZOOM_MAX_PCT);
   style_control_rebuild(prefs.zoom_scale_pct, prefs.window_opacity_pct);
 }
+
 static void cmd_zoom_in(ViewState &vs) { apply_zoom(vs, ZOOM_STEP_PCT); }
 static void cmd_zoom_out(ViewState &vs) { apply_zoom(vs, -ZOOM_STEP_PCT); }
+
 static void cmd_focus_process_filter(ViewState &vs) {
   vs.brief_table_state.focus_filter_requested = true;
 }
+
 static void cmd_show_licenses(ViewState &vs) {
   vs.preferences_state.show_licenses_modal = true;
 }
+
 static void cmd_show_about(ViewState &vs) {
   vs.preferences_state.show_about_modal = true;
 }
+
 static void cmd_toggle_recording(ViewState &vs) {
   vs.recorder.toggle_request = true;
+}
+
+static void cmd_open_replay(ViewState &vs) {
+  vs.replay_state.show_open_dialog = true;
 }
 
 // Entries are listed in CommandId order. A 0 chord means the command has no
@@ -80,7 +112,8 @@ static void cmd_toggle_recording(ViewState &vs) {
 static const Command g_commands[eCommand_Count] = {
     {"Filter processes in the table",
      ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_F, cmd_focus_process_filter},
-    {"Toggle auto-follow", ImGuiKey_Space, cmd_toggle_auto_follow},
+    {"Toggle auto-follow", ImGuiKey_Space, cmd_toggle_auto_follow,
+     auto_follow_label},
     {"Toggle auto-fit Y axis", ImGuiMod_Shift | ImGuiKey_Space,
      cmd_toggle_auto_fit_y},
     {"Zoom in", ImGuiMod_Ctrl | ImGuiKey_Equal, cmd_zoom_in},
@@ -94,6 +127,7 @@ static const Command g_commands[eCommand_Count] = {
     {"About Prock", 0, cmd_show_about},
     {"Toggle recording", ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_R,
      cmd_toggle_recording, recorder_toggle_label},
+    {"Replay a recording...", 0, cmd_open_replay},
 };
 
 void command_dispatch(ViewState &vs) {

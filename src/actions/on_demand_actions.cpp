@@ -4,6 +4,7 @@
 
 #include "tracy/Tracy.hpp"
 
+#include <cerrno>
 #include <mutex>
 
 void on_demand_actions_loop(Sync &sync) {
@@ -22,7 +23,13 @@ void on_demand_actions_loop(Sync &sync) {
     while (my_sync.dump_request_queue.pop(dump_request)) {
       ZoneScopedN("dump_request");
       ZoneValue(dump_request.pid);
-      DumpResponse response = dump_writer_write(dump_request, sync.quit);
+      DumpResponse response = {};
+      if (sync.replay_mode) {
+        response.pid = dump_request.pid;
+        response.error_code = ENOTSUP;
+      } else {
+        response = dump_writer_write(dump_request, sync.quit);
+      }
       response.id = dump_request.id;
       // Can't drop: the response queue capacity matches the request queue and
       // actions run serially, so every popped request leaves room for its

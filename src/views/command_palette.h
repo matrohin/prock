@@ -18,6 +18,7 @@ enum CommandId {
   eCommand_ShowLicenses,
   eCommand_ShowAbout,
   eCommand_ToggleRecording,
+  eCommand_OpenReplay,
   eCommand_Count,
 };
 

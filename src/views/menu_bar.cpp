@@ -451,10 +451,15 @@ void menu_bar_draw(ViewState &view_state) {
         view_state.command_state.show_palette = true;
       }
       char rec_label[64];
+      ImGui::BeginDisabled(view_state.sync->replay_mode);
       if (ImGui::MenuItem(
               recorder_toggle_label(view_state, rec_label, sizeof(rec_label)),
               "Ctrl+Shift+R")) {
         view_state.recorder.toggle_request = true;
+      }
+      ImGui::EndDisabled();
+      if (ImGui::MenuItem("Replay a recording...")) {
+        view_state.replay_state.show_open_dialog = true;
       }
       if (ImGui::MenuItem("Preferences...")) {
         view_state.preferences_state.show_preferences_modal = true;

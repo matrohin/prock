@@ -13,7 +13,10 @@ static void ser_write_bytes(SerializeControl *control, const void *src,
                             const size_t n) {
   if (control->out_buffer) {
     control->out_buffer->append(src, static_cast<uint32_t>(n));
-  } else if (fwrite(src, n, 1, control->file) != 1) {
+  } else if (n > 0 && fwrite(src, n, 1, control->file) != 1) {
+    // A zero-length write (e.g. the empty content of a "" string) is a no-op,
+    // not a failure - fwrite(_, 0, 1, _) returns 0, which must not trip
+    // `failed`.
     control->failed = true;
   }
 }
@@ -80,12 +83,17 @@ void serialize_with_limit(SerializeControl *control, const char **datum,
   uint32_t len = 0;
   if (control->is_writing) {
     len = strlen(*datum) + 1;
+    len = std::min(limit, len);
   }
   ADD_TO(eSerVer_Init, &len);
-  VALIDATE(len < limit);
+  VALIDATE(len <= limit);
 
   if (control->is_writing) {
-    ser_write_bytes(control, *datum, len);
+    if (len > 0) {
+      ser_write_bytes(control, *datum, len - 1);
+      const char *empty = "";
+      ser_write_bytes(control, empty, 1);
+    }
   } else {
     char *buf = control->arena->alloc_string(len);
     const size_t read = fread(buf, len, 1, control->file);

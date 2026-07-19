@@ -16,6 +16,7 @@
 #include "views/ports_viewer.h"
 #include "views/process_host.h"
 #include "views/properties_viewer.h"
+#include "views/replay_controls.h"
 #include "views/smaps_viewer.h"
 #include "views/socket_viewer.h"
 #include "views/system_cpu_chart.h"
@@ -96,4 +97,5 @@ struct ViewState {
   PropertiesViewerState properties_viewer_state;
   Notifications notifications;
   RecorderViewState recorder;
+  ReplayViewState replay_state;
 };

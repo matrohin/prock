@@ -30,10 +30,12 @@ void sock_notify_data_ready(Sync &sync) {
 }
 
 // UNITY BUILD:
+#include "actions/direct.cpp"
 #include "actions/dump_writer.cpp"
 #include "actions/on_demand_actions.cpp"
 #include "base/base.cpp"
 #include "paths.cpp"
+#include "playback/player.cpp"
 #include "playback/recorder.cpp"
 #include "readers/environ_reader.cpp"
 #include "readers/font_list_reader.cpp"
@@ -69,6 +71,7 @@ void sock_notify_data_ready(Sync &sync) {
 #include "views/process_host.cpp"
 #include "views/process_window_flags.cpp"
 #include "views/properties_viewer.cpp"
+#include "views/replay_controls.cpp"
 #include "views/smaps_viewer.cpp"
 #include "views/socket_format.cpp"
 #include "views/socket_viewer.cpp"
@@ -279,6 +282,14 @@ static void state_update(FrameContext &frame_ctx, State &state,
 static bool update(FrameContext &frame_ctx, State &state, ViewState &view_state,
                    Sync &sync) {
   ZoneScoped;
+  // A replay restart wipes the previous pass's chart + table history so the new
+  // pass, streamed from the file's start, repopulates it from scratch. Clear
+  // before draining the queue below - never drain here, or the restarted pass's
+  // already-queued snapshots would be thrown away and the views stay empty.
+  if (view_state.replay_state.reset_history_request) {
+    view_state.replay_state.reset_history_request = false;
+    entry_views_reset_history(view_state);
+  }
   UpdateSnapshot snapshot = {};
   bool updated = false;
   while (sync.update_queue.pop(snapshot)) {
@@ -420,7 +431,27 @@ Stacked=0
 [[maybe_unused]] constexpr const char *MAIN_FRAME = "main_frame";
 constexpr const char *USAGE = "Usage: prock [--replay <file.prck>]\n";
 
-int main(int, char **) {
+int main(int argc, char **argv) {
+  const char *replay_path = nullptr;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--replay") == 0 && i + 1 < argc) {
+      replay_path = argv[++i];
+    } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+      printf("%s", USAGE);
+      return 0;
+    } else {
+      fprintf(stderr, "Unknown argument: %s\n%s", argv[i], USAGE);
+      return 1;
+    }
+  }
+
+  SystemInfo replay_system = {};
+  if (replay_path && !playback_validate(replay_path, &replay_system)) {
+    fprintf(stderr, "Cannot replay %s: not a valid .prck recording\n%s",
+            replay_path, USAGE);
+    return 1;
+  }
+
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) {
     return 1;
@@ -544,25 +575,38 @@ int main(int, char **) {
   // install a framebuffer-size callback, so set ours after init.
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-  // Setup state
+  // Setup state. In replay the system info comes from the recording (needed for
+  // correct CPU%/RSS/start-time); otherwise it is read from the live host.
   State state = {};
-  if (!state_init(state)) {
+  if (replay_path) {
+    state.system = replay_system;
+  } else if (!state_init(state)) {
     return 1;
   }
 
   Sync sync = {};
+  sync.replay_mode = replay_path != nullptr;
   view_state.sync = &sync;
+  view_state.replay_state.active_path = replay_path;
   sync.update_period.store(view_state.preferences_state.update_period);
 
-  std::thread gathering_thread{[&sync] {
-    pthread_setname_np(pthread_self(), "gathering");
-    GatheringState gathering_state = {};
-    gathering_state.usernames =
-        UsernameResolver::create(&gathering_state.persistent_arena);
-    while (!sync.quit.load()) {
-      process_stat_gather(gathering_state, sync);
-    }
-  }};
+  std::thread producer_thread;
+  if (sync.replay_mode) {
+    producer_thread = std::thread{[&sync, replay_path] {
+      pthread_setname_np(pthread_self(), "playback");
+      playback_loop(sync, replay_path);
+    }};
+  } else {
+    producer_thread = std::thread{[&sync] {
+      pthread_setname_np(pthread_self(), "gathering");
+      GatheringState gathering_state = {};
+      gathering_state.usernames =
+          UsernameResolver::create(&gathering_state.persistent_arena);
+      while (!sync.quit.load()) {
+        process_stat_gather(gathering_state, sync);
+      }
+    }};
+  }
 
   std::thread proc_reader_thread{[&sync] {
     pthread_setname_np(pthread_self(), "proc_reader");
@@ -606,9 +650,10 @@ int main(int, char **) {
       g_needs_updates = 2;
     }
 
-    // Sync update period to gathering thread
+    // Sync update period to the gathering thread (replay ignores it - the
+    // playback thread paces itself from the recorded timestamps).
     const float new_period = view_state.preferences_state.update_period;
-    if (sync.update_period.load() != new_period) {
+    if (!sync.replay_mode && sync.update_period.load() != new_period) {
       {
         std::lock_guard<std::mutex> lock(sync.quit_mutex);
         sync.update_period.store(new_period);
@@ -624,11 +669,34 @@ int main(int, char **) {
 
     // Recording start/stop is requested from the menu/palette (draw phase) and
     // performed here where State/Sync are mutable; responses become toasts.
+    // Recording is meaningless during replay, so the request is dropped there.
     if (view_state.recorder.toggle_request) {
       view_state.recorder.toggle_request = false;
-      recorder_toggle(view_state, state, sync);
+      if (!sync.replay_mode) recorder_toggle(view_state, state, sync);
     }
     recorder_drain_responses(view_state, sync);
+
+    // A "Replay a recording..." dialog pick re-execs this binary in replay
+    // mode; persist the layout first so the new session keeps it. execv only
+    // returns on failure. Validate here (in the still-live process) so a bad
+    // pick becomes a toast instead of a re-exec that immediately exits.
+    if (view_state.replay_state.launch_request) {
+      view_state.replay_state.launch_request = false;
+      SystemInfo probe = {};
+      if (!playback_validate(view_state.replay_state.open_path, &probe)) {
+        notify_error(view_state.notifications, 0,
+                     "Cannot replay %s: not a valid .prck recording",
+                     view_state.replay_state.open_path);
+      } else {
+        ImGui::SaveIniSettingsToDisk(io.IniFilename);
+        char *const args[] = {const_cast<char *>("prock"),
+                              const_cast<char *>("--replay"),
+                              view_state.replay_state.open_path, nullptr};
+        execv("/proc/self/exe", args);
+        notify_error(view_state.notifications, errno,
+                     "Failed to start replay: %s", strerror(errno));
+      }
+    }
 
     draw(frame_ctx, window, io, state, view_state);
     frame_ctx.frame_arena.destroy();
@@ -659,7 +727,7 @@ int main(int, char **) {
   sync.on_demand_reader.request_read_cv.notify_one();
   sync.on_demand_actions.request_cv.notify_one();
   sync.recorder.request_cv.notify_one();
-  gathering_thread.join();
+  producer_thread.join();
   proc_reader_thread.join();
   actions_thread.join();
   recorder_thread.join();
