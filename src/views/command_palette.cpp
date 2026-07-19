@@ -36,7 +36,7 @@ static void cmd_open_palette(ViewState &vs) {
 
 static void cmd_toggle_auto_follow(ViewState &vs) {
   if (vs.sync->replay_mode) {
-    replay_toggle_pause(*vs.sync);
+    replay_toggle_pause(vs);
     return;
   }
   vs.preferences_state.auto_follow = !vs.preferences_state.auto_follow;

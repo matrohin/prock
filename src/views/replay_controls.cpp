@@ -24,8 +24,11 @@ static void notify_playback(Sync &sync) {
   sync.quit_cv.notify_one();
 }
 
-void replay_toggle_pause(Sync &sync) {
-  sync.playback.paused.store(!sync.playback.paused.load());
+void replay_toggle_pause(ViewState &view_state) {
+  Sync &sync = *view_state.sync;
+  const bool paused = !sync.playback.paused.load();
+  sync.playback.paused.store(paused);
+  view_state.preferences_state.auto_follow = !paused;
   notify_playback(sync);
 }
 
@@ -100,7 +103,7 @@ void replay_overlay_draw(ViewState &view_state) {
 
     const bool paused = sync.playback.paused.load();
     if (ImGui::Button(paused ? "Play" : "Pause")) {
-      replay_toggle_pause(sync);
+      replay_toggle_pause(view_state);
     }
     ImGui::SameLine();
 
@@ -115,6 +118,7 @@ void replay_overlay_draw(ViewState &view_state) {
     if (ImGui::Button("Restart")) {
       sync.playback.restart.store(true);
       sync.playback.paused.store(false);
+      view_state.preferences_state.auto_follow = true;
       rs.reset_history_request = true; // drop the previous pass's view history
       notify_playback(sync);
     }

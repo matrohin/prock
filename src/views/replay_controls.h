@@ -3,7 +3,6 @@
 #include <linux/limits.h>
 
 struct ViewState;
-struct Sync;
 
 struct ReplayViewState {
   int speed_index = 1;
@@ -14,9 +13,9 @@ struct ReplayViewState {
   const char *active_path = nullptr;
 };
 
-// Flip playback pause/resume and wake the playback thread. Shared by the
-// overlay button and the Space shortcut.
-void replay_toggle_pause(Sync &sync);
+// Flip playback pause/resume and wake the playback thread.
+// Also toggle auto-follow.
+void replay_toggle_pause(ViewState &view_state);
 
 void replay_open_dialog_draw(ViewState &view_state);
 void replay_overlay_draw(ViewState &view_state);
