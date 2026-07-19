@@ -18,9 +18,11 @@ static const char *SPEED_LABELS[] = {"0.5x", "1x", "2x", "5x", "10x", "Max"};
 static const char *REPLAY_DIALOG_TITLE = "Replay a recording";
 
 static void notify_playback(Sync &sync) {
+  // clang-format off: older clang-format (on CI) disagrees with formatting
   {
     std::lock_guard<std::mutex> lock(sync.quit_mutex);
   }
+  // clang-format on
   sync.quit_cv.notify_one();
 }
 
