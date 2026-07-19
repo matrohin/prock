@@ -159,6 +159,7 @@ void serialize(SerializeControl *control, ProcessStat *datum) {
 }
 
 void serialize(SerializeControl *control, UpdateSnapshot *datum) {
+  ZoneScoped;
   BumpArena *prev_arena = control->arena;
   control->arena = &datum->owner_arena;
 
@@ -177,6 +178,7 @@ void serialize(SerializeControl *control, UpdateSnapshot *datum) {
 }
 
 void serialize_header(SerializeControl *control) {
+  ZoneScoped;
   uint32_t magic_header = MAGIC_HEADER;
   uint32_t byte_order = 0;
   if (control->is_writing) {
@@ -193,6 +195,7 @@ void serialize_header(SerializeControl *control) {
 }
 
 void serialize_record_header(SerializeControl *control, RecordHeader *header) {
+  ZoneScoped;
   CHECK_FAILURE();
   serialize(control, &header->record_type);
   VALIDATE(header->record_type < eSerRecordType_Invalid);
@@ -205,6 +208,7 @@ void serialize_record_header(SerializeControl *control, RecordHeader *header) {
 }
 
 void serialize_record_footer(SerializeControl *control, RecordHeader *header) {
+  ZoneScoped;
   CHECK_FAILURE();
 
   const long end = ser_tell(control);

@@ -31,6 +31,7 @@ static bool recorder_send(Sync &sync, const RecordCommand &cmd,
 }
 
 void recorder_toggle(ViewState &view_state, const State &state, Sync &sync) {
+  ZoneScoped;
   if (view_state.recorder.active) {
     view_state.recorder.active = false;
     RecordCommand cmd = {};
@@ -76,6 +77,8 @@ void recorder_toggle(ViewState &view_state, const State &state, Sync &sync) {
 void recorder_update(ViewState &view_state, UpdateSnapshot &snapshot,
                      Sync &sync) {
   if (!view_state.recorder.active) return;
+  ZoneScoped;
+
   RecordHeader header = {};
   header.record_type = eSerRecordType_UpdateSnapshot;
   SteadyTimeDataPoint at = snapshot.at;
@@ -120,6 +123,7 @@ void recorder_update(ViewState &view_state, UpdateSnapshot &snapshot,
 }
 
 void recorder_drain_responses(ViewState &view_state, Sync &sync) {
+  ZoneScoped;
   Notifications &notifications = view_state.notifications;
   RecordResponse r;
   while (sync.recorder.response_queue.pop(r)) {
@@ -226,7 +230,8 @@ void recorder_loop(Sync &sync) {
         continue;
       }
       switch (cmd.type) {
-      case eRecordCmd_Start:
+      case eRecordCmd_Start: {
+        ZoneScopedN("recorder: start");
         session = cmd.session;
         snprintf(path, sizeof(path), "%s", cmd.path);
         snapshots = 0;
@@ -249,9 +254,10 @@ void recorder_loop(Sync &sync) {
         }
         cmd.buffer.destroy();
         push_response(eRecordStatus_Started, 0);
-        break;
+      } break;
 
-      case eRecordCmd_Write:
+      case eRecordCmd_Write: {
+        ZoneScopedN("recorder: write");
         if (file) {
           if (cmd.buffer.size > 0 &&
               fwrite(cmd.buffer.data, cmd.buffer.size, 1, file) != 1) {
@@ -264,15 +270,16 @@ void recorder_loop(Sync &sync) {
           ++snapshots;
         }
         cmd.buffer.destroy();
-        break;
+      } break;
 
-      case eRecordCmd_Stop:
+      case eRecordCmd_Stop: {
+        ZoneScopedN("recorder: stop");
         cmd.buffer.destroy();
         if (file) {
           close_file();
           push_response(eRecordStatus_Saved, 0);
         }
-        break;
+      } break;
       }
     }
   }
