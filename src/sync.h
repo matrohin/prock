@@ -12,14 +12,7 @@
 #include <mutex>
 
 struct Sync {
-  std::atomic<bool> quit;
-  std::atomic<bool> data_ready;
-  std::atomic<float> update_period{0.5f}; // seconds, 0 = paused
-  std::mutex quit_mutex;
-  std::condition_variable quit_cv;
   Channel<UpdateSnapshot, 256> update_queue;
-
-  bool replay_mode = false;
 
   // Thread gathering: PIDs to watch/unwatch
   Channel<int, 16> thread_watch_queue;
@@ -28,7 +21,15 @@ struct Sync {
   OnDemandReaderSync on_demand_reader;
   OnDemandActionsSync on_demand_actions;
   RecorderSync recorder;
+
+  std::mutex quit_mutex;
+  std::condition_variable quit_cv;
+
+  std::atomic<bool> quit;
+  std::atomic<bool> data_ready;
+  std::atomic<float> update_period{0.5f}; // seconds, 0 = paused
   PlaybackSync playback;
+  bool replay_mode = false;
 };
 
 void sock_notify_data_ready(Sync &sync);
