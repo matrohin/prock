@@ -29,6 +29,7 @@ target_compile_options(project_warnings
     -Wcast-align # warn for potential performance problem casts
     -Woverloaded-virtual # warn if you overload (not override) a virtual function
     -Wnull-dereference # warn if a null dereference is detected
+    -Wformat-security # warn on a non-literal format with no arguments
 )
 
 # Sanitizers:

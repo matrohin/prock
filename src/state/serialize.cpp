@@ -99,6 +99,7 @@ void serialize_with_limit(SerializeControl *control, const char **datum,
     char *buf = control->arena->alloc_string(len);
     const size_t read = fread(buf, len, 1, control->file);
     VALIDATE(read == 1);
+    VALIDATE(len > 0 && buf[len - 1] == '\0');
     *datum = buf;
   }
 }

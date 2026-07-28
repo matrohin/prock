@@ -22,6 +22,12 @@ using SteadyTimePoint = SteadyClock::time_point;
 
 inline constexpr double NS_IN_SEC = 1'000'000'000;
 
+// printf-style checking
+// fmt_idx - the 1-based index of the format parameter
+// args_idx - the first variadic argument (0 for functions taking a va_list)
+#define PROCK_PRINTF(fmt_idx, args_idx)                                        \
+  __attribute__((format(printf, fmt_idx, args_idx)))
+
 struct SteadyTimeDataPoint {
   int64_t at_ns;
 

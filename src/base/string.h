@@ -21,6 +21,7 @@ struct String {
     return String{dst, len};
   }
 
+  PROCK_PRINTF(2, 0)
   static String vsprintf(BumpArena &arena, const char *format, va_list args) {
     va_list args_copy;
     va_copy(args_copy, args);
@@ -37,6 +38,7 @@ struct String {
     return String{res, static_cast<uint32_t>(size)};
   }
 
+  PROCK_PRINTF(2, 3)
   static String sprintf(BumpArena &arena, const char *format, ...) {
     va_list args;
     va_start(args, format);

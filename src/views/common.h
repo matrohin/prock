@@ -157,6 +157,7 @@ inline void draw_socket_query_error(const int error_code) {
 }
 
 // Push an error notification; on permission errors it offers a pkexec restart.
+PROCK_PRINTF(3, 4)
 inline void notify_error(Notifications &notifications, const int error_code,
                          const char *fmt, ...) {
   const bool can_escalate = is_permission_error(error_code);
@@ -170,6 +171,7 @@ inline void notify_error(Notifications &notifications, const int error_code,
   va_end(args);
 }
 
+PROCK_PRINTF(2, 3)
 inline void notify_info(Notifications &notifications, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -181,6 +183,7 @@ inline void notify_info(Notifications &notifications, const char *fmt, ...) {
 // Info notification with a clickable action button. action_fn(action_data) runs
 // on click; action_data must outlive the toast (e.g. allocated in the
 // notifications arena, which lives as long as any notification is shown).
+PROCK_PRINTF(5, 6)
 inline void notify_info_action(Notifications &notifications,
                                const char *action_label,
                                void (*action_fn)(const void *user_data),
@@ -224,6 +227,7 @@ inline void copy_path_action_fn(const void *user_data) {
 
 // Toast with a "Copy path" button that copies `path` to the clipboard on click.
 // The message is the usual printf fmt/args (typically naming `path`).
+PROCK_PRINTF(4, 0)
 inline void vnotify_copy_path(Notifications &notifications,
                               const NotificationSeverity severity,
                               const char *path, const char *fmt, va_list args) {
@@ -234,6 +238,7 @@ inline void vnotify_copy_path(Notifications &notifications,
                              copy_path_action_fn, action, fmt, args);
 }
 
+PROCK_PRINTF(3, 4)
 inline void notify_info_copy_path(Notifications &notifications,
                                   const char *path, const char *fmt, ...) {
   va_list args;
@@ -244,6 +249,7 @@ inline void notify_info_copy_path(Notifications &notifications,
 
 // Error variant: for a failure that still left a usable file on disk (e.g. a
 // recording that stopped mid-write, keeping the records written so far).
+PROCK_PRINTF(3, 4)
 inline void notify_error_copy_path(Notifications &notifications,
                                    const char *path, const char *fmt, ...) {
   va_list args;

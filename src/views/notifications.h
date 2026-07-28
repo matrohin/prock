@@ -39,6 +39,7 @@ struct FrameContext;
 // plain message; otherwise action_label (copied into the arena) invokes
 // action_fn(action_data) when clicked. See notify_error in common.h for the
 // usual entry.
+PROCK_PRINTF(6, 0)
 void notifications_vpush_action(Notifications &notifications,
                                 NotificationSeverity severity,
                                 const char *action_label,
@@ -49,6 +50,7 @@ void notifications_vpush_action(Notifications &notifications,
 // Push a sticky "in progress" message that stays until notifications_remove is
 // called with the returned id. Use it to track a long-running action and swap
 // it for a result toast on completion.
+PROCK_PRINTF(2, 3)
 uint64_t notifications_push_progress(Notifications &notifications,
                                      const char *fmt, ...);
 void notifications_remove(Notifications &notifications, uint64_t id);
