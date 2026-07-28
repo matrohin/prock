@@ -1,7 +1,5 @@
 #include "serialize.h"
 
-#include <bits/error_constants.h>
-
 static constexpr uint32_t MAGIC_HEADER = 0x7072636b; // PRCK
 
 static long ser_tell(SerializeControl *control) {

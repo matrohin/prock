@@ -152,7 +152,7 @@ void on_demand_reader_loop(Sync &sync) {
 
     sock_notify_data_ready(sync);
     if (temp_arena.cur_slab &&
-        (temp_arena.cur_slab->prev ||
+        (temp_arena.cur_slab->prev.load(std::memory_order_relaxed) ||
          temp_arena.cur_slab->left_size < SLAB_SIZE / 10)) {
       temp_arena.destroy();
     }

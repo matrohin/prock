@@ -18,7 +18,8 @@
 #define PROCK_VERSION "unknown"
 #endif
 
-static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f};
+static constexpr float PERIODS[] = {0.0f, 0.25f, 0.5f,
+                                    1.0f, 2.0f,  UPDATE_PERIOD_MAX_SEC};
 static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
                                       "1s",     "2s",    "5s"};
 static const char *PREFERENCES_TITLE = "Preferences";

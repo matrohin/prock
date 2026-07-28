@@ -11,6 +11,7 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
       Array<ProcessDerivedStat>::create(arena, snapshot.stats.size);
 
   const double time_delta = snapshot.at.elapsed_seconds(old.at);
+  const bool has_prev_sample = old_state.update_count > 0;
 
   // Normalize per-process CPU% against the /proc/stat jiffy budget for one core
   // (same unit as utime/stime), not wall-clock time. This matches system CPU%
@@ -94,7 +95,7 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
   constexpr double SECTOR_SIZE = 512.0;
   constexpr double BYTES_TO_MB = 1.0 / (1024.0 * 1024.0);
   DiskIoRate disk_io_rate = {};
-  if (time_delta > 0 && old.disk_io_stats.sectors_read > 0) {
+  if (time_delta > 0 && has_prev_sample) {
     disk_io_rate.read_mb_per_sec = counter_rate(
         snapshot.disk_io_stats.sectors_read, old.disk_io_stats.sectors_read,
         SECTOR_SIZE * BYTES_TO_MB, time_delta);
@@ -106,7 +107,7 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
 
   // Compute network I/O rates in MB/s
   NetIoRate net_io_rate = {};
-  if (time_delta > 0 && old.net_io_stats.bytes_received > 0) {
+  if (time_delta > 0 && has_prev_sample) {
     net_io_rate.recv_mb_per_sec =
         counter_rate(snapshot.net_io_stats.bytes_received,
                      old.net_io_stats.bytes_received, BYTES_TO_MB, time_delta);

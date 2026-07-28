@@ -49,7 +49,9 @@ struct ArenaSlab {
   void *cur;
   size_t left_size;
   size_t total_size;
-  ArenaSlab *prev;
+  // Atomic because pop() reads it speculatively, while a thread that won the
+  // race may already be writing it from create().
+  std::atomic<ArenaSlab *> prev;
 
   static ArenaSlab *create(size_t size, ArenaSlab *prev = nullptr);
 
@@ -90,7 +92,7 @@ struct SlabCache {
     uintptr_t old_head = head.load(std::memory_order_relaxed);
     uintptr_t new_head;
     do {
-      slab->prev = ptr_of(old_head);
+      slab->prev.store(ptr_of(old_head), std::memory_order_relaxed);
       new_head = pack(slab, (old_head & TAG_MASK) + 1);
     } while (!head.compare_exchange_weak(old_head, new_head,
                                          std::memory_order_release,
@@ -104,7 +106,8 @@ struct SlabCache {
     do {
       node = ptr_of(old_head);
       if (!node) return nullptr;
-      new_head = pack(node->prev, (old_head & TAG_MASK) + 1);
+      new_head = pack(node->prev.load(std::memory_order_relaxed),
+                      (old_head & TAG_MASK) + 1);
     } while (!head.compare_exchange_weak(old_head, new_head,
                                          std::memory_order_acquire,
                                          std::memory_order_acquire));
@@ -129,7 +132,7 @@ inline ArenaSlab *ArenaSlab::create(const size_t size, ArenaSlab *prev) {
     res->total_size = size;
   }
 
-  res->prev = prev;
+  res->prev.store(prev, std::memory_order_relaxed);
   TracyAllocN(res, res->total_size, ARENA_SLAB_POOL);
   return res;
 }
@@ -179,7 +182,7 @@ struct BumpArena {
     ArenaSlab *it = cur_slab;
     cur_slab = nullptr;
     while (it) {
-      ArenaSlab *prev = it->prev;
+      ArenaSlab *prev = it->prev.load(std::memory_order_relaxed);
       TracyFreeN(it, ARENA_SLAB_POOL);
       if (it->total_size == SLAB_SIZE) {
         g_slab_cache.push(it);

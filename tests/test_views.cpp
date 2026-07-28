@@ -479,6 +479,7 @@ TEST_CASE("state_snapshot_update") {
     old_state.system.ticks_in_second = 100;
     old_state.system.mem_page_size = 4096;
     old_state.snapshot.at = SteadyTimeDataPoint{};
+    old_state.update_count = 1;
 
     // Old disk stats: 1000 sectors read, 500 sectors written
     old_state.snapshot.disk_io_stats.sectors_read = 1000;
@@ -1240,6 +1241,7 @@ TEST_CASE("state_snapshot_update network I/O") {
     old_state.system.ticks_in_second = 100;
     old_state.system.mem_page_size = 4096;
     old_state.snapshot.at = SteadyTimeDataPoint{};
+    old_state.update_count = 1;
 
     // Old network stats
     old_state.snapshot.net_io_stats.bytes_received = 10'000'000;

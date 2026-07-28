@@ -278,6 +278,14 @@ void brief_table_dump_update(Notifications &notifications, Sync &sync) {
   }
 }
 
+static const BriefTableLine *find_line(const BriefTableState &my_state,
+                                       const Pid pid) {
+  for (const BriefTableLine &line : my_state.lines) {
+    if (line.pid == pid) return &line;
+  }
+  return nullptr;
+}
+
 static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
                                     BriefTableState &my_state,
                                     const BriefTableLine &line,
@@ -355,7 +363,8 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     ImGui::Separator();
     Sync &sync = *view_state.sync;
     const bool replay = sync.replay_mode;
-    ImGui::BeginDisabled(replay);
+    const bool is_dead = line.death_time_ns != 0;
+    ImGui::BeginDisabled(replay || is_dead);
     if (ImGui::MenuItemEx("Set Affinity...", ICON_MD_SETTINGS)) {
       my_state.control_edit_pid = pid;
       direct_get_affinity(pid, my_state.affinity_edit_mask, num_cpus);
@@ -379,7 +388,8 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
     ImGui::Separator();
     const bool kill_clicked =
         ImGui::MenuItemEx("Kill Process", ICON_MD_DELETE, "Del");
-    if (kill_clicked || (!replay && ImGui::IsKeyPressed(ImGuiKey_Delete))) {
+    if (kill_clicked ||
+        (!replay && !is_dead && ImGui::IsKeyPressed(ImGuiKey_Delete))) {
       direct_kill(sync, view_state.notifications, pid, SIGTERM, "kill");
       ImGui::CloseCurrentPopup();
     }
@@ -395,7 +405,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
         const Pid parent = tree_pids[ti];
         for (uint32_t li = 0; li < my_state.lines.size; ++li) {
           const BriefTableLine &l = my_state.lines.data[li];
-          if (l.ppid == parent && l.pid != parent &&
+          if (l.ppid == parent && l.pid != parent && l.death_time_ns == 0 &&
               tree_count <
                   static_cast<int>(sizeof(tree_pids) / sizeof(tree_pids[0]))) {
             tree_pids[tree_count++] = l.pid;
@@ -543,8 +553,9 @@ static void affinity_popup_draw(FrameContext &ctx, BriefTableState &my_state,
     ImGui::Separator();
 
     if (ImGui::Button("Select All")) {
-      my_state.affinity_edit_mask =
-          num_cpus >= 64 ? ~0ULL : (1ULL << num_cpus) - 1;
+      // num_cpus is -1 when the CPU stats are missing, so clamp before shifting
+      const int cpus = std::clamp(num_cpus, 0, 64);
+      my_state.affinity_edit_mask = cpus >= 64 ? ~0ULL : (1ULL << cpus) - 1;
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear All")) {
@@ -1015,18 +1026,19 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
   if (my_state.selected_pid > 0) {
     // Ctrl+C to copy selected row
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C)) {
-      for (const BriefTableLine &line : my_state.lines) {
-        if (line.pid == my_state.selected_pid) {
-          copy_process_row(view_state.notifications, ctx.frame_arena, line);
-          break;
-        }
+      if (const BriefTableLine *line =
+              find_line(my_state, my_state.selected_pid)) {
+        copy_process_row(view_state.notifications, ctx.frame_arena, *line);
       }
     }
 
     // Del key to kill selected process (disabled while replaying)
     if (!view_state.sync->replay_mode && ImGui::Shortcut(ImGuiKey_Delete)) {
-      direct_kill(*view_state.sync, view_state.notifications,
-                  my_state.selected_pid, SIGTERM, "kill");
+      const BriefTableLine *line = find_line(my_state, my_state.selected_pid);
+      if (line && line->death_time_ns == 0) {
+        direct_kill(*view_state.sync, view_state.notifications, line->pid,
+                    SIGTERM, "kill");
+      }
     }
   }
 

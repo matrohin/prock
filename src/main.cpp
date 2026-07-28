@@ -137,7 +137,9 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
       view_state->preferences_state.theme = static_cast<Theme>(val);
     }
   } else if (sscanf(line, "UpdatePeriod=%f", &fval) == 1) {
-    view_state->preferences_state.update_period = fval;
+    if (fval >= 0.0f && fval <= UPDATE_PERIOD_MAX_SEC) {
+      view_state->preferences_state.update_period = fval;
+    }
   } else if (sscanf(line, "TargetFPS=%d", &val) == 1) {
     view_state->preferences_state.target_fps =
         std::clamp(val, TARGET_FPS_MIN, TARGET_FPS_MAX);
