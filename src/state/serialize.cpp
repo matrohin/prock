@@ -65,10 +65,13 @@ void serialize(SerializeControl *control, uint64_t *datum) {
 }
 
 void serialize(SerializeControl *control, SystemTimePoint *datum) {
-  int64_t since_epoch_time = datum->time_since_epoch().count();
-  ADD_TO(eSerVer_Init, &since_epoch_time);
+  int64_t since_epoch_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                               datum->time_since_epoch())
+                               .count();
+  ADD_TO(eSerVer_Init, &since_epoch_ns);
   if (!control->is_writing) {
-    *datum = SystemTimePoint{std::chrono::nanoseconds{since_epoch_time}};
+    *datum = SystemTimePoint{std::chrono::duration_cast<SystemClock::duration>(
+        std::chrono::nanoseconds{since_epoch_ns})};
   }
 }
 
