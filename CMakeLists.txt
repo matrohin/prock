@@ -7,6 +7,14 @@ find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
 find_package(Freetype REQUIRED)
 
+# Hardening. https://wiki.debian.org/Hardening
+include(CheckPIESupported)
+check_pie_supported()
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_compile_options(-fstack-protector-strong -fstack-clash-protection)
+add_compile_options($<$<NOT:$<CONFIG:Debug>>:-D_FORTIFY_SOURCE=3>)
+add_link_options(-Wl,-z,relro,-z,now)
+
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(third-party/glfw-3.4)
 add_subdirectory(third-party/tracy)
