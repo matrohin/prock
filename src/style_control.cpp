@@ -14,6 +14,8 @@
 #include "themes.h"
 #include "views/icons.h"
 
+#include <algorithm>
+
 static Theme g_applied_theme = Theme::COUNT;
 static float g_monitor_scale = 1.0f;
 static ImFont *g_mono_font = nullptr;
@@ -27,21 +29,32 @@ static void apply_window_opacity(ImGuiStyle &style, const float opacity) {
   if (opacity >= 1.0f) {
     return;
   }
-  static constexpr ImGuiCol bg_colors[] = {
-      ImGuiCol_WindowBg,         ImGuiCol_ChildBg,
-      ImGuiCol_MenuBarBg,        ImGuiCol_PopupBg,
-      ImGuiCol_TitleBg,          ImGuiCol_TitleBgActive,
-      ImGuiCol_TitleBgCollapsed, ImGuiCol_ScrollbarBg,
-      ImGuiCol_TableHeaderBg,    ImGuiCol_TableRowBg,
-      ImGuiCol_TableRowBgAlt,    ImGuiCol_Tab,
-      ImGuiCol_TabHovered,       ImGuiCol_TabSelected,
-      ImGuiCol_TabDimmed,        ImGuiCol_TabDimmedSelected,
-      ImGuiCol_FrameBg,          ImGuiCol_FrameBgHovered,
-      ImGuiCol_FrameBgActive,    ImGuiCol_Button,
-      ImGuiCol_ButtonHovered,    ImGuiCol_ButtonActive,
+  static constexpr ImGuiCol tint_colors[] = {
+      ImGuiCol_ChildBg,
+      ImGuiCol_MenuBarBg,
+      ImGuiCol_PopupBg,
+      ImGuiCol_TitleBg,
+      ImGuiCol_TitleBgActive,
+      ImGuiCol_TitleBgCollapsed,
+      ImGuiCol_ScrollbarBg,
+      ImGuiCol_TableHeaderBg,
+      ImGuiCol_TableRowBg,
+      ImGuiCol_TableRowBgAlt,
+      ImGuiCol_Tab,
+      ImGuiCol_TabHovered,
+      ImGuiCol_TabSelected,
+      ImGuiCol_TabDimmed,
+      ImGuiCol_TabDimmedSelected,
+      ImGuiCol_FrameBg,
+      ImGuiCol_FrameBgHovered,
+      ImGuiCol_FrameBgActive,
+      ImGuiCol_Button,
+      ImGuiCol_ButtonHovered,
+      ImGuiCol_ButtonActive,
   };
-  for (const ImGuiCol col : bg_colors) {
-    style.Colors[col].w *= opacity;
+  style.Colors[ImGuiCol_WindowBg].w = opacity;
+  for (const ImGuiCol col : tint_colors) {
+    style.Colors[col].w = std::min(style.Colors[col].w, opacity);
   }
 }
 
@@ -67,7 +80,7 @@ static void apply_plot_opacity(const float opacity) {
     return;
   }
   ImVec4 plot = g_base_style.Colors[ImGuiCol_WindowBg];
-  plot.w *= opacity;
+  plot.w = opacity;
   plot_style.Colors[ImPlotCol_PlotBg] = plot;
 }
 
