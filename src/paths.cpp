@@ -1,5 +1,6 @@
 #include "paths.h"
 
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -9,29 +10,35 @@
 
 void paths_default_out_dir(char *out, const uint32_t size, const char *subdir) {
   const char *home = getenv("HOME");
-  if (home) {
-    snprintf(out, size, "%s/prock/%s", home, subdir);
-  } else {
-    snprintf(out, size, "/tmp/prock/%s", subdir);
+  if (!home) {
+    out[0] = '\0';
+    return;
   }
+  const int n = snprintf(out, size, "%s/prock/%s", home, subdir);
+  if (n < 0 || static_cast<uint32_t>(n) >= size) out[0] = '\0';
 }
 
-void paths_ensure_parent_dir(const char *out_path) {
+bool paths_ensure_parent_dir(const char *out_path) {
   char dir[PATH_MAX];
-  snprintf(dir, sizeof(dir), "%s", out_path);
+  const int n = snprintf(dir, sizeof(dir), "%s", out_path);
+  if (n < 0 || static_cast<size_t>(n) >= sizeof(dir)) {
+    errno = ENAMETOOLONG;
+    return false;
+  }
   char *slash = strrchr(dir, '/');
+  // Parent is the working directory or the root directory: both already exist.
   if (!slash || slash == dir) {
-    return;
+    return true;
   }
   *slash = '\0';
 
   for (char *p = dir + 1; *p; ++p) {
     if (*p != '/') continue;
     *p = '\0';
-    mkdir(dir, 0700); // ignore EEXIST and other errors
+    if (mkdir(dir, 0700) != 0 && errno != EEXIST) return false;
     *p = '/';
   }
-  mkdir(dir, 0700);
+  return mkdir(dir, 0700) == 0 || errno == EEXIST;
 }
 
 void paths_format_time_suffix(char *out, const uint32_t size) {

@@ -47,6 +47,11 @@ void recorder_toggle(ViewState &view_state, const State &state, Sync &sync) {
     recorder_default_dir(default_dir, sizeof(default_dir));
     dir = default_dir;
   }
+  if (dir[0] == '\0') {
+    notify_error(view_state.notifications, 0,
+                 "No recordings folder: set one in Preferences.");
+    return;
+  }
 
   char timestamp[32];
   paths_format_time_suffix(timestamp, sizeof(timestamp));
@@ -235,7 +240,12 @@ void recorder_loop(Sync &sync) {
         session = cmd.session;
         snprintf(path, sizeof(path), "%s", cmd.path);
         snapshots = 0;
-        paths_ensure_parent_dir(path);
+        if (!paths_ensure_parent_dir(path)) {
+          const int err = errno;
+          cmd.buffer.destroy();
+          push_response(eRecordStatus_StartError, err);
+          break;
+        }
         file = fopen(path, "wb");
         if (!file) {
           const int err = errno;

@@ -215,6 +215,11 @@ static void send_dump_request(ViewState &view_state, const Pid pid,
     dump_writer_default_dir(default_dir, sizeof(default_dir));
     dump_dir = default_dir;
   }
+  if (dump_dir[0] == '\0') {
+    notify_error(view_state.notifications, 0,
+                 "No dump folder: set one in Preferences.");
+    return;
+  }
 
   char safe_comm[64];
   uint32_t si = 0;

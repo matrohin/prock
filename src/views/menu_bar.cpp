@@ -163,6 +163,12 @@ static void draw_preferences_modal(PreferencesState &prefs) {
       prefs.show_preferences_modal = false;
     }
 
+    if (g_borrowed_config) {
+      ImGui::TextDisabled(ICON_MD_SHIELD
+                          " Elevated session: changes apply now, not saved");
+      ImGui::Spacing();
+    }
+
     ImGui::SeparatorText("Appearance");
 
     const float scale = ui_scale();

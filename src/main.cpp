@@ -1,6 +1,8 @@
+#include "actions/elevate.h"
 #include "base/base.h"
 #include "base/channel.h"
 #include "constants.h"
+#include "paths.h"
 #include "readers/process_stat.h"
 #include "state/state.h"
 #include "sync.h"
@@ -15,10 +17,13 @@
 #include <GLES2/gl2.h>
 #include <GLFW/glfw3.h>
 
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
+#include <fcntl.h>
 #include <pthread.h>
+#include <pwd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -32,6 +37,7 @@ void sock_notify_data_ready(Sync &sync) {
 // UNITY BUILD:
 #include "actions/direct.cpp"
 #include "actions/dump_writer.cpp"
+#include "actions/elevate.cpp"
 #include "actions/on_demand_actions.cpp"
 #include "base/base.cpp"
 #include "paths.cpp"
@@ -109,6 +115,20 @@ static void framebuffer_size_callback(GLFWwindow * /*window*/, int /*width*/,
   g_framebuffer_resized = true;
 }
 
+// Home directory of the user who launched an elevated session (sudo or pkexec)
+static const char *invoking_user_home() {
+  uid_t uid = 0;
+  if (!invoking_user_uid(uid)) return nullptr;
+  const passwd *pw = getpwuid(uid);
+  return pw ? pw->pw_dir : nullptr;
+}
+
+static void set_path_setting(char *dst, const size_t size, const char *path) {
+  if (g_borrowed_config) return;
+  const size_t len = strlen(path);
+  if (len < size) memcpy(dst, path, len + 1);
+}
+
 static void *view_settings_read_open(ImGuiContext *,
                                      ImGuiSettingsHandler *handler,
                                      const char *name) {
@@ -151,29 +171,19 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
   } else if (sscanf(line, "WindowOpacityPct=%d", &val) == 1) {
     view_state->preferences_state.window_opacity_pct = std::clamp(val, 0, 100);
   } else if (strncmp(line, "FontPath=", 9) == 0) {
-    const char *path = line + 9;
-    const uint32_t len = static_cast<uint32_t>(strlen(path));
-    if (len < sizeof(view_state->preferences_state.font_path)) {
-      memcpy(view_state->preferences_state.font_path, path, len + 1);
-    }
+    set_path_setting(view_state->preferences_state.font_path,
+                     sizeof(view_state->preferences_state.font_path), line + 9);
   } else if (strncmp(line, "MonoFontPath=", 13) == 0) {
-    const char *path = line + 13;
-    const uint32_t len = static_cast<uint32_t>(strlen(path));
-    if (len < sizeof(view_state->preferences_state.mono_font_path)) {
-      memcpy(view_state->preferences_state.mono_font_path, path, len + 1);
-    }
+    set_path_setting(view_state->preferences_state.mono_font_path,
+                     sizeof(view_state->preferences_state.mono_font_path),
+                     line + 13);
   } else if (strncmp(line, "DumpDir=", 8) == 0) {
-    const char *path = line + 8;
-    const uint32_t len = static_cast<uint32_t>(strlen(path));
-    if (len < sizeof(view_state->preferences_state.dump_dir)) {
-      memcpy(view_state->preferences_state.dump_dir, path, len + 1);
-    }
+    set_path_setting(view_state->preferences_state.dump_dir,
+                     sizeof(view_state->preferences_state.dump_dir), line + 8);
   } else if (strncmp(line, "RecordingsDir=", 14) == 0) {
-    const char *path = line + 14;
-    const uint32_t len = static_cast<uint32_t>(strlen(path));
-    if (len < sizeof(view_state->preferences_state.recordings_dir)) {
-      memcpy(view_state->preferences_state.recordings_dir, path, len + 1);
-    }
+    set_path_setting(view_state->preferences_state.recordings_dir,
+                     sizeof(view_state->preferences_state.recordings_dir),
+                     line + 14);
   }
 }
 
@@ -430,14 +440,52 @@ DockSpace     ID=0xF352448A Window=0xEA9D8568 Pos=0,19 Size=1280,673 Split=Y
 Stacked=0
 )";
 
+constexpr off_t SETTINGS_MAX_BYTES = 1 << 20;
+
+static void load_borrowed_settings(const char *path) {
+  const int fd = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+  struct stat st;
+  if (fd < 0 || fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) ||
+      st.st_size > SETTINGS_MAX_BYTES) {
+    if (fd >= 0) close(fd);
+    ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
+    return;
+  }
+
+  BumpArena arena = BumpArena::create();
+  const size_t size = static_cast<size_t>(st.st_size);
+  char *buf = arena.alloc_string(size);
+  size_t len = 0;
+  while (len < size) {
+    const ssize_t r = read(fd, buf + len, size - len);
+    if (r < 0 && errno == EINTR) continue;
+    if (r <= 0) break;
+    len += static_cast<size_t>(r);
+  }
+  close(fd);
+
+  if (len > 0) {
+    ImGui::LoadIniSettingsFromMemory(buf, len);
+  } else {
+    ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
+  }
+  arena.destroy();
+}
+
 [[maybe_unused]] constexpr const char *MAIN_FRAME = "main_frame";
-constexpr const char *USAGE = "Usage: prock [--replay <file.prck>]\n";
+constexpr const char *USAGE =
+    "Usage: prock [--replay <file.prck>] [--display-env NAME=VALUE]\n";
 
 int main(int argc, char **argv) {
   const char *replay_path = nullptr;
   for (int i = 1; i < argc; ++i) {
     if (strcmp(argv[i], "--replay") == 0 && i + 1 < argc) {
       replay_path = argv[++i];
+    } else if (strcmp(argv[i], "--display-env") == 0 && i + 1 < argc) {
+      if (!apply_display_env(argv[++i])) {
+        fprintf(stderr, "Cannot apply --display-env %s\n%s", argv[i], USAGE);
+        return 1;
+      }
     } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       printf("%s", USAGE);
       return 0;
@@ -493,37 +541,18 @@ int main(int argc, char **argv) {
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
   io.ConfigInputTextCursorBlink = false;
 
-  // Set up config path: PROCK_CONFIG_DIR or $HOME/.config/prock/
+  // Set up config path in $HOME/.config/prock/, or in the home of whoever
+  // launched an elevated session
   static char ini_path[PATH_MAX] = {};
-  const char *config_dir = getenv("PROCK_CONFIG_DIR");
-  if (config_dir) {
-    // Use explicit config dir (e.g., when running elevated via pkexec)
-    mkdir(config_dir, 0755);
-    int n = snprintf(ini_path, sizeof(ini_path), "%s/settings.ini", config_dir);
+  const char *invoker_home = geteuid() == 0 ? invoking_user_home() : nullptr;
+  g_borrowed_config = invoker_home != nullptr;
+  const char *home = invoker_home ? invoker_home : getenv("HOME");
+  if (home) {
+    const int n = snprintf(ini_path, sizeof(ini_path),
+                           "%s/.config/prock/settings.ini", home);
     if (n > 0 && static_cast<size_t>(n) < sizeof(ini_path)) {
       io.IniFilename = ini_path;
-    }
-  } else {
-    const char *home = getenv("HOME");
-    if (home) {
-      char dir_path[PATH_MAX] = {};
-      int n = 0;
-      // Ensure .config directory exists
-      n = snprintf(dir_path, sizeof(dir_path), "%s/.config", home);
-      if (n > 0 && static_cast<size_t>(n) < sizeof(dir_path)) {
-        mkdir(dir_path, 0755);
-        // Ensure .config/prock directory exists
-        n = snprintf(dir_path, sizeof(dir_path), "%s/.config/prock", home);
-        if (n > 0 && static_cast<size_t>(n) < sizeof(dir_path)) {
-          mkdir(dir_path, 0755);
-          // Set the ini file path
-          n = snprintf(ini_path, sizeof(ini_path),
-                       "%s/.config/prock/settings.ini", home);
-          if (n > 0 && static_cast<size_t>(n) < sizeof(ini_path)) {
-            io.IniFilename = ini_path;
-          }
-        }
-      }
+      if (!g_borrowed_config) paths_ensure_parent_dir(ini_path);
     }
   }
 
@@ -541,15 +570,18 @@ int main(int argc, char **argv) {
   handler.UserData = view_state_ptr;
   ImGui::GetCurrentContext()->SettingsHandlers.push_back(handler);
 
-  if (access(io.IniFilename, F_OK) != 0) {
+  if (g_borrowed_config) {
+    load_borrowed_settings(ini_path);
+    // Clear the name so that we don't save settings from an elevated process.
+    io.IniFilename = nullptr;
+  } else if (access(io.IniFilename, F_OK) != 0) {
     ImGui::LoadIniSettingsFromMemory(DEFAULT_INI);
   } else {
     ImGui::LoadIniSettingsFromDisk(io.IniFilename);
   }
 
-  // Seed the dump folder on first run (while $HOME still points at the real
-  // user) so it persists in settings; an elevated relaunch then reads it back
-  // instead of defaulting to /root.
+  // Where we write follows our own $HOME, not the borrowed settings: a
+  // borrowed DumpDir would be picking a path for root.
   if (view_state.preferences_state.dump_dir[0] == '\0') {
     dump_writer_default_dir(view_state.preferences_state.dump_dir,
                             sizeof(view_state.preferences_state.dump_dir));

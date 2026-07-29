@@ -32,7 +32,10 @@ DumpResponse dump_writer_write(const DumpRequest &request,
   snprintf(response.out_path, sizeof(response.out_path), "%s",
            request.out_path);
 
-  paths_ensure_parent_dir(request.out_path);
+  if (!paths_ensure_parent_dir(request.out_path)) {
+    response.error_code = errno;
+    return response;
+  }
 
   char pid_str[16];
   snprintf(pid_str, sizeof(pid_str), "%d", request.pid);
