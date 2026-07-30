@@ -2,6 +2,7 @@
 
 #include "base/algorithms.h"
 #include "base/base.h"
+#include "base/containers.h"
 
 #include "imgui.h"
 

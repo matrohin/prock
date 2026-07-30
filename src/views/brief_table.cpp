@@ -29,6 +29,7 @@
 #include <chrono>
 #include <cstring>
 #include <ctime>
+#include <iterator>
 #include <signal.h>
 #include <unistd.h>
 
@@ -411,8 +412,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
         for (uint32_t li = 0; li < my_state.lines.size; ++li) {
           const BriefTableLine &l = my_state.lines.data[li];
           if (l.ppid == parent && l.pid != parent && l.death_time_ns == 0 &&
-              tree_count <
-                  static_cast<int>(sizeof(tree_pids) / sizeof(tree_pids[0]))) {
+              tree_count < static_cast<int>(std::size(tree_pids))) {
             tree_pids[tree_count++] = l.pid;
           }
         }

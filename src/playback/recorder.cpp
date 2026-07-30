@@ -192,14 +192,14 @@ void recorder_loop(Sync &sync) {
     sock_notify_data_ready(sync);
   };
 
-  const auto close_file = [&]() {
+  const auto close_file = [&] {
     if (file) {
       fclose(file);
       file = nullptr;
     }
   };
 
-  const auto discard_backlog = [&]() {
+  const auto discard_backlog = [&] {
     RecordCommand cmd;
     while (rec.command_queue.pop(cmd)) {
       cmd.buffer.destroy();

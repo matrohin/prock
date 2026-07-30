@@ -3,7 +3,7 @@
 #include "base/base.h"
 #include "base/string.h"
 #include "proc_util.h"
-#include "process_stat.h"
+#include "state/raw_stats.h"
 #include "username.h"
 
 #include "tracy/Tracy.hpp"
@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <unistd.h>
 
 // Capability names indexed by bit number (see capabilities(7)).
@@ -93,7 +94,7 @@ static void append_clamped(const size_t size, size_t &used, const int written) {
 // Comma-joined names for the set bits; "all" when every known capability is
 // present, "none" when the mask is empty.
 static String decode_caps(BumpArena &arena, const unsigned long long mask) {
-  constexpr int count = sizeof(CAP_NAMES) / sizeof(CAP_NAMES[0]);
+  constexpr int count = std::size(CAP_NAMES);
   constexpr unsigned long long full = count >= 64 ? ~0ull : (1ull << count) - 1;
   if ((mask & full) == full) return String::static_string("all");
 
