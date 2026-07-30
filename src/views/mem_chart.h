@@ -26,6 +26,3 @@ void mem_chart_draw(ViewState &view_state);
 
 void mem_chart_add(MemChartState &my_state, Pid pid, const char *comm,
                    ImGuiID dock_id = 0, ProcessWindowFlags extra_flags = 0);
-void mem_chart_close_if_docked_in(MemChartState &my_state, Pid pid,
-                                  ImGuiID dockspace_id);
-void mem_chart_restore_layout_by_pid(MemChartState &my_state, Pid pid);

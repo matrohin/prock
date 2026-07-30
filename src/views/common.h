@@ -148,21 +148,6 @@ inline void notify_info(Notifications &notifications, const char *fmt, ...) {
   va_end(args);
 }
 
-// Info notification with a clickable action button. action_fn(action_data) runs
-// on click; action_data must outlive the toast (e.g. allocated in the
-// notifications arena, which lives as long as any notification is shown).
-PROCK_PRINTF(5, 6)
-inline void notify_info_action(Notifications &notifications,
-                               const char *action_label,
-                               void (*action_fn)(const void *user_data),
-                               const void *action_data, const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  notifications_vpush_action(notifications, eNotificationSeverity_Info,
-                             action_label, action_fn, action_data, fmt, args);
-  va_end(args);
-}
-
 // Clipboard helpers that confirm the copy with a toast. Cell copies preview
 // the value; rows are too long to preview, so they just say what happened.
 inline void clipboard_copy_cell(Notifications &notifications,

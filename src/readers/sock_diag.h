@@ -26,9 +26,6 @@ enum TcpState {
 
 struct SocketEntry {
   unsigned long inode;
-  // TCP info (only valid for TCP sockets)
-  unsigned long long bytes_received;
-  unsigned long long bytes_sent;
   SocketProtocol protocol;
   TcpState state;
   unsigned int local_ip;

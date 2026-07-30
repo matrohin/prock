@@ -67,18 +67,12 @@ SmapsResponse smaps_reader_read(BumpArena &temp_arena,
         cur->rss_kb = value;
       else if (strcmp(key, "Pss") == 0)
         cur->pss_kb = value;
-      else if (strcmp(key, "Shared_Clean") == 0)
-        cur->shared_clean_kb = value;
-      else if (strcmp(key, "Shared_Dirty") == 0)
-        cur->shared_dirty_kb = value;
       else if (strcmp(key, "Private_Clean") == 0)
         cur->private_clean_kb = value;
       else if (strcmp(key, "Private_Dirty") == 0)
         cur->private_dirty_kb = value;
       else if (strcmp(key, "Swap") == 0)
         cur->swap_kb = value;
-      else if (strcmp(key, "SwapPss") == 0)
-        cur->swap_pss_kb = value;
     }
   }
 

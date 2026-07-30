@@ -9,8 +9,7 @@ struct SmapsSegment {
   ulong start_addr, end_addr;
   ulong size_kb, rss_kb, pss_kb;
   ulong private_clean_kb, private_dirty_kb;
-  ulong shared_clean_kb, shared_dirty_kb;
-  ulong swap_kb, swap_pss_kb;
+  ulong swap_kb;
   char perms[8];
 };
 

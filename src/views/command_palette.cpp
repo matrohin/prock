@@ -15,6 +15,7 @@
 #include <cfloat>
 #include <cstdint>
 #include <cstdio>
+#include <iterator>
 
 struct Command {
   const char *label;     // static label shown in the palette
@@ -106,10 +107,11 @@ static void cmd_open_replay(ViewState &vs) {
   vs.replay_state.show_open_dialog = true;
 }
 
-// Entries are listed in CommandId order. A 0 chord means the command has no
-// global shortcut and is reachable only through the palette (or an existing
+// Listed roughly by how often the action is reached from the palette; the
+// palette and dispatch both follow this order. A 0 chord means the command has
+// no global shortcut and is reachable only through the palette (or an existing
 // menu item), which avoids colliding with the table's own key handling.
-static const Command g_commands[eCommand_Count] = {
+static const Command g_commands[] = {
     {"Filter processes in the table",
      ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_F, cmd_focus_process_filter},
     {"Toggle auto-follow", ImGuiKey_Space, cmd_toggle_auto_follow,
@@ -130,8 +132,10 @@ static const Command g_commands[eCommand_Count] = {
     {"Replay a recording...", 0, cmd_open_replay},
 };
 
+static constexpr uint32_t COMMAND_COUNT = std::size(g_commands);
+
 void command_dispatch(ViewState &vs) {
-  for (uint32_t i = 0; i < eCommand_Count; ++i) {
+  for (uint32_t i = 0; i < COMMAND_COUNT; ++i) {
     const ImGuiKeyChord chord = g_commands[i].binding;
     if (chord != 0 && ImGui::Shortcut(chord, ImGuiInputFlags_RouteGlobal)) {
       g_commands[i].execute(vs);
@@ -189,9 +193,9 @@ void command_palette_draw(ViewState &vs) {
   ui_filter_input(filter, "##cmdfilter", cs.filter, sizeof(cs.filter),
                   "Type to search commands...");
 
-  int matches[eCommand_Count];
+  int matches[COMMAND_COUNT];
   int match_count = 0;
-  for (uint32_t i = 0; i < eCommand_Count; ++i) {
+  for (uint32_t i = 0; i < COMMAND_COUNT; ++i) {
     char lbuf[96];
     const char *label = command_label(g_commands[i], vs, lbuf, sizeof(lbuf));
     if (filter.IsActive() && !filter.PassFilter(label)) {

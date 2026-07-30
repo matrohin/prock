@@ -90,7 +90,6 @@ template <class T> struct GrowingArray {
   T *data() { return inner.data; }
   const T *data() const { return inner.data; }
   uint32_t size() const { return cur_size; }
-  size_t total_byte_size() const { return inner.size * sizeof(T); }
 
   T *begin() { return data(); }
   T *end() { return data() + size(); }

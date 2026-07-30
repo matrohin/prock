@@ -5,11 +5,9 @@
 #include <cerrno>
 #include <linux/inet_diag.h>
 #include <linux/netlink.h>
-#include <linux/rtnetlink.h>
 #include <linux/sock_diag.h>
 
 #include <algorithm>
-#include <linux/tcp.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -52,10 +50,6 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
     request.req.sdiag_family = static_cast<__u8>(q.family);
     request.req.sdiag_protocol = static_cast<__u8>(q.protocol);
     request.req.idiag_states = ~0U; // All states
-    // Request TCP_INFO for byte counts (only meaningful for TCP)
-    if (q.protocol == IPPROTO_TCP) {
-      request.req.idiag_ext |= 1 << (INET_DIAG_INFO - 1);
-    }
 
     if (send(fd, &request, sizeof(request), 0) < 0) {
       if (first_errno == 0) first_errno = errno;
@@ -73,7 +67,7 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
         break;
       }
 
-// NLMSG_NEXT/RTA_NEXT walk buffers the kernel guarantees are aligned.
+// NLMSG_NEXT walks a buffer the kernel guarantees is aligned.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
       for (nlmsghdr *h = reinterpret_cast<nlmsghdr *>(buf); NLMSG_OK(h, len);
@@ -91,8 +85,7 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
           break;
         }
 
-        // Short of a full inet_diag_msg the body is not there to read, and the
-        // rta_len below would underflow into a walk past the buffer.
+        // Short of a full inet_diag_msg the body is not there to read.
         if (h->nlmsg_len < NLMSG_LENGTH(sizeof(inet_diag_msg))) continue;
 
         inet_diag_msg *diag = static_cast<inet_diag_msg *>(NLMSG_DATA(h));
@@ -105,8 +98,6 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
         entry->state = static_cast<TcpState>(diag->idiag_state);
         entry->tx_queue = diag->idiag_wqueue;
         entry->rx_queue = diag->idiag_rqueue;
-        entry->bytes_received = 0;
-        entry->bytes_sent = 0;
 
         // Extract addresses and ports
         entry->local_port = ntohs(diag->id.idiag_sport);
@@ -122,19 +113,6 @@ Array<SocketEntry> sock_diag_query(BumpArena &arena, int &out_errno) {
           entry->remote_ip = 0;
           memcpy(entry->local_ip6, diag->id.idiag_src, 16);
           memcpy(entry->remote_ip6, diag->id.idiag_dst, 16);
-        }
-
-        // Parse response attributes for TCP_INFO (byte counts)
-        if (q.protocol == IPPROTO_TCP) {
-          unsigned int rta_len = h->nlmsg_len - NLMSG_LENGTH(sizeof(*diag));
-          for (rtattr *attr = reinterpret_cast<rtattr *>(diag + 1);
-               RTA_OK(attr, rta_len); attr = RTA_NEXT(attr, rta_len)) {
-            if (attr->rta_type == INET_DIAG_INFO) {
-              const tcp_info *info = static_cast<tcp_info *>(RTA_DATA(attr));
-              entry->bytes_received = info->tcpi_bytes_received;
-              entry->bytes_sent = info->tcpi_bytes_acked;
-            }
-          }
         }
       }
 #pragma GCC diagnostic pop
