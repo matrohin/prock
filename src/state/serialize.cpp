@@ -27,9 +27,9 @@ static void ser_write_at(SerializeControl *control, const long pos,
     return;
   }
   const long end = ftell(control->file);
-  fseek(control->file, pos, SEEK_SET);
-  if (fwrite(src, n, 1, control->file) != 1) control->failed = true;
-  fseek(control->file, end, SEEK_SET);
+  VALIDATE(end >= 0 && fseek(control->file, pos, SEEK_SET) == 0);
+  VALIDATE(fwrite(src, n, 1, control->file) == 1);
+  VALIDATE(fseek(control->file, end, SEEK_SET) == 0);
 }
 
 template <class T>
