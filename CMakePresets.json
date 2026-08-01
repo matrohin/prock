@@ -72,7 +72,7 @@
     {
       "name": "publish",
       "displayName": "Publish",
-      "description": "Portable release build (zig cc, generic x86-64, glibc 2.17, static libc++, LTO) for distribution",
+      "description": "Portable release build (zig cc, generic x86-64, glibc 2.17, static libc++, LTO, no unwind tables) for distribution",
       "binaryDir": "${sourceDir}/build/Publish",
       "inherits": ["common"],
       "cacheVariables": {
@@ -82,8 +82,8 @@
         "BUILD_TESTS": "OFF",
         "CMAKE_C_COMPILER": "zig;cc;-target;x86_64-linux-gnu.2.17",
         "CMAKE_CXX_COMPILER": "zig;c++;-target;x86_64-linux-gnu.2.17",
-        "CMAKE_C_FLAGS": "-Wno-macro-redefined -Wno-nullability-completeness",
-        "CMAKE_CXX_FLAGS": "-Wno-macro-redefined -Wno-nullability-completeness",
+        "CMAKE_C_FLAGS": "-Wno-macro-redefined -Wno-nullability-completeness -fno-asynchronous-unwind-tables -fno-unwind-tables",
+        "CMAKE_CXX_FLAGS": "-Wno-macro-redefined -Wno-nullability-completeness -fno-asynchronous-unwind-tables -fno-unwind-tables",
         "CMAKE_LINK_DEPENDS_USE_LINKER": "OFF",
         "CMAKE_EXE_LINKER_FLAGS": "-s"
       }
