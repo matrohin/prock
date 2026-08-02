@@ -420,7 +420,7 @@ static void table_context_menu_draw(FrameContext &ctx, ViewState &view_state,
       // Kill children first, parent last: reverse the discovery order.
       std::reverse(tree_pids, tree_pids + tree_count);
       direct_kill_many(sync, view_state.notifications, tree_pids, tree_count,
-                       SIGKILL, "kill");
+                       SIGTERM, "kill");
     }
     ImGui::EndDisabled();
     ImGui::EndPopup();
