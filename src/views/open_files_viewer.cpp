@@ -165,6 +165,7 @@ void open_files_viewer_update(OpenFilesViewerState &state, Sync &sync) {
   while (sync.on_demand_reader.open_files_response_queue.pop(response)) {
     OpenFilesViewerWindow *win = on_demand_find(state.windows, response.pid);
     if (win && on_demand_apply_response(win->od, response.error_code)) {
+      if (win->files.size > 0) ++state.updates_since_last_cleanup;
       win->files = copy_files(state.cur_arena, response.files);
       sort_open_files(*win);
     }

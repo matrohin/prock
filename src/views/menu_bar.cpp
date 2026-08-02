@@ -28,6 +28,7 @@ static const char *LICENSES_TITLE = "Third-Party Licenses";
 static constexpr float UI_ELEMENT_WIDTH = 220.0f;
 static constexpr float FONT_POPUP_WIDTH = 300.0f;
 static constexpr float SETTING_LABEL_WIDTH = 130.0f;
+static constexpr float CLOSE_BUTTON_WIDTH = 120.0f;
 
 // Left-hand label column shared by all Preferences rows; the widget that
 // follows starts at a fixed x so rows line up across sections.
@@ -322,8 +323,7 @@ static void draw_licenses_modal(PreferencesState &prefs) {
     }
     ImGui::EndChild();
 
-    constexpr float button_w = 120.0f;
-    if (ImGui::Button("Close", ImVec2(button_w, 0.0f))) {
+    if (ImGui::Button("Close", ImVec2(CLOSE_BUTTON_WIDTH * ui_scale(), 0.0f))) {
       ImGui::CloseCurrentPopup();
       prefs.show_licenses_modal = false;
     }
@@ -370,8 +370,7 @@ static void draw_about_modal(PreferencesState &prefs) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    constexpr float button_w = 120.0f;
-    if (ImGui::Button("Close", ImVec2(button_w, 0.0f))) {
+    if (ImGui::Button("Close", ImVec2(CLOSE_BUTTON_WIDTH * ui_scale(), 0.0f))) {
       ImGui::CloseCurrentPopup();
       prefs.show_about_modal = false;
     }

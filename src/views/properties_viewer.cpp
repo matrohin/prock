@@ -193,7 +193,9 @@ void properties_viewer_update(PropertiesViewerState &state, Sync &sync) {
   PropertiesResponse response;
   while (sync.on_demand_reader.properties_response_queue.pop(response)) {
     PropertiesViewerWindow *win = on_demand_find(state.windows, response.pid);
+    const bool had_props = win && win->od.status == eOnDemandViewerStatus_Ready;
     if (win && on_demand_apply_response(win->od, response.error_code)) {
+      if (had_props) ++state.updates_since_last_cleanup;
       win->props = response.props;
       copy_props_into(state.cur_arena, win->props);
     }

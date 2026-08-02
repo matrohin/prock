@@ -138,6 +138,7 @@ void environ_viewer_update(EnvironViewerState &state, Sync &sync) {
   while (sync.on_demand_reader.environ_response_queue.pop(response)) {
     EnvironViewerWindow *win = on_demand_find(state.windows, response.pid);
     if (win && on_demand_apply_response(win->od, response.error_code)) {
+      if (win->entries.size > 0) ++state.updates_since_last_cleanup;
       win->entries = copy_entries(state.cur_arena, response.entries);
       sort_environ(*win);
     }

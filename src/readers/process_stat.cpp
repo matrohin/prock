@@ -163,7 +163,7 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena,
     return {};
   }
 
-  LinkedList<long> pids = {};
+  LinkedList<Pid> pids = {};
   while (true) {
     const dirent *dir = readdir(proc_dir);
     if (!dir) {
@@ -173,15 +173,15 @@ static Array<ProcessStat> read_all_processes(BumpArena &result_arena,
     const char *name = dir->d_name;
     char *str_end = nullptr;
     const long parsed_pid = strtol(name, &str_end, 10);
-    if (parsed_pid == 0 || parsed_pid == LONG_MAX || parsed_pid == LONG_MIN) {
+    if (parsed_pid <= 0 || parsed_pid > INT32_MAX || *str_end != '\0') {
       continue;
     }
-    *pids.emplace_front(result_arena) = parsed_pid;
+    *pids.emplace_front(result_arena) = static_cast<Pid>(parsed_pid);
   }
 
   Array<ProcessStat> result =
       Array<ProcessStat>::create(result_arena, pids.size);
-  const LinkedNode<long> *it = pids.head;
+  const LinkedNode<Pid> *it = pids.head;
   ProcessStat *it_result = result.data;
   while (it) {
     if (read_process(it->value, result_arena, it_result, usernames)) {

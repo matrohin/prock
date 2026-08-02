@@ -108,6 +108,7 @@ void library_viewer_update(LibraryViewerState &state, Sync &sync) {
   while (sync.on_demand_reader.library_response_queue.pop(response)) {
     LibraryViewerWindow *win = on_demand_find(state.windows, response.pid);
     if (win && on_demand_apply_response(win->od, response.error_code)) {
+      if (win->libraries.size > 0) ++state.updates_since_last_cleanup;
       win->libraries = copy_libraries(state.cur_arena, response.libraries);
       sort_libraries(*win);
     }

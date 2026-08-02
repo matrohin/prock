@@ -127,6 +127,7 @@ void socket_viewer_update(SocketViewerState &state, Sync &sync) {
     if (win) {
       if (response.error_code == 0 && response.netlink_error_code == 0) {
         on_demand_apply_response(win->od, 0);
+        if (win->sockets.size > 0) ++state.updates_since_last_cleanup;
         win->sockets =
             Array<SocketEntry>::copy_from(state.cur_arena, response.sockets);
         sort_sockets(*win);
