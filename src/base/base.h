@@ -22,6 +22,11 @@ using SteadyTimePoint = SteadyClock::time_point;
 
 inline constexpr double NS_IN_SEC = 1'000'000'000;
 
+// Next multiple of `alignment` (a power of two) at or above `value`.
+inline constexpr size_t align_up(const size_t value, const size_t alignment) {
+  return (value + alignment - 1) & ~(alignment - 1);
+}
+
 // printf-style checking
 // fmt_idx - the 1-based index of the format parameter
 // args_idx - the first variadic argument (0 for functions taking a va_list)
@@ -155,8 +160,9 @@ struct BumpArena {
       return cur_slab->advance(size);
     }
 
-    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + sizeof(ArenaSlab)),
-                                 cur_slab);
+    const size_t header = align_up(sizeof(ArenaSlab), alignment);
+    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + header), cur_slab);
+    cur_slab->advance(header - sizeof(ArenaSlab));
     return cur_slab->advance(size);
   }
 
