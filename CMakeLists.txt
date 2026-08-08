@@ -109,10 +109,10 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
   add_executable(prock_tests
-    tests/test_main.cpp
-    tests/test_base.cpp
-    tests/test_views.cpp
-    tests/test_serialize.cpp
+    tests/unit/test_main.cpp
+    tests/unit/test_base.cpp
+    tests/unit/test_views.cpp
+    tests/unit/test_serialize.cpp
     src/base/base.cpp
     src/readers/proc_util.cpp
     src/readers/username.cpp
