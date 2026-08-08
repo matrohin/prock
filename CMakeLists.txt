@@ -124,6 +124,7 @@ if(BUILD_TESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/tests
     third-party/imgui
     third-party/implot
+    third-party/doctest
   )
   target_link_libraries(prock_tests PRIVATE tracy project_warnings project_sanitizers)
 
