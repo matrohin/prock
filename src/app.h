@@ -11,6 +11,7 @@ struct AppParams {
   const char *replay_path; // static storage required, can be null
   const char *config_path; // static storage required, can be null
   bool is_config_borrowed;
+  bool hidden_window;
 };
 
 struct App {

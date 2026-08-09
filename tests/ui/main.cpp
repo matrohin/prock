@@ -1,13 +1,33 @@
 #include "app.h"
 #include "imgui.h"
 #include "imgui_te_engine.h"
+#include "imgui_te_exporters.h"
 #include "imgui_te_ui.h"
 #include "imgui_te_utils.h"
 
+#include <cstdio>
+#include <cstring>
+
 extern void ui_tests_brief_table_register(ImGuiTestEngine *engine);
 
-int main() {
+constexpr const char *USAGE = "Usage: prock_ui_tests [--gui]\n";
+
+int main(int argc, char **argv) {
+  bool gui = false;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--gui") == 0) {
+      gui = true;
+    } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+      printf("%s", USAGE);
+      return 0;
+    } else {
+      fprintf(stderr, "Unknown argument: %s\n%s", argv[i], USAGE);
+      return 1;
+    }
+  }
+
   AppParams params = {};
+  params.hidden_window = !gui;
   App *app = app_create(params);
   if (!app) {
     return 1;
@@ -17,12 +37,15 @@ int main() {
   ImGuiTestEngineIO &test_io = ImGuiTestEngine_GetIO(engine);
   test_io.ConfigVerboseLevel = ImGuiTestVerboseLevel_Info;
   test_io.ConfigVerboseLevelOnError = ImGuiTestVerboseLevel_Debug;
+  test_io.ConfigLogToTTY = !gui;
   ImGui::GetIO().ConfigDebugIsDebuggerPresent = ImOsIsDebuggerPresent();
 
   ui_tests_brief_table_register(engine);
 
   ImGuiTestEngine_Start(engine, ImGui::GetCurrentContext());
   ImGuiTestEngine_InstallDefaultCrashHandler();
+
+  bool tests_queued = false;
 
   while (!app_should_close(app)) {
     FrameMark;
@@ -33,7 +56,9 @@ int main() {
     app_update(app, frame_ctx);
 
     app_draw(app, frame_ctx);
-    ImGuiTestEngine_ShowTestEngineWindows(engine, nullptr);
+    if (gui) {
+      ImGuiTestEngine_ShowTestEngineWindows(engine, nullptr);
+    }
     app_render(app);
     app_end_frame(frame_ctx);
 
@@ -41,9 +66,29 @@ int main() {
     app_swap_buffers(app);
     ImGuiTestEngine_PostSwap(engine);
     FrameMarkEnd(MAIN_FRAME);
+
+    if (gui) continue;
+    if (!tests_queued) {
+      // The tests act on the process table, so they can only start once the
+      // gathering thread has delivered its first snapshot.
+      if (app->state.update_count > 0) {
+        ImGuiTestEngine_QueueTests(engine, ImGuiTestGroup_Tests, "all",
+                                   ImGuiTestRunFlags_RunFromCommandLine);
+        tests_queued = true;
+      }
+    } else if (ImGuiTestEngine_IsTestQueueEmpty(engine)) {
+      break;
+    }
   }
 
   ImGuiTestEngine_Stop(engine);
+
+  ImGuiTestEngineResultSummary summary = {};
+  ImGuiTestEngine_GetResultSummary(engine, &summary);
+  ImGuiTestEngine_PrintResultSummary(engine);
+
   app_destroy(app);
   ImGuiTestEngine_DestroyContext(engine);
+
+  return summary.CountSuccess == summary.CountTested ? 0 : 1;
 }

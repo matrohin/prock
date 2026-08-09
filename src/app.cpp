@@ -362,6 +362,10 @@ App *app_create(const AppParams &params) {
   // translucent (Option B transparency) while text stays opaque.
   glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
+  if (params.hidden_window) {
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+  }
+
   // Create window with graphics context
   float main_scale =
       ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
