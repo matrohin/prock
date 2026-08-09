@@ -2327,8 +2327,6 @@ void PlotShadedG(const char* label_id, ImPlotGetter getter_func1, void* data1, I
     PlotShadedEx(label_id, getter1, getter2, spec);
 }
 
-#ifndef PROCK_IMPLOT_MINIMAL
-
 //-----------------------------------------------------------------------------
 // [SECTION] PlotBars
 //-----------------------------------------------------------------------------
@@ -2451,6 +2449,8 @@ void PlotBarsG(const char* label_id, ImPlotGetter getter_func, void* data, int c
         PlotBarsVEx(label_id, getter1, getter2, bar_size, spec);
     }
 }
+
+#ifndef PROCK_IMPLOT_MINIMAL
 
 //-----------------------------------------------------------------------------
 // [SECTION] PlotBarGroups

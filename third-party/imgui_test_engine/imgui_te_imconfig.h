@@ -9,7 +9,7 @@
 // [Optional, default 0] Enable plotting of perflog data for comparing performance of different runs.
 // This feature requires ImPlot to be linked in the application.
 #ifndef IMGUI_TEST_ENGINE_ENABLE_IMPLOT
-#define IMGUI_TEST_ENGINE_ENABLE_IMPLOT 0
+#define IMGUI_TEST_ENGINE_ENABLE_IMPLOT 1
 #endif
 
 // [Optional, default 1] Enable screen capture and PNG/GIF saving functionalities
@@ -25,7 +25,7 @@
 
 // [Optional, default 0] Automatically fill ImGuiTestEngineIO::CoroutineFuncs with a default implementation using std::thread
 #ifndef IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL
-#define IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL 0
+#define IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL 1
 #endif
 
 // [Optional, default 0] Disable calls that do not make sense on game consoles

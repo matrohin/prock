@@ -70,7 +70,7 @@ struct CascadeLayout {
 };
 
 struct ViewState {
-  BumpArena arena;
+  BumpArena *persistent_arena; // from App.arena
   InternTable string_interner;
 
   Sync *sync;

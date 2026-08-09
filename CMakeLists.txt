@@ -60,41 +60,61 @@ endif()
 # Dear ImGui (no project warnings)
 ##############################################################################
 
-add_library(imgui_all STATIC src/imgui_all.cpp)
-target_include_directories(imgui_all PRIVATE
-  third-party/imgui
-  third-party/implot
+set(IMGUI_TARGETS imgui_all)
+if(BUILD_TESTS)
+  list(APPEND IMGUI_TARGETS imgui_all_te)
+endif()
+
+foreach(target ${IMGUI_TARGETS})
+  add_library(${target} STATIC src/imgui_all.cpp)
+  target_include_directories(${target} PUBLIC
+    third-party/imgui
+    third-party/implot
+  )
+  target_compile_definitions(${target} PRIVATE "IMPLOT_CUSTOM_NUMERIC_TYPES=(double)")
+  # PUBLIC so the main executable's TUs (which include imgui_internal.h) agree with
+  # the library on the active font loader and stay ABI-consistent.
+  target_compile_definitions(${target} PUBLIC IMGUI_ENABLE_FREETYPE)
+  target_link_libraries(${target}
+    PRIVATE
+    glfw
+    OpenGL::GLES2
+    Freetype::Freetype
+    project_sanitizers
+  )
+endforeach()
+
+##############################################################################
+# UI Dependencies (for prock and prock_ui_tests)
+##############################################################################
+add_library(project_ui_deps INTERFACE)
+target_include_directories(project_ui_deps
+  INTERFACE
+  third-party/material-symbols
+  third-party/inter
+  third-party/jetbrains-mono
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_compile_definitions(imgui_all PRIVATE "IMPLOT_CUSTOM_NUMERIC_TYPES=(double)")
-# PUBLIC so the main executable's TUs (which include imgui_internal.h) agree with
-# the library on the active font loader and stay ABI-consistent.
-target_compile_definitions(imgui_all PUBLIC IMGUI_ENABLE_FREETYPE)
-target_link_libraries(imgui_all PRIVATE glfw OpenGL::GLES2 Freetype::Freetype project_sanitizers)
+target_link_libraries(project_ui_deps
+  INTERFACE
+  glfw
+  OpenGL::GLES2
+  X11::X11
+  tracy
+)
 
 ##############################################################################
 # Main Executable
 ##############################################################################
 include(GNUInstallDirs)
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/app.cpp)
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-  third-party/imgui
-  third-party/implot
-  third-party/material-symbols
-  third-party/inter
-  third-party/jetbrains-mono
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
 target_link_libraries(${PROJECT_NAME} PRIVATE
   imgui_all
-  glfw
-  OpenGL::GLES2
-  X11::X11
-  tracy
+  project_ui_deps
   project_warnings
   project_sanitizers
 )
@@ -125,6 +145,11 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 ##############################################################################
 option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
+  enable_testing()
+
+  ############################################################################
+  # Unit Tests
+  ############################################################################
   add_executable(prock_tests
     tests/unit/test_main.cpp
     tests/unit/test_base.cpp
@@ -144,9 +169,54 @@ if(BUILD_TESTS)
     third-party/doctest
   )
   target_compile_options(prock_tests PRIVATE -fexceptions)
-  target_link_libraries(prock_tests PRIVATE tracy project_warnings project_sanitizers)
+  target_link_libraries(prock_tests
+    PRIVATE
+    tracy
+    project_warnings
+    project_sanitizers
+  )
 
-  enable_testing()
-  add_test(NAME prock_tests COMMAND prock_tests WORKING_DIRECTORY ${UNIT_TEST_BIN_OUTPUT_DIR})
+  add_test(
+    NAME prock_tests
+    COMMAND prock_tests
+  )
+
+  ############################################################################
+  # UI Tests
+  ############################################################################
+  target_include_directories(imgui_all_te PUBLIC third-party/imgui_test_engine)
+  target_compile_definitions(imgui_all_te PUBLIC PROCK_UI_TESTS)
+  target_sources(imgui_all_te PRIVATE
+    third-party/imgui_test_engine/imgui_te_context.cpp
+    third-party/imgui_test_engine/imgui_capture_tool.cpp
+    third-party/imgui_test_engine/imgui_te_coroutine.cpp
+    third-party/imgui_test_engine/imgui_te_engine.cpp
+    third-party/imgui_test_engine/imgui_te_exporters.cpp
+    third-party/imgui_test_engine/imgui_te_perftool.cpp
+    third-party/imgui_test_engine/imgui_te_ui.cpp
+    third-party/imgui_test_engine/imgui_te_utils.cpp
+  )
+
+  add_executable(prock_ui_tests
+    tests/ui/main.cpp
+    tests/ui/ui_tests_brief_table.cpp
+    src/app.cpp
+  )
+  target_include_directories(prock_ui_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+  )
+  target_link_libraries(prock_ui_tests
+    PRIVATE
+    imgui_all_te
+    project_ui_deps
+    project_warnings
+    project_sanitizers
+  )
+
+  add_test(
+    NAME prock_ui_tests
+    COMMAND prock_ui_tests
+  )
 endif()
 

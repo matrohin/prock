@@ -22,4 +22,6 @@ inline constexpr float MONO_FONT_SIZE_FACTOR = 1.085f;
 // Stretch weight for the trailing spacer column in viewer header toolbars.
 // Small relative to the filter column (default weight 1.0) so the spacer is a
 // thin gap at the right edge that keeps the controls left-aligned.
-constexpr float HEADER_SPACER_WEIGHT = 0.25f;
+inline constexpr float HEADER_SPACER_WEIGHT = 0.25f;
+
+[[maybe_unused]] inline constexpr const char *MAIN_FRAME = "main_frame";

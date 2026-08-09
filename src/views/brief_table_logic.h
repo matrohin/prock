@@ -3,6 +3,7 @@
 #include "base/base.h"
 #include "base/containers.h"
 #include "readers/process_stat.h"
+#include "state/state.h"
 
 #include "imgui.h"
 

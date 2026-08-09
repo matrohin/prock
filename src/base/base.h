@@ -153,6 +153,18 @@ struct BumpArena {
 
   static BumpArena create() { return BumpArena{}; }
 
+  static BumpArena create_with_capacity(size_t size, size_t alignment) {
+    BumpArena res;
+    res.allocate_new_slab(size, alignment);
+    return res;
+  }
+
+  void allocate_new_slab(size_t size, size_t alignment) {
+    const size_t header = align_up(sizeof(ArenaSlab), alignment);
+    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + header), cur_slab);
+    cur_slab->advance(header - sizeof(ArenaSlab));
+  }
+
   void *alloc_raw(const size_t size, const size_t alignment) {
     if (cur_slab &&
         std::align(alignment, size, cur_slab->cur, cur_slab->left_size) &&
@@ -160,9 +172,7 @@ struct BumpArena {
       return cur_slab->advance(size);
     }
 
-    const size_t header = align_up(sizeof(ArenaSlab), alignment);
-    cur_slab = ArenaSlab::create(std::max(SLAB_SIZE, size + header), cur_slab);
-    cur_slab->advance(header - sizeof(ArenaSlab));
+    allocate_new_slab(size, alignment);
     return cur_slab->advance(size);
   }
 
@@ -207,7 +217,8 @@ struct BumpArena {
 };
 
 template <class T> T *create_with_arena() {
-  BumpArena arena = {};
+  BumpArena arena =
+      BumpArena::create_with_capacity(sizeof(T) + SLAB_SIZE, alignof(T));
   void *memory = arena.alloc<T>();
   // TODO: ViewState is not zero-initializable, so we need this now:
   T *res = new (memory) T{};
