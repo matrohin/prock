@@ -921,7 +921,8 @@ void brief_table_draw(FrameContext &ctx, ViewState &view_state,
         const BriefTableLine &line = my_state.lines.data[i];
         const bool is_dead = line.death_time_ns != 0;
         const bool is_new =
-            !is_dead && now_ns - line.first_seen_ns < NEW_PROCESS_HIGHLIGHT_NS;
+            !is_dead && my_state.lines_at_ns - line.first_seen_ns <
+                            NEW_PROCESS_HIGHLIGHT_NS;
 
         const String label = String::sprintf(ctx.frame_arena, "%d", line.pid);
 

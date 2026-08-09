@@ -54,6 +54,7 @@ struct BriefTableLine {
 
 struct BriefTableState {
   Array<BriefTableLine> lines;
+  int64_t lines_at_ns;
   BriefTableColumnId sorted_by;
   ImGuiSortDirection sorted_order;
   Pid selected_pid = -1;

@@ -247,6 +247,7 @@ void brief_table_update(FrameContext &ctx, BriefTableState &my_state,
 
   new_lines.size = new_lines_count;
   my_state.lines = new_lines;
+  my_state.lines_at_ns = now_ns;
 
   if (my_state.tree_mode) {
     sort_brief_table_tree(my_state, ctx.frame_arena);

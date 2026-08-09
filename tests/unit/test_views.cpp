@@ -863,6 +863,34 @@ TEST_CASE("brief_table_update dead process handling") {
     state.snapshot_arena.destroy();
   }
 
+  SUBCASE("lines_at_ns tracks the snapshot the rows were built from") {
+    // Row ages are measured against this, not the live snapshot: while paused
+    // brief_table_update is skipped, so it must stay put and keep a
+    // just-spawned row highlighted instead of aging it out under a frozen view.
+    State state = {};
+    state.snapshot_arena = BumpArena::create();
+
+    SnapshotBuilder builder(arena);
+    builder.add(10, 0, "proc_a");
+    state.snapshot = builder.build();
+    state.snapshot.at = SteadyTimeDataPoint{}.shifted(5);
+
+    BriefTableState my_state = {};
+    my_state.sorted_by = eBriefTableColumnId_Pid;
+    my_state.sorted_order = ImGuiSortDirection_Ascending;
+
+    brief_table_update(frame_ctx, my_state, interner, state);
+    CHECK(my_state.lines_at_ns == SteadyTimeDataPoint{}.shifted(5).at_ns);
+
+    // A newly-arrived row is stamped with the same instant, so its age is 0
+    // however far the live snapshot has moved on.
+    REQUIRE(my_state.lines.size == 1);
+    my_state.lines.data[0].first_seen_ns = my_state.lines_at_ns;
+    CHECK(my_state.lines_at_ns - my_state.lines.data[0].first_seen_ns == 0);
+
+    state.snapshot_arena.destroy();
+  }
+
   frame_ctx.frame_arena.destroy();
   arena.destroy();
 }
