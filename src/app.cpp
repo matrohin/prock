@@ -13,6 +13,9 @@
 #include <GLES2/gl2.h>
 #include <GLFW/glfw3.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../third-party/stb/stb_image.h"
+
 #include <cstdio>
 #include <fcntl.h>
 #include <linux/limits.h>
@@ -366,6 +369,9 @@ App *app_create(const AppParams &params) {
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
   }
 
+  // Set Wayland App ID so the compositor can map it to our .desktop file icon
+  glfwWindowHintString(GLFW_WAYLAND_APP_ID, "prock");
+
   // Create window with graphics context
   float main_scale =
       ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
@@ -375,6 +381,14 @@ App *app_create(const AppParams &params) {
   if (window == nullptr) {
     return nullptr;
   }
+
+  GLFWimage images[1];
+  images[0].pixels = stbi_load("prock.png", &images[0].width, &images[0].height, 0, 4);
+  if (images[0].pixels) {
+    glfwSetWindowIcon(window, 1, images);
+    stbi_image_free(images[0].pixels);
+  }
+
   glfwMakeContextCurrent(window);
   glfwSwapInterval(0);
 
