@@ -21,6 +21,7 @@ enum class Theme : uint8_t {
   Onenord,
   EverforestDark,
   EverforestLight,
+  Custom,
   COUNT
 };
 
@@ -42,6 +43,8 @@ inline const char *theme_name(const Theme theme) {
     return "Everforest Dark";
   case Theme::EverforestLight:
     return "Everforest Light";
+  case Theme::Custom:
+    return "Custom";
   default:
     return "Unknown";
   }
@@ -60,6 +63,10 @@ enum AppColor : uint8_t {
 // apply_theme(); read from views via app_color_u32(). Not scaled by window
 // opacity - these are foreground highlights, not panel backgrounds.
 inline ImVec4 g_app_colors[eAppColor_COUNT];
+
+inline ImVec4 g_custom_colors[ImGuiCol_COUNT];
+inline ImVec4 g_custom_app_colors[eAppColor_COUNT];
+inline bool g_custom_theme_inited = false;
 
 inline ImU32 app_color_u32(const AppColor idx) {
   return ImGui::ColorConvertFloat4ToU32(g_app_colors[idx]);
@@ -526,6 +533,20 @@ inline void apply_theme(const Theme theme, ImGuiStyle *dst = nullptr) {
     set_app_colors_light();
     g_app_colors[eAppColor_NewProcessRow] = wa(green, 0.30f);
     g_app_colors[eAppColor_DeadProcessRow] = wa(red, 0.30f);
+    break;
+  }
+
+  case Theme::Custom: {
+    if (!g_custom_theme_inited) {
+      ImGui::StyleColorsDark(dst);
+      set_app_colors_dark();
+      for (int i = 0; i < ImGuiCol_COUNT; ++i) g_custom_colors[i] = colors[i];
+      for (int i = 0; i < eAppColor_COUNT; ++i) g_custom_app_colors[i] = g_app_colors[i];
+      g_custom_theme_inited = true;
+    } else {
+      for (int i = 0; i < ImGuiCol_COUNT; ++i) colors[i] = g_custom_colors[i];
+      for (int i = 0; i < eAppColor_COUNT; ++i) g_app_colors[i] = g_custom_app_colors[i];
+    }
     break;
   }
 

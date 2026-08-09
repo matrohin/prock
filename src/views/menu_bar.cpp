@@ -25,6 +25,7 @@ static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
 static const char *PREFERENCES_TITLE = "Preferences";
 static const char *ABOUT_TITLE = "About Prock";
 static const char *LICENSES_TITLE = "Third-Party Licenses";
+static const char *THEME_EDITOR_TITLE = "Theme Editor";
 static constexpr float UI_ELEMENT_WIDTH = 220.0f;
 static constexpr float FONT_POPUP_WIDTH = 300.0f;
 static constexpr float SETTING_LABEL_WIDTH = 130.0f;
@@ -149,6 +150,106 @@ static void draw_font_picker(PreferencesState &prefs, const char *label,
   ImGui::PopID();
 }
 
+static void draw_theme_editor_modal(PreferencesState &prefs) {
+  if (prefs.show_theme_editor_modal) {
+    ImGui::OpenPopup(THEME_EDITOR_TITLE);
+  }
+
+  const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+  ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+  ImGui::SetNextWindowSize(ImVec2(600.0f * ui_scale(), 500.0f * ui_scale()), ImGuiCond_Appearing);
+
+  if (ImGui::BeginPopupModal(THEME_EDITOR_TITLE, &prefs.show_theme_editor_modal)) {
+    if (popup_close_on_escape()) {
+      prefs.show_theme_editor_modal = false;
+    }
+
+    static ImGuiTextFilter filter;
+    
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(ICON_MD_SEARCH);
+    ImGui::SameLine();
+    filter.Draw("##ColorFilter", 200.0f * ui_scale());
+    
+    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 200.0f * ui_scale());
+    ImGui::SetNextItemWidth(200.0f * ui_scale());
+    if (ImGui::BeginCombo("##LoadPreset", "Load Preset...")) {
+      for (int i = 0; i < static_cast<int>(Theme::Custom); i++) {
+        const Theme t = static_cast<Theme>(i);
+        if (ImGui::Selectable(theme_name(t))) {
+          ImGuiStyle temp_style;
+          apply_theme(t, &temp_style);
+          for (int j = 0; j < ImGuiCol_COUNT; ++j) {
+            g_custom_colors[j] = temp_style.Colors[j];
+          }
+          for (int j = 0; j < eAppColor_COUNT; ++j) {
+            g_custom_app_colors[j] = g_app_colors[j];
+          }
+          style_control_force_update();
+          style_control_rebuild(prefs.zoom_scale_pct, prefs.window_opacity_pct);
+        }
+      }
+      ImGui::EndCombo();
+    }
+    
+    ImGui::Spacing();
+
+    if (ImGui::BeginTabBar("ThemeEditorTabs")) {
+      if (ImGui::BeginTabItem("ImGui Colors")) {
+        ImGui::BeginChild("ImGuiColorsScroll", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.y));
+        for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+          const char* color_name = ImGui::GetStyleColorName(i);
+          if (!filter.PassFilter(color_name)) continue;
+          
+          ImGui::PushID(i);
+          if (ImGui::ColorEdit4(color_name, (float*)&g_custom_colors[i], ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreviewHalf)) {
+            if (prefs.theme == Theme::Custom) {
+              style_control_force_update();
+              style_control_rebuild(prefs.zoom_scale_pct, prefs.window_opacity_pct);
+            }
+          }
+          ImGui::PopID();
+        }
+        ImGui::EndChild();
+        ImGui::EndTabItem();
+      }
+
+      if (ImGui::BeginTabItem("App Colors")) {
+        ImGui::BeginChild("AppColorsScroll", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.y));
+        static const char* app_color_names[eAppColor_COUNT] = {
+          "NewProcessRow",
+          "DeadProcessRow",
+          "ErrorText",
+          "WarningText",
+          "InfoText"
+        };
+        for (int i = 0; i < eAppColor_COUNT; ++i) {
+          if (!filter.PassFilter(app_color_names[i])) continue;
+          
+          ImGui::PushID(i);
+          if (ImGui::ColorEdit4(app_color_names[i], (float*)&g_custom_app_colors[i], ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreviewHalf)) {
+            if (prefs.theme == Theme::Custom) {
+              style_control_force_update();
+              style_control_rebuild(prefs.zoom_scale_pct, prefs.window_opacity_pct);
+            }
+          }
+          ImGui::PopID();
+        }
+        ImGui::EndChild();
+        ImGui::EndTabItem();
+      }
+      ImGui::EndTabBar();
+    }
+
+    if (ImGui::Button("Close", ImVec2(CLOSE_BUTTON_WIDTH * ui_scale(), 0.0f))) {
+      ImGui::CloseCurrentPopup();
+      prefs.show_theme_editor_modal = false;
+    }
+
+    ImGui::EndPopup();
+  }
+}
+
 static void draw_preferences_modal(PreferencesState &prefs) {
   if (prefs.show_preferences_modal) {
     ImGui::OpenPopup(PREFERENCES_TITLE);
@@ -191,6 +292,14 @@ static void draw_preferences_modal(PreferencesState &prefs) {
         }
       }
       ImGui::EndCombo();
+    }
+    
+    ImGui::SameLine();
+    if (ImGui::Button("Edit Colors")) {
+      prefs.theme = Theme::Custom;
+      changed_style = true;
+      prefs.show_theme_editor_modal = true;
+      prefs.show_preferences_modal = false;
     }
 
     changed_style |=
@@ -502,6 +611,7 @@ void menu_bar_draw(ViewState &view_state) {
   }
 
   draw_preferences_modal(view_state.preferences_state);
+  draw_theme_editor_modal(view_state.preferences_state);
   draw_about_modal(view_state.preferences_state);
   draw_licenses_modal(view_state.preferences_state);
 }

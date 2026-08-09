@@ -7,6 +7,7 @@
 void style_control_rebuild(int zoom_pct, int opacity_pct);
 
 void style_control_select_theme(Theme theme);
+void style_control_force_update();
 
 void style_control_init(Theme theme, float monitor_scale, int target_fps);
 

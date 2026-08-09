@@ -160,6 +160,14 @@ void style_control_select_theme(const Theme theme) {
   g_applied_zoom_scale = -1;
 }
 
+void style_control_force_update() {
+  if (g_applied_theme == Theme::COUNT) return;
+  apply_theme(g_applied_theme, &g_base_style);
+  apply_geometry(g_base_style);
+  apply_chart_colormap(g_applied_theme);
+  g_applied_zoom_scale = -1;
+}
+
 void style_control_init(const Theme theme, const float monitor_scale,
                         const int target_fps) {
   register_chart_colormaps();

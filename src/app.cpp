@@ -260,6 +260,24 @@ static void view_settings_read_line(ImGuiContext *, ImGuiSettingsHandler *,
     set_path_setting(view_state->preferences_state.recordings_dir,
                      sizeof(view_state->preferences_state.recordings_dir),
                      line + 14);
+  } else if (strncmp(line, "CustomColor_", 12) == 0) {
+    int idx;
+    float r, g, b, a;
+    if (sscanf(line, "CustomColor_%d=%f,%f,%f,%f", &idx, &r, &g, &b, &a) == 5) {
+      if (idx >= 0 && idx < ImGuiCol_COUNT) {
+        g_custom_colors[idx] = ImVec4(r, g, b, a);
+        g_custom_theme_inited = true;
+      }
+    }
+  } else if (strncmp(line, "CustomAppColor_", 15) == 0) {
+    int idx;
+    float r, g, b, a;
+    if (sscanf(line, "CustomAppColor_%d=%f,%f,%f,%f", &idx, &r, &g, &b, &a) == 5) {
+      if (idx >= 0 && idx < eAppColor_COUNT) {
+        g_custom_app_colors[idx] = ImVec4(r, g, b, a);
+        g_custom_theme_inited = true;
+      }
+    }
   }
 }
 
@@ -302,6 +320,17 @@ static void view_settings_write_all(ImGuiContext * /*ctx*/,
   if (view_state->preferences_state.recordings_dir[0] != '\0') {
     buf->appendf("RecordingsDir=%s\n",
                  view_state->preferences_state.recordings_dir);
+  }
+
+  for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+    buf->appendf("CustomColor_%d=%.2f,%.2f,%.2f,%.2f\n", i,
+                 g_custom_colors[i].x, g_custom_colors[i].y,
+                 g_custom_colors[i].z, g_custom_colors[i].w);
+  }
+  for (int i = 0; i < eAppColor_COUNT; ++i) {
+    buf->appendf("CustomAppColor_%d=%.2f,%.2f,%.2f,%.2f\n", i,
+                 g_custom_app_colors[i].x, g_custom_app_colors[i].y,
+                 g_custom_app_colors[i].z, g_custom_app_colors[i].w);
   }
   buf->append("\n");
 
