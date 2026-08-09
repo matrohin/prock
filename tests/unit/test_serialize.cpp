@@ -119,6 +119,7 @@ UpdateSnapshot make_snapshot(uint64_t seed) {
   snap.mem_info = {seed + 16000000u, seed + 8000000u};
   snap.disk_io_stats = {seed + 111u, seed + 222u};
   snap.net_io_stats = {seed + 333u, seed + 444u};
+  snap.uptime_ticks = seed + 555u;
   snap.system_time = SystemTimePoint{std::chrono::nanoseconds{
       static_cast<int64_t>(1500000000000000000LL + seed)}};
   snap.at = {static_cast<int64_t>(987654321 + seed)};
@@ -146,6 +147,7 @@ void check_snapshot_eq(UpdateSnapshot &a, UpdateSnapshot &b) {
   CHECK(a.disk_io_stats.sectors_written == b.disk_io_stats.sectors_written);
   CHECK(a.net_io_stats.bytes_received == b.net_io_stats.bytes_received);
   CHECK(a.net_io_stats.bytes_transmitted == b.net_io_stats.bytes_transmitted);
+  CHECK(a.uptime_ticks == b.uptime_ticks);
   CHECK(a.system_time.time_since_epoch().count() ==
         b.system_time.time_since_epoch().count());
 }
@@ -453,6 +455,46 @@ TEST_CASE("UpdateSnapshot record round-trip") {
   check_snapshot_eq(snap, out);
   CHECK(out.at.at_ns == snap.at.at_ns);
   CHECK(out.thread_snapshots.size == 0); // not serialized (yet)
+
+  out.owner_arena.destroy();
+  snap.owner_arena.destroy();
+}
+
+TEST_CASE("pre-eSerVer_Uptime recordings still replay") {
+  // The absent field must read back as 0, which is what keeps
+  // state_snapshot_update off the newborn CPU path on an old recording.
+  SerFixture fix;
+  REQUIRE(fix.file != nullptr);
+
+  UpdateSnapshot snap = make_snapshot(0);
+
+  // serialize_header() stamps eSerVer_Latest on every write, so an old file is
+  // reproduced by driving the records at the old version directly.
+  auto w = fix.writer();
+  w.data_version = eSerVer_Init;
+  RecordHeader wh = {};
+  wh.record_type = eSerRecordType_UpdateSnapshot;
+  wh.at = &snap.at;
+  serialize_record_header(&w, &wh);
+  serialize(&w, &snap);
+  serialize_record_footer(&w, &wh);
+  CHECK_FALSE(w.failed);
+
+  UpdateSnapshot out = {};
+  auto r = fix.reader();
+  r.data_version = eSerVer_Init;
+
+  RecordHeader rh = {};
+  rh.at = &out.at;
+  serialize_record_header(&r, &rh);
+  serialize(&r, &out);
+  serialize_record_footer(&r, &rh);
+  CHECK_FALSE(r.failed);
+
+  CHECK(out.uptime_ticks == 0);
+  CHECK(out.mem_info.mem_total == snap.mem_info.mem_total);
+  REQUIRE(out.stats.size == snap.stats.size);
+  check_stat_eq(snap.stats.data[0], out.stats.data[0]);
 
   out.owner_arena.destroy();
   snap.owner_arena.destroy();

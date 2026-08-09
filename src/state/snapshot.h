@@ -16,6 +16,7 @@ struct UpdateSnapshot {
   MemInfo mem_info;
   DiskIoStat disk_io_stats;
   NetIoStat net_io_stats;
+  uint64_t uptime_ticks;
   Array<ThreadSnapshot> thread_snapshots; // Per-watched-pid thread data
   SteadyTimeDataPoint at;
   SystemTimePoint system_time;

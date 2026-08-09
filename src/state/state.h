@@ -76,6 +76,7 @@ struct StateSnapshot {
   NetIoStat net_io_stats;
   NetIoRate net_io_rate;
   Array<ThreadSnapshot> thread_snapshots;
+  uint64_t uptime_ticks;
   SteadyTimeDataPoint at;
   // /proc/stat jiffy budget for one core over this interval; the basis for
   // per-process and per-thread CPU% (see state_snapshot_update).

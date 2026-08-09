@@ -249,6 +249,23 @@ static Array<CpuCoreStat> read_cpu_stats(BumpArena &arena) {
   return result;
 }
 
+// Reads /proc/uptime, in clock ticks so it compares directly against
+// ProcessStat::starttime.
+static uint64_t read_uptime_ticks(const uint64_t ticks_in_second) {
+  ZoneScoped;
+  FILE *uptime_file = fopen("/proc/uptime", "r");
+  if (!uptime_file) {
+    return 0;
+  }
+  double uptime_secs = 0.0;
+  const int parsed = fscanf(uptime_file, "%lf", &uptime_secs);
+  fclose(uptime_file);
+  if (parsed != 1 || uptime_secs < 0.0) {
+    return 0;
+  }
+  return static_cast<uint64_t>(uptime_secs * ticks_in_second);
+}
+
 // Reads /proc/diskstats for system-wide disk I/O stats
 // Aggregates all block devices (skips partitions by looking at device naming)
 static DiskIoStat read_disk_io_stats() {
@@ -541,13 +558,14 @@ void process_stat_gather(GatheringState &state, Sync &sync) {
   const auto mem_info = read_mem_info();
   const auto disk_io_stats = read_disk_io_stats();
   const auto net_io_stats = read_net_io_stats();
+  const auto uptime_ticks = read_uptime_ticks(state.ticks_in_second);
   const auto thread_snapshots = read_watched_threads(state.watched_pids, arena);
 
   state.last_update = SteadyTimeDataPoint::now();
   const SystemTimePoint system_now = SystemClock::now();
   const bool pushed = sync.update_queue.push(UpdateSnapshot{
       arena, process_stats, cpu_stats, mem_info, disk_io_stats, net_io_stats,
-      thread_snapshots, state.last_update, system_now});
+      uptime_ticks, thread_snapshots, state.last_update, system_now});
   if (pushed) {
     sock_notify_data_ready(sync);
   } else {

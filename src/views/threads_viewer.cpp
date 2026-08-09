@@ -222,15 +222,23 @@ void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
         ++prev_idx;
       }
 
-      if (prev_idx < prev_threads.size &&
-          prev_threads.data[prev_idx].pid == thread.pid && per_core_ticks > 0) {
-        const ThreadCpuSample &prev = prev_threads.data[prev_idx];
-        const double effective_ticks = effective_core_ticks(
-            thread.read_time_ns, prev.read_time, per_core_ticks, interval_secs);
-        line.cpu_user_perc =
-            counter_rate(thread.utime, prev.utime, 100.0, effective_ticks);
-        line.cpu_kernel_perc =
-            counter_rate(thread.stime, prev.stime, 100.0, effective_ticks);
+      const bool has_prev = prev_idx < prev_threads.size &&
+                            prev_threads.data[prev_idx].pid == thread.pid;
+      if (per_core_ticks > 0) {
+        if (has_prev) {
+          const ThreadCpuSample &prev = prev_threads.data[prev_idx];
+          const double effective_ticks =
+              effective_core_ticks(thread.read_time_ns, prev.read_time,
+                                   per_core_ticks, interval_secs);
+          line.cpu_user_perc =
+              counter_rate(thread.utime, prev.utime, 100.0, effective_ticks);
+          line.cpu_kernel_perc =
+              counter_rate(thread.stime, prev.stime, 100.0, effective_ticks);
+        } else if (win.prev_uptime_ticks > 0 &&
+                   thread.starttime > win.prev_uptime_ticks) {
+          line.cpu_user_perc = thread.utime * 100.0 / per_core_ticks;
+          line.cpu_kernel_perc = thread.stime * 100.0 / per_core_ticks;
+        }
       }
     }
 
@@ -241,6 +249,7 @@ void threads_viewer_update(FrameContext &ctx, ThreadsViewerState &state,
       const ProcessStat &t = snap->threads.data[i];
       win.prev_threads.data[i] = {t.pid, t.utime, t.stime, t.read_time_ns};
     }
+    win.prev_uptime_ticks = state_data.snapshot.uptime_ticks;
 
     // Rebuild lines in previous display order (dead threads dropped, new ones
     // appended) so the stable sort keeps tied rows where they were

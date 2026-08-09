@@ -40,29 +40,42 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
       ++old_state_idx;
     }
 
-    // CPU and I/O are rates: they need a matching previous sample and a
-    // positive divisor. Without those the zero-initialized result stands. CPU
-    // is normalized by jiffies (per_core_ticks); I/O is a wall-clock byte rate.
-    if (old_state_idx < old.stats.size &&
-        new_stat.pid == old.stats.data[old_state_idx].pid) {
-      const ProcessStat &old_stat = old.stats.data[old_state_idx];
-      if (per_core_ticks > 0) {
+    const ProcessStat *old_stat =
+        old_state_idx < old.stats.size &&
+                new_stat.pid == old.stats.data[old_state_idx].pid
+            ? &old.stats.data[old_state_idx]
+            : nullptr;
+    // A reused PID: those counters belong to a process that has since died.
+    if (old_stat && old_stat->starttime != new_stat.starttime) {
+      old_stat = nullptr;
+    }
+    // Just use the uptime/other stat in case of a newborn
+    const bool is_newborn = !old_stat && old.uptime_ticks > 0 &&
+                            new_stat.starttime > old.uptime_ticks;
+
+    if (per_core_ticks > 0) {
+      if (old_stat) {
         const double effective_ticks =
-            effective_core_ticks(new_stat.read_time_ns, old_stat.read_time_ns,
+            effective_core_ticks(new_stat.read_time_ns, old_stat->read_time_ns,
                                  per_core_ticks, time_delta);
-        result.cpu_user_perc = counter_rate(new_stat.utime, old_stat.utime,
+        result.cpu_user_perc = counter_rate(new_stat.utime, old_stat->utime,
                                             100.0, effective_ticks);
-        result.cpu_kernel_perc = counter_rate(new_stat.stime, old_stat.stime,
+        result.cpu_kernel_perc = counter_rate(new_stat.stime, old_stat->stime,
                                               100.0, effective_ticks);
+      } else if (is_newborn) {
+        result.cpu_user_perc =
+            counter_rate(new_stat.utime, 0, 100.0, per_core_ticks);
+        result.cpu_kernel_perc =
+            counter_rate(new_stat.stime, 0, 100.0, per_core_ticks);
       }
-      if (time_delta > 0) {
-        result.io_read_kb_per_sec =
-            counter_rate(new_stat.io_read_bytes, old_stat.io_read_bytes,
-                         1.0 / 1024.0, time_delta);
-        result.io_write_kb_per_sec =
-            counter_rate(new_stat.io_write_bytes, old_stat.io_write_bytes,
-                         1.0 / 1024.0, time_delta);
-      }
+    }
+    if (time_delta > 0 && (old_stat || is_newborn)) {
+      const uint64_t prev_read = old_stat ? old_stat->io_read_bytes : 0;
+      const uint64_t prev_write = old_stat ? old_stat->io_write_bytes : 0;
+      result.io_read_kb_per_sec = counter_rate(
+          new_stat.io_read_bytes, prev_read, 1.0 / 1024.0, time_delta);
+      result.io_write_kb_per_sec = counter_rate(
+          new_stat.io_write_bytes, prev_write, 1.0 / 1024.0, time_delta);
     }
   }
 
@@ -116,11 +129,11 @@ StateSnapshot state_snapshot_update(BumpArena &arena, const State &old_state,
         old.net_io_stats.bytes_transmitted, BYTES_TO_MB, time_delta);
   }
 
-  return StateSnapshot{snapshot.stats,     derived_stats,
-                       snapshot.cpu_stats, cpu_perc,
-                       snapshot.mem_info,  snapshot.disk_io_stats,
-                       disk_io_rate,       snapshot.net_io_stats,
-                       net_io_rate,        snapshot.thread_snapshots,
-                       snapshot.at,        per_core_ticks,
-                       time_delta};
+  return StateSnapshot{snapshot.stats,        derived_stats,
+                       snapshot.cpu_stats,    cpu_perc,
+                       snapshot.mem_info,     snapshot.disk_io_stats,
+                       disk_io_rate,          snapshot.net_io_stats,
+                       net_io_rate,           snapshot.thread_snapshots,
+                       snapshot.uptime_ticks, snapshot.at,
+                       per_core_ticks,        time_delta};
 }

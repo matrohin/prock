@@ -11,7 +11,8 @@
 
 enum SerVer : uint32_t {
   eSerVer_Init = 0,
-  eSerVer_Latest = eSerVer_Init,
+  eSerVer_Uptime = 1,
+  eSerVer_Latest = eSerVer_Uptime,
 };
 
 enum SerRecordType : uint32_t {

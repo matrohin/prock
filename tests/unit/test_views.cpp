@@ -361,7 +361,7 @@ TEST_CASE("state_snapshot_update") {
           doctest::Approx(50.0));
   }
 
-  SUBCASE("new process (not in old snapshot) gets zero CPU") {
+  SUBCASE("process on the first update gets zero CPU") {
     State old_state = {};
     old_state.system.ticks_in_second = 100;
     old_state.system.mem_page_size = 4096;
@@ -385,12 +385,147 @@ TEST_CASE("state_snapshot_update") {
     StateSnapshot result = state_snapshot_update(arena, old_state, update);
 
     REQUIRE(result.derived_stats.size == 1);
-    // New process - no old data to compare, so CPU should be 0
+    // No previous /proc/stat sample, so there is no jiffy budget to normalize
+    // against and CPU stays 0 whatever the counters say.
     CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(0.0));
     CHECK(result.derived_stats.data[0].cpu_kernel_perc == doctest::Approx(0.0));
     // ...but memory is instantaneous, so it's still reported on first sight.
     CHECK(result.derived_stats.data[0].mem_resident_bytes ==
           doctest::Approx(100 * 4096));
+  }
+
+  SUBCASE("process born inside the interval is credited its whole lifetime") {
+    State old_state = {};
+    old_state.system.ticks_in_second = 100;
+    old_state.system.mem_page_size = 4096;
+    old_state.snapshot.at = SteadyTimeDataPoint{};
+    old_state.snapshot.uptime_ticks = 1000; // previous sample at boot tick 1000
+
+    CpuCoreStat old_cpu[2] = {};
+    CpuCoreStat new_cpu[2] = {};
+    new_cpu[0].total = 100; // 100-jiffy aggregate delta over 1 core
+
+    old_state.snapshot.cpu_stats.data = old_cpu;
+    old_state.snapshot.cpu_stats.size = 2;
+
+    UpdateSnapshot update = {};
+    ProcessStat new_proc = {};
+    new_proc.pid = 100;
+    new_proc.starttime = 1020; // spawned after the previous sample
+    new_proc.utime = 40;
+    new_proc.stime = 10;
+    new_proc.io_read_bytes = 102400;
+    new_proc.io_write_bytes = 51200;
+
+    update.stats.data = &new_proc;
+    update.stats.size = 1;
+    update.cpu_stats.data = new_cpu;
+    update.cpu_stats.size = 2;
+    update.uptime_ticks = 1050;
+    update.at = old_state.snapshot.at.shifted(1);
+
+    StateSnapshot result = state_snapshot_update(arena, old_state, update);
+
+    REQUIRE(result.derived_stats.size == 1);
+    // 40 of the 100-tick budget, charged against the full interval so the
+    // column stays additive against system CPU%.
+    CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(40.0));
+    CHECK(result.derived_stats.data[0].cpu_kernel_perc == doctest::Approx(10.0));
+    // Same rule for I/O: every byte was read in this interval.
+    CHECK(result.derived_stats.data[0].io_read_kb_per_sec ==
+          doctest::Approx(100.0));
+    CHECK(result.derived_stats.data[0].io_write_kb_per_sec ==
+          doctest::Approx(50.0));
+  }
+
+  SUBCASE("process older than the previous sample stays at zero") {
+    // Absent from the previous snapshot: it was missed, not spawned, so
+    // crediting its lifetime would invent a huge spike.
+    State old_state = {};
+    old_state.system.ticks_in_second = 100;
+    old_state.system.mem_page_size = 4096;
+    old_state.snapshot.at = SteadyTimeDataPoint{};
+    old_state.snapshot.uptime_ticks = 1000;
+
+    CpuCoreStat old_cpu[2] = {};
+    CpuCoreStat new_cpu[2] = {};
+    new_cpu[0].total = 100;
+
+    old_state.snapshot.cpu_stats.data = old_cpu;
+    old_state.snapshot.cpu_stats.size = 2;
+
+    UpdateSnapshot update = {};
+    ProcessStat new_proc = {};
+    new_proc.pid = 100;
+    new_proc.starttime = 500; // long-lived
+    new_proc.utime = 9000;
+    new_proc.stime = 3000;
+
+    update.stats.data = &new_proc;
+    update.stats.size = 1;
+    update.cpu_stats.data = new_cpu;
+    update.cpu_stats.size = 2;
+    update.uptime_ticks = 1050;
+    update.at = old_state.snapshot.at.shifted(1);
+
+    StateSnapshot result = state_snapshot_update(arena, old_state, update);
+
+    REQUIRE(result.derived_stats.size == 1);
+    CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(0.0));
+    CHECK(result.derived_stats.data[0].cpu_kernel_perc == doctest::Approx(0.0));
+  }
+
+  SUBCASE("reused PID is measured from birth, not against the dead process") {
+    // Subtracting the dead process's counters would clamp the delta to zero.
+    State old_state = {};
+    old_state.system.ticks_in_second = 100;
+    old_state.system.mem_page_size = 4096;
+    old_state.snapshot.at = SteadyTimeDataPoint{};
+    old_state.snapshot.uptime_ticks = 1000;
+
+    ProcessStat old_proc = {};
+    old_proc.pid = 100;
+    old_proc.starttime = 500;
+    old_proc.utime = 9000;
+    old_proc.stime = 3000;
+    old_proc.io_read_bytes = 8ull << 20;
+    ProcessDerivedStat old_derived = {};
+
+    CpuCoreStat old_cpu[2] = {};
+    CpuCoreStat new_cpu[2] = {};
+    new_cpu[0].total = 100;
+
+    old_state.snapshot.stats.data = &old_proc;
+    old_state.snapshot.stats.size = 1;
+    old_state.snapshot.derived_stats.data = &old_derived;
+    old_state.snapshot.derived_stats.size = 1;
+    old_state.snapshot.cpu_stats.data = old_cpu;
+    old_state.snapshot.cpu_stats.size = 2;
+
+    UpdateSnapshot update = {};
+    ProcessStat new_proc = {};
+    new_proc.pid = 100;
+    new_proc.starttime = 1020; // a different process wearing the same PID
+    new_proc.utime = 40;
+    new_proc.stime = 10;
+    new_proc.io_read_bytes = 102400;
+
+    update.stats.data = &new_proc;
+    update.stats.size = 1;
+    update.cpu_stats.data = new_cpu;
+    update.cpu_stats.size = 2;
+    update.uptime_ticks = 1050;
+    update.at = old_state.snapshot.at.shifted(1);
+
+    StateSnapshot result = state_snapshot_update(arena, old_state, update);
+
+    REQUIRE(result.derived_stats.size == 1);
+    CHECK(result.derived_stats.data[0].cpu_user_perc == doctest::Approx(40.0));
+    CHECK(result.derived_stats.data[0].cpu_kernel_perc == doctest::Approx(10.0));
+    // Measured from zero, not as a delta against the dead process's 8 MB -
+    // which would have clamped to 0.
+    CHECK(result.derived_stats.data[0].io_read_kb_per_sec ==
+          doctest::Approx(100.0));
   }
 
   SUBCASE("system CPU percentage calculation") {

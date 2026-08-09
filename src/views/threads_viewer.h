@@ -56,6 +56,9 @@ struct ThreadsViewerWindow {
   // Stored in TID-sorted order (as returned by read_process_threads)
   // for linear-scan delta matching
   Array<ThreadCpuSample> prev_threads;
+  // Uptime when prev_threads was taken, in ProcessStat::starttime's units.
+  // Zero until this window's second update, which disables the newborn path.
+  uint64_t prev_uptime_ticks;
 
   // UI state
   int selected_tid;

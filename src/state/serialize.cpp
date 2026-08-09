@@ -181,6 +181,7 @@ void serialize(SerializeControl *control, UpdateSnapshot *datum) {
   ADD_FIELD(eSerVer_Init, disk_io_stats);
   ADD_FIELD(eSerVer_Init, net_io_stats);
   ADD_FIELD(eSerVer_Init, system_time);
+  ADD_FIELD(eSerVer_Uptime, uptime_ticks);
 
   // "at" is serialized by the top layer as part of the record header
 

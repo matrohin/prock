@@ -470,15 +470,17 @@ App *app_create(const AppParams &params) {
           playback_loop(*sync, replay_path);
         }};
   } else {
-    app->producer_thread = std::thread{[sync] {
-      pthread_setname_np(pthread_self(), "gathering");
-      GatheringState gathering_state = {};
-      gathering_state.usernames =
-          UsernameResolver::create(&gathering_state.persistent_arena);
-      while (!sync->quit.load()) {
-        process_stat_gather(gathering_state, *sync);
-      }
-    }};
+    app->producer_thread =
+        std::thread{[sync, ticks = app->state.system.ticks_in_second] {
+          pthread_setname_np(pthread_self(), "gathering");
+          GatheringState gathering_state = {};
+          gathering_state.ticks_in_second = ticks;
+          gathering_state.usernames =
+              UsernameResolver::create(&gathering_state.persistent_arena);
+          while (!sync->quit.load()) {
+            process_stat_gather(gathering_state, *sync);
+          }
+        }};
   }
 
   app->proc_reader_thread = std::thread{[sync] {

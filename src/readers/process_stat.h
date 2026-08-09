@@ -5,6 +5,7 @@
 #include "username.h"
 
 struct GatheringState {
+  uint64_t ticks_in_second;
   SteadyTimeDataPoint last_update;
   GrowingArray<Pid> watched_pids;
   BumpArena watched_pids_arena;
