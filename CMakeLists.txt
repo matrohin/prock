@@ -41,6 +41,8 @@ target_compile_options(project_warnings
   -Wformat-security # warn on a non-literal format with no arguments
 )
 
+option(BUILD_TESTS "Build tests" ON)
+
 option(PROCK_SANITIZE "Build with ASan (+ UBSan on first-party code)" OFF)
 add_library(project_sanitizers INTERFACE)
 if(PROCK_SANITIZE)
@@ -143,7 +145,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 ##############################################################################
 # All Tests
 ##############################################################################
-option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
   enable_testing()
 
