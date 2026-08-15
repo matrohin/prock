@@ -70,6 +70,7 @@
 #include "views/system_mem_chart.cpp"
 #include "views/system_net_chart.cpp"
 #include "views/threads_viewer.cpp"
+#include "views/ui.cpp"
 #include "views/vim_nav.cpp"
 
 constexpr off_t SETTINGS_MAX_BYTES = 1 << 20;

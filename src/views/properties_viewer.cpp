@@ -4,12 +4,11 @@
 #include "state/state.h"
 #include "views/common.h"
 #include "views/icons.h"
-#include "views/shortcut.h"
-#include "views/table_item.h"
 #include "views/ui.h"
 #include "views/view_state.h"
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "on_demand_common.h"
 #include "tracy/Tracy.hpp"
 
@@ -161,6 +160,7 @@ void properties_viewer_request(PropertiesViewerState &state, Sync &sync,
   PropertiesViewerWindow *win = state.windows.emplace_back(state.cur_arena);
   on_demand_window_init(win->od, pid, comm, dock_id, extra_flags);
   win->props = {};
+  win->menu_selection = {};
 
   if (!send_properties_request(sync, pid)) {
     on_demand_mark_request_dropped(win->od);
@@ -224,6 +224,14 @@ static constexpr ImGuiTableFlags PROP_TABLE_FLAGS =
     ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
     ImGuiTableFlags_Borders | ImGuiTableFlags_HighlightHoveredColumn;
 
+static String selection_text(BumpArena &arena, const String &value,
+                             const UiTextSelection &selection) {
+  const uint32_t end = std::min(selection.end, value.len);
+  const uint32_t begin = std::min(selection.begin, end);
+  if (begin == end) return value;
+  return String::copy_from(arena, value.data + begin, end - begin);
+}
+
 static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
                                     PropertiesViewerWindow &win,
                                     const PropEntry *entries,
@@ -232,7 +240,8 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
   ui_push_mono_font();
   float label_width = 0.0f;
   for (uint32_t i = 0; i < count; ++i) {
-    label_width = ImMax(label_width, ImGui::CalcTextSize(entries[i].label).x);
+    label_width =
+        std::max(label_width, ImGui::CalcTextSize(entries[i].label).x);
   }
   ui_pop_mono_font();
 
@@ -258,43 +267,43 @@ static void draw_properties_content(FrameContext &ctx, ViewState &view_state,
     for (uint32_t i = 0; i < count; ++i) {
       const PropEntry &entry = entries[i];
       if (entry.section != section) continue;
+      ImGui::PushID(static_cast<int>(i));
 
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
-      ImGui::PushID(static_cast<int>(i));
 
-      const bool is_selected = win.od.selected_index == static_cast<int>(i);
-      if (ImGui::Selectable(entry.label, is_selected,
-                            ImGuiSelectableFlags_SpanAllColumns) ||
-          ImGui::IsItemFocused()) {
-        win.od.selected_index = static_cast<int>(i);
+      ImGui::TextUnformatted(entry.label);
+      bool open_menu = ui_item_right_clicked();
+
+      ImGui::TableSetColumnIndex(1);
+      const UiTextSelection selection =
+          ui_selectable_text("##value", entry.value);
+      open_menu |= ui_item_right_clicked();
+
+      if (selection.begin != selection.end && ui_copy_shortcut_pressed()) {
+        clipboard_copy_cell(
+            view_state.notifications,
+            selection_text(ctx.frame_arena, entry.value, selection));
       }
 
-      if (ui_context_menu(is_selected)) {
-        win.od.selected_index = static_cast<int>(i);
-        if (ImGui::MenuItemEx(
-                copy_cell_menu_label(ctx.frame_arena, entry.value).data,
-                ICON_MD_CONTENT_COPY, "Ctrl+C")) {
-          clipboard_copy_cell(view_state.notifications, entry.value);
+      if (open_menu) {
+        win.menu_selection = selection;
+        ImGui::OpenPopup("##menu");
+      }
+      ui_hold_text_selection("##menu");
+      if (ImGui::BeginPopup("##menu")) {
+        const String cell =
+            selection_text(ctx.frame_arena, entry.value, win.menu_selection);
+        if (ImGui::MenuItemEx(copy_cell_menu_label(ctx.frame_arena, cell).data,
+                              ICON_MD_CONTENT_COPY)) {
+          clipboard_copy_cell(view_state.notifications, cell);
         }
         ImGui::EndPopup();
       }
-
-      ImGui::TableSetColumnIndex(1);
-      ImGui::TextUnformatted(entry.value.data);
-      if (ImGui::IsItemHovered() && entry.value.len > 60) {
-        ImGui::SetTooltip("%s", entry.value.data);
-      }
-
       ImGui::PopID();
     }
     ui_pop_mono_font();
     ImGui::EndTable();
-  }
-
-  if (shortcut_copy_row(win.od.selected_index, count)) {
-    clipboard_copy_cell(view_state.notifications,
-                        entries[win.od.selected_index].value);
   }
 }
 

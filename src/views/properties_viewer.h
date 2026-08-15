@@ -5,6 +5,7 @@
 #include "process_window_flags.h"
 #include "readers/properties_reader.h"
 #include "sync.h"
+#include "views/ui.h"
 
 #include "imgui.h"
 #include "on_demand_common.h"
@@ -14,6 +15,9 @@ struct PropertiesViewerWindow {
 
   // Strings owned by PropertiesViewerState::cur_arena.
   ProcessProperties props;
+
+  // What was highlighted in the value box when the context menu was opened
+  UiTextSelection menu_selection;
 };
 
 struct PropertiesViewerState {

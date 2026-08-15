@@ -1,7 +1,10 @@
 #pragma once
 
+#include "base/string.h"
 #include "constants.h"
+#include "icons.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "shortcut.h"
 #include "style_control.h"
 
@@ -37,6 +40,20 @@ inline bool ui_context_menu(const bool row_is_selected, int &menu_column,
     menu_column = 0;
   }
   return ImGui::BeginPopupContextItem(str_id);
+}
+
+// True when the last item was right-clicked
+inline bool ui_item_right_clicked() {
+  return ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
+         ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
+                              ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+}
+
+// Ctrl+C (or Ctrl+Insert) over a focused ui_selectable_text() box
+inline bool ui_copy_shortcut_pressed() {
+  return ImGui::IsKeyDown(ImGuiMod_Ctrl) &&
+         (ImGui::IsKeyPressed(ImGuiKey_C, false) ||
+          ImGui::IsKeyPressed(ImGuiKey_Insert, false));
 }
 
 // Draw a filter input with Ctrl+F keyboard shortcut
@@ -115,3 +132,13 @@ inline void ui_filter_input(ImGuiTextFilter &filter, const char *id,
     filter.Build();
   }
 }
+
+struct UiTextSelection {
+  uint32_t begin;
+  uint32_t end;
+};
+
+UiTextSelection ui_selectable_text(const char *id, const String &value);
+
+// Keeps the box active while `popup_id`'s popup - opened over it
+void ui_hold_text_selection(const char *popup_id);
