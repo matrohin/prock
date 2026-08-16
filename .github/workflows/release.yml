@@ -1,16 +1,49 @@
 name: Release
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag to create, e.g. v0.5.3'
+        required: true
+        type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Validate tag
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "::error::'$TAG' is not a vMAJOR.MINOR[.PATCH] tag"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::tag $TAG already exists on origin"
+            exit 1
+          fi
+      - name: Refuse off-master commits
+        run: |
+          git fetch --no-tags origin master
+          if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
+            echo "::error::$GITHUB_SHA is not on master"
+            exit 1
+          fi
+      - name: Create tag
+        # CMake embeds `git describe` as PROCK_VERSION at configure time.
+        # So we create the tag locally before build. Push happens at the end.
+        run: git tag "$TAG"
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -37,8 +70,9 @@ jobs:
             -DCMAKE_C_COMPILER_RANLIB="$RUNNER_TEMP/zig-tools/ranlib" \
             -DCMAKE_CXX_COMPILER_RANLIB="$RUNNER_TEMP/zig-tools/ranlib"
           cmake --build build/Publish
+      - name: Push tag
+        run: git push origin "refs/tags/$TAG"
       - name: Publish draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: gh release create "$TAG" build/Publish/prock --draft --generate-notes
