@@ -23,9 +23,6 @@ constexpr uint32_t NUM_CORES = 4;
 // Frames a single record may take to travel from the playback thread.
 constexpr int STEP_FRAME_BUDGET = 200;
 
-// The test engine reports existence for 2 frames after it was seen.
-constexpr int SETTLE_FRAMES = 3;
-
 static char g_recording_path[PATH_MAX];
 
 static void add_process(FakeRecording &rec, const Pid pid, const Pid ppid,
@@ -42,9 +39,10 @@ static void build_records(FakeRecording &rec) {
   add_process(rec, UI_TEST_PID_ROOT, 0, "init", 500);
   add_process(rec, 100, UI_TEST_PID_ROOT, "systemd-journald", 2000);
   add_process(rec, 200, UI_TEST_PID_ROOT, "sshd", 900);
-  add_process(rec, 300, 200, "bash", 700);
-  add_process(rec, UI_TEST_PID_DYING, 300, "vim", 1500);
-  add_process(rec, 500, UI_TEST_PID_ROOT, "firefox", 60000);
+  add_process(rec, UI_TEST_PID_SHELL, 200, "bash", 700);
+  add_process(rec, UI_TEST_PID_DYING, UI_TEST_PID_SHELL, UI_TEST_NAME_DYING,
+              1500);
+  add_process(rec, UI_TEST_PID_BROWSER, UI_TEST_PID_ROOT, "firefox", 60000);
   rec.record(0);
 
   rec.advance(5, 2, 4096, 1024);
@@ -104,7 +102,7 @@ void ui_test_replay_step(ImGuiTestContext *ctx) {
 
   for (int i = 0; i < STEP_FRAME_BUDGET; ++i) {
     if (g_ui_test_app->state.update_count != before) {
-      ctx->Yield(SETTLE_FRAMES);
+      ctx->Yield(UI_TEST_SETTLE_FRAMES);
       return;
     }
     ctx->Yield();

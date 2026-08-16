@@ -17,6 +17,13 @@ constexpr int UI_TEST_RECORD_SETTLED = 4;
 constexpr Pid UI_TEST_PID_ROOT = 1;    // parent of most of the tree
 constexpr Pid UI_TEST_PID_BORN = 600;  // absent until UI_TEST_RECORD_LIFECYCLE
 constexpr Pid UI_TEST_PID_DYING = 400; // present until UI_TEST_RECORD_LIFECYCLE
+constexpr Pid UI_TEST_PID_SHELL = 300; // parent of UI_TEST_PID_DYING
+constexpr Pid UI_TEST_PID_BROWSER = 500; // child of UI_TEST_PID_ROOT
+
+constexpr const char *UI_TEST_NAME_DYING = "vim";
+
+// The test engine reports existence for 2 frames after an item was last seen.
+constexpr int UI_TEST_SETTLE_FRAMES = 3;
 
 constexpr const char *UI_TEST_REPLAY_PLAY = "//##ReplayOverlay/Play";
 constexpr const char *UI_TEST_REPLAY_PAUSE = "//##ReplayOverlay/Pause";
