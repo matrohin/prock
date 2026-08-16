@@ -5,7 +5,7 @@
 // - OneNord blends Nord with Atom One Dark (MIT, (c) GitHub Inc.)
 // - Everforest (MIT, (c) sainnhe) https://github.com/sainnhe/everforest
 // The palettes below are color values; the full upstream license texts ship in
-// the in-app "Third-Party Licenses" dialog (scripts/gen_licenses.py ->
+// the in-app "Licenses" dialog (scripts/gen_licenses.py ->
 // src/views/licenses.h).
 
 #pragma once

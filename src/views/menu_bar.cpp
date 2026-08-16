@@ -24,7 +24,7 @@ static const char *PERIOD_LABELS[] = {"Paused", "0.25s", "0.5s",
                                       "1s",     "2s",    "5s"};
 static const char *PREFERENCES_TITLE = "Preferences";
 static const char *ABOUT_TITLE = "About Prock";
-static const char *LICENSES_TITLE = "Third-Party Licenses";
+static const char *LICENSES_TITLE = "Licenses";
 static constexpr float UI_ELEMENT_WIDTH = 220.0f;
 static constexpr float FONT_POPUP_WIDTH = 300.0f;
 static constexpr float SETTING_LABEL_WIDTH = 130.0f;
@@ -308,13 +308,18 @@ static void draw_licenses_modal(PreferencesState &prefs) {
     }
 
     ImGui::TextWrapped(
-        "Prock bundles the third-party libraries and fonts listed below. "
-        "Expand an entry to read its full license.");
+        "Prock is released under the MIT License, and bundles the third-party "
+        "libraries and fonts listed below. Expand an entry to read its full "
+        "license.");
     ImGui::Spacing();
 
     const float footer = ImGui::GetFrameHeightWithSpacing();
     if (ImGui::BeginChild("licenses_scroll", ImVec2(0.0f, -footer),
                           ImGuiChildFlags_Borders)) {
+      if (ImGui::CollapsingHeader("Prock")) {
+        ImGui::TextUnformatted(PROCK_LICENSE);
+      }
+      ImGui::Separator();
       for (const ThirdPartyLicense &lic : THIRD_PARTY_LICENSES) {
         if (ImGui::CollapsingHeader(lic.name)) {
           ImGui::TextUnformatted(lic.text);
@@ -358,7 +363,7 @@ static void draw_about_modal(PreferencesState &prefs) {
     ImGui::Spacing();
 
     ImGui::Text("A process explorer and system monitor for Linux");
-    ImGui::Text("Created by Dmitrii Matrokhin");
+    ImGui::Text("%s", PROCK_COPYRIGHT);
     ImGui::SameLine();
     ImGui::TextDisabled("<matrokhin.d@gmail.com>");
 
@@ -477,7 +482,7 @@ void menu_bar_draw(ViewState &view_state) {
         open_url("https://github.com/matrohin/prock/issues");
       }
       ImGui::Separator();
-      if (ImGui::MenuItem("Third-Party Licenses...")) {
+      if (ImGui::MenuItem("Licenses...")) {
         view_state.preferences_state.show_licenses_modal = true;
       }
       if (ImGui::MenuItem("About Prock...")) {

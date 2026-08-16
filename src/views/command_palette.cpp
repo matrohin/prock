@@ -125,7 +125,7 @@ static const Command g_commands[] = {
     {"Toggle menu bar on Alt", 0, cmd_toggle_menu_on_alt},
     {"Open Preferences...", 0, cmd_open_preferences},
     {"Open command palette", ImGuiMod_Ctrl | ImGuiKey_P, cmd_open_palette},
-    {"Show third-party licenses", 0, cmd_show_licenses},
+    {"Show licenses", 0, cmd_show_licenses},
     {"About Prock", 0, cmd_show_about},
     {"Toggle recording", ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_R,
      cmd_toggle_recording, recorder_toggle_label},
