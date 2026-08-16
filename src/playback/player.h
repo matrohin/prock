@@ -11,10 +11,13 @@ constexpr float PLAYBACK_SPEED_MAX = 1e9f;
 
 struct PlaybackSync {
   std::atomic<float> speed{1.0f};
+  std::atomic<int> steps{0};
   std::atomic<bool> paused{false};
   std::atomic<bool> restart{false};
   std::atomic<bool> finished{false};
 };
+
+void playback_notify(Sync &sync);
 
 bool playback_read_header(SerializeControl &control, SystemInfo *out);
 

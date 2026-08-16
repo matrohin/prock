@@ -10,28 +10,38 @@
 
 #include <cfloat>
 #include <cstring>
-#include <mutex>
 
 static constexpr float SPEED_VALUES[] = {0.5f, 1.0f,  2.0f,
                                          5.0f, 10.0f, PLAYBACK_SPEED_MAX};
 static const char *SPEED_LABELS[] = {"0.5x", "1x", "2x", "5x", "10x", "Max"};
 static const char *REPLAY_DIALOG_TITLE = "Replay a recording";
 
-static void notify_playback(Sync &sync) {
-  // clang-format off: older clang-format (on CI) disagrees with formatting
-  {
-    std::lock_guard<std::mutex> lock(sync.quit_mutex);
-  }
-  // clang-format on
-  sync.quit_cv.notify_one();
-}
-
 void replay_toggle_pause(ViewState &view_state) {
   Sync &sync = *view_state.sync;
   const bool paused = !sync.playback.paused.load();
   sync.playback.paused.store(paused);
   view_state.preferences_state.auto_follow = !paused;
-  notify_playback(sync);
+  playback_notify(sync);
+}
+
+void replay_request_step(ViewState &view_state) {
+  Sync &sync = *view_state.sync;
+  sync.playback.steps.fetch_add(1);
+  playback_notify(sync);
+}
+
+void replay_follow_record(ViewState &view_state) {
+  const Sync &sync = *view_state.sync;
+  if (sync.replay_mode && sync.playback.paused.load()) {
+    view_state.preferences_state.auto_follow = true;
+  }
+}
+
+void replay_follow_release(ViewState &view_state) {
+  const Sync &sync = *view_state.sync;
+  if (sync.replay_mode && sync.playback.paused.load()) {
+    view_state.preferences_state.auto_follow = false;
+  }
 }
 
 void replay_open_dialog_draw(ViewState &view_state) {
@@ -104,16 +114,24 @@ void replay_overlay_draw(ViewState &view_state) {
     ImGui::SameLine();
 
     const bool paused = sync.playback.paused.load();
+    const bool finished = sync.playback.finished.load();
     if (ImGui::Button(paused ? "Play" : "Pause")) {
       replay_toggle_pause(view_state);
     }
+    ImGui::SameLine();
+
+    ImGui::BeginDisabled(!paused || finished);
+    if (ImGui::Button("Step")) {
+      replay_request_step(view_state);
+    }
+    ImGui::EndDisabled();
     ImGui::SameLine();
 
     ImGui::SetNextItemWidth(64.0f * ui_scale());
     if (ImGui::Combo("##speed", &rs.speed_index, SPEED_LABELS,
                      IM_ARRAYSIZE(SPEED_LABELS))) {
       sync.playback.speed.store(SPEED_VALUES[rs.speed_index]);
-      notify_playback(sync);
+      playback_notify(sync);
     }
     ImGui::SameLine();
 
@@ -122,10 +140,10 @@ void replay_overlay_draw(ViewState &view_state) {
       sync.playback.paused.store(false);
       view_state.preferences_state.auto_follow = true;
       rs.reset_history_request = true; // drop the previous pass's view history
-      notify_playback(sync);
+      playback_notify(sync);
     }
 
-    if (sync.playback.finished.load()) {
+    if (finished) {
       ImGui::SameLine();
       ImGui::TextDisabled("- finished");
     }

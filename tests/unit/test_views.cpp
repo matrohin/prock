@@ -6,12 +6,12 @@
 // implot
 using ImPlotShadedFlags = int;
 
+#include "common/test_helpers.h"
 #include "readers/proc_util.h"
 #include "readers/username.h"
 #include "state/raw_stats.h"
 #include "state/state.h"
 #include "sync.h"
-#include "test_helpers.h"
 #include "views/brief_table_logic.h"
 #include "views/common.h"
 #include "views/common_charts.h"

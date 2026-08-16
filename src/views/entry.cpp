@@ -1,5 +1,6 @@
 #include "views/entry.h"
 
+#include "sync.h"
 #include "views/brief_table.h"
 #include "views/cpu_chart.h"
 #include "views/environ_viewer.h"
@@ -22,10 +23,15 @@
 
 #include "tracy/Tracy.hpp"
 
+bool entry_views_frozen(const ViewState &view_state) {
+  return !view_state.preferences_state.auto_follow &&
+         !view_state.sync->replay_mode;
+}
+
 void entry_views_update(FrameContext &ctx, ViewState &view_state,
                         State &state) {
   ZoneScoped;
-  const bool paused = !view_state.preferences_state.auto_follow;
+  const bool paused = entry_views_frozen(view_state);
   if (!paused)
     brief_table_update(ctx, view_state.brief_table_state,
                        view_state.string_interner, state);

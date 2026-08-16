@@ -17,6 +17,15 @@ struct PlaybackState {
   InternTable interner;
 };
 
+void playback_notify(Sync &sync) {
+  // clang-format off: older clang-format (on CI) disagrees with formatting
+  {
+    std::lock_guard<std::mutex> lock(sync.quit_mutex);
+  }
+  // clang-format on
+  sync.quit_cv.notify_one();
+}
+
 bool playback_read_header(SerializeControl &control, SystemInfo *out) {
   serialize_header(&control);
   serialize(&control, out);
@@ -43,9 +52,13 @@ static void playback_wait(Sync &sync, const SteadyTimeDataPoint at,
 
     std::unique_lock<std::mutex> lock(sync.quit_mutex);
     if (sync.playback.paused.load()) {
+      if (sync.playback.steps.load() > 0) {
+        sync.playback.steps.fetch_sub(1);
+        return;
+      }
       sync.quit_cv.wait(lock, [&] {
         return sync.quit.load() || sync.playback.restart.load() ||
-               !sync.playback.paused.load();
+               !sync.playback.paused.load() || sync.playback.steps.load() > 0;
       });
       continue;
     }
@@ -102,8 +115,10 @@ void playback_loop(Sync &sync, const char *path) {
     fseek(file, first_record_pos, SEEK_SET);
     clearerr(file);
     control.failed = false;
-    sync.playback.restart.store(false);
+    // Cleared first, so a UI waiting on `restart` can step right away
     sync.playback.finished.store(false);
+    sync.playback.restart.store(false);
+    // Note that we don't clear step here as the UI test can request it earlier
 
     bool have_prev = false;
     SteadyTimeDataPoint prev_at = {};

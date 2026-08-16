@@ -465,6 +465,7 @@ App *app_create(const AppParams &params) {
   Sync *sync = &app->sync;
 
   if (app->sync.replay_mode) {
+    app->sync.playback.paused.store(params.replay_start_paused);
     app->producer_thread =
         std::thread{[sync, replay_path = params.replay_path] {
           pthread_setname_np(pthread_self(), "playback");
@@ -532,12 +533,13 @@ static void state_update(FrameContext &frame_ctx, App &app,
   state.snapshot = state_snapshot_update(state.snapshot_arena, state, snapshot);
   state.update_count += 1;
   state.update_system_time = snapshot.system_time;
+  replay_follow_record(view_state);
 
   entry_views_update(frame_ctx, view_state, state);
   recorder_update(view_state, snapshot, app.sync);
 
   // Save the old arena to continue to show it in all the tables:
-  const bool paused = !view_state.preferences_state.auto_follow;
+  const bool paused = entry_views_frozen(view_state);
   if (paused && !state.frozen_snapshot_arena.cur_slab) {
     state.frozen_snapshot_arena = old_arena;
   } else {
@@ -673,6 +675,7 @@ void app_draw(App *app, FrameContext &frame_ctx) {
 
   ImGuiIO &io = ImGui::GetIO();
   draw_main_window(frame_ctx, io, app->state, app->view_state);
+  replay_follow_release(app->view_state);
 }
 
 void app_render(App *app) {

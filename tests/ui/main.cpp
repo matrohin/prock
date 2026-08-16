@@ -1,4 +1,7 @@
 #include "app.h"
+#include "ui/ui_test_replay.h"
+#include "views/replay_controls.h"
+
 #include "imgui.h"
 #include "imgui_te_engine.h"
 #include "imgui_te_exporters.h"
@@ -9,6 +12,7 @@
 #include <cstring>
 
 extern void ui_tests_brief_table_register(ImGuiTestEngine *engine);
+extern void ui_tests_replay_controls_register(ImGuiTestEngine *engine);
 
 constexpr const char *USAGE = "Usage: prock_ui_tests [--gui]\n";
 
@@ -26,12 +30,21 @@ int main(int argc, char **argv) {
     }
   }
 
-  AppParams params = {};
-  params.hidden_window = !gui;
-  App *app = app_create(params);
-  if (!app) {
+  const char *recording_path = ui_test_replay_build();
+  if (!recording_path) {
     return 1;
   }
+
+  AppParams params = {};
+  params.hidden_window = !gui;
+  params.replay_path = recording_path;
+  params.replay_start_paused = true;
+  App *app = app_create(params);
+  if (!app) {
+    ui_test_replay_cleanup();
+    return 1;
+  }
+  g_ui_test_app = app;
 
   ImGuiTestEngine *engine = ImGuiTestEngine_CreateContext();
   ImGuiTestEngineIO &test_io = ImGuiTestEngine_GetIO(engine);
@@ -41,9 +54,13 @@ int main(int argc, char **argv) {
   ImGui::GetIO().ConfigDebugIsDebuggerPresent = ImOsIsDebuggerPresent();
 
   ui_tests_brief_table_register(engine);
+  ui_tests_replay_controls_register(engine);
 
   ImGuiTestEngine_Start(engine, ImGui::GetCurrentContext());
   ImGuiTestEngine_InstallDefaultCrashHandler();
+
+  // Get the baseline record on screen; tests take it from there.
+  replay_request_step(app->view_state);
 
   bool tests_queued = false;
 
@@ -70,7 +87,7 @@ int main(int argc, char **argv) {
     if (gui) continue;
     if (!tests_queued) {
       // The tests act on the process table, so they can only start once the
-      // gathering thread has delivered its first snapshot.
+      // playback thread has delivered the record requested above.
       if (app->state.update_count > 0) {
         ImGuiTestEngine_QueueTests(engine, ImGuiTestGroup_Tests, "all",
                                    ImGuiTestRunFlags_RunFromCommandLine);
@@ -89,6 +106,7 @@ int main(int argc, char **argv) {
 
   app_destroy(app);
   ImGuiTestEngine_DestroyContext(engine);
+  ui_test_replay_cleanup();
 
   return summary.CountSuccess == summary.CountTested ? 0 : 1;
 }

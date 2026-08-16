@@ -200,7 +200,10 @@ if(BUILD_TESTS)
 
   add_executable(prock_ui_tests
     tests/ui/main.cpp
+    tests/ui/ui_test_replay.cpp
     tests/ui/ui_tests_brief_table.cpp
+    tests/ui/ui_tests_replay_controls.cpp
+    tests/common/fake_recording.cpp
     src/app.cpp
   )
   target_include_directories(prock_ui_tests PRIVATE

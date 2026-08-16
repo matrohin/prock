@@ -1,5 +1,7 @@
+#include "app.h"
 #include "imgui_te_context.h"
 #include "imgui_te_engine.h"
+#include "ui/ui_test_replay.h"
 #include "views/brief_table_logic.h"
 
 constexpr const char *TREE_CHECKBOX = "//ProcessTable/Header/Tree";
@@ -7,6 +9,13 @@ constexpr const char *TABLE = "//ProcessTable/Processes";
 constexpr const char *FIRST_PROCESS = "//ProcessTable/Processes/1";
 constexpr const char *PID_COLUMN = "//ProcessTable/Processes/$$0/PID";
 constexpr const char *RSS_COLUMN = "//ProcessTable/Processes/$$9/RSS";
+
+// Rows are identified by PID, so these spell out the scenario's PIDs.
+constexpr const char *BORN_ROW = "//ProcessTable/Processes/600";
+constexpr const char *DYING_ROW = "//ProcessTable/Processes/400";
+static_assert(UI_TEST_PID_ROOT == 1);
+static_assert(UI_TEST_PID_BORN == 600);
+static_assert(UI_TEST_PID_DYING == 400);
 
 #define CHECK_ITEM_INFO_HAS(info, expect_true)                                 \
   IM_CHECK(((info).StatusFlags & (expect_true)) == (expect_true))
@@ -103,5 +112,38 @@ void ui_tests_brief_table_register(ImGuiTestEngine *engine) {
     IM_CHECK(context->ItemIsChecked(TREE_CHECKBOX));
     check_col_sorted(context, eBriefTableColumnId_Pid,
                      ImGuiSortDirection_Ascending);
+  };
+
+  t = IM_REGISTER_TEST(engine, "brief_table",
+                       "Stepping the replay adds and removes rows");
+  t->TestFunc = [](ImGuiTestContext *context) {
+    ui_test_replay_seek(context, UI_TEST_RECORD_LIFECYCLE - 1);
+    IM_CHECK(context->ItemExists(DYING_ROW));
+    IM_CHECK(!context->ItemExists(BORN_ROW));
+
+    // The record that starts one process and ends another. The dead row is
+    // kept on screen for a while, so both are visible here.
+    ui_test_replay_step(context);
+    IM_CHECK(context->ItemExists(BORN_ROW));
+    IM_CHECK(context->ItemExists(DYING_ROW));
+
+    // Far enough past the death for the row to be dropped.
+    ui_test_replay_seek(context, UI_TEST_RECORD_SETTLED);
+    IM_CHECK(context->ItemExists(BORN_ROW));
+    IM_CHECK(!context->ItemExists(DYING_ROW));
+  };
+
+  t = IM_REGISTER_TEST(engine, "brief_table",
+                       "Stepping a paused replay still updates the table");
+  t->TestFunc = [](ImGuiTestContext *context) {
+    ui_test_replay_seek(context, UI_TEST_RECORD_LIFECYCLE - 1);
+
+    // A paused replay leaves auto-follow off, which is what freezes the table
+    // for live gathering.
+    IM_CHECK(!g_ui_test_app->view_state.preferences_state.auto_follow);
+    IM_CHECK(!context->ItemExists(BORN_ROW));
+
+    ui_test_replay_step(context);
+    IM_CHECK(context->ItemExists(BORN_ROW));
   };
 }
