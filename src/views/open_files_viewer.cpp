@@ -311,10 +311,7 @@ void open_files_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
             // Path
             ImGui::TableSetColumnIndex(eOpenFilesViewerColumnId_Path);
-            ImGui::TextUnformatted(file.path.data);
-            if (ImGui::IsItemHovered()) {
-              ImGui::SetTooltip("%s", file.path.data);
-            }
+            ui_path_text(ctx.frame_arena, file.path);
             ImGui::PopID();
           }
 

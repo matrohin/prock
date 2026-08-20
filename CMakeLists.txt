@@ -160,6 +160,7 @@ if(BUILD_TESTS)
     src/readers/proc_util.cpp
     src/readers/username.cpp
     src/views/brief_table_logic.cpp
+    src/views/path_elide.cpp
     src/state/state.cpp
     src/state/serialize.cpp)
   target_include_directories(prock_tests PRIVATE

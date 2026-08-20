@@ -133,6 +133,16 @@ inline void ui_filter_input(ImGuiTextFilter &filter, const char *id,
   }
 }
 
+// Fits `path` into `avail_width` pixels by middle-eliding it
+String ui_path_fit(BumpArena &arena, const String &path, float avail_width);
+
+// Draws a path in the current table cell, middle-elided when it does not fit
+void ui_path_text(BumpArena &arena, const String &path);
+
+inline void ui_path_text(BumpArena &arena, const char *path) {
+  ui_path_text(arena, String::static_string(path));
+}
+
 struct UiTextSelection {
   uint32_t begin;
   uint32_t end;

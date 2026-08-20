@@ -462,10 +462,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
               // Mapping
               ImGui::TableSetColumnIndex(6);
-              ImGui::TextUnformatted(g.name);
-              if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("%s", g.name);
-              }
+              ui_path_text(ctx.frame_arena, g.name);
 
               ImGui::PopID();
             }
@@ -586,11 +583,7 @@ void smaps_viewer_draw(FrameContext &ctx, ViewState &view_state) {
 
               // Mapping
               ImGui::TableSetColumnIndex(eSmapsViewerColumnId_Mapping);
-              const char *label = segment_label(seg);
-              ImGui::TextUnformatted(label);
-              if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("%s", label);
-              }
+              ui_path_text(ctx.frame_arena, segment_label(seg));
 
               ImGui::PopID();
             }

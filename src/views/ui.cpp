@@ -1,5 +1,7 @@
 #include "ui.h"
 
+#include "path_elide.h"
+
 #include "imgui_internal.h"
 
 #include <algorithm>
@@ -48,6 +50,29 @@ void ui_hold_text_selection(const char *popup_id) {
   const bool hold = ImGui::IsPopupOpen(popup_id);
   g.ActiveIdNoClearOnFocusLoss = hold;
   if (hold) g.ActiveIdAllowOverlap = true;
+}
+
+String ui_path_fit(BumpArena &arena, const String &path,
+                   const float avail_width) {
+  const float full_width =
+      ImGui::CalcTextSize(path.data, path.data + path.len).x;
+  if (full_width <= avail_width) return path;
+  if (full_width <= 0.0f) return String{"", 0};
+
+  // Note: this assumes monospaced font and will not work on some custom ones,
+  // I'm thinking of just disabling the option to choose the font anyway.
+  const uint32_t budget = static_cast<uint32_t>(static_cast<float>(path.len) *
+                                                avail_width / full_width);
+  return path_elide(arena, path.data, path.len, budget);
+}
+
+void ui_path_text(BumpArena &arena, const String &path) {
+  const String shown =
+      ui_path_fit(arena, path, ImGui::GetContentRegionAvail().x);
+  ImGui::TextUnformatted(shown.data, shown.data + shown.len);
+  if (shown.data != path.data && ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("%s", path.data);
+  }
 }
 
 UiTextSelection ui_selectable_text(const char *id, const String &value) {

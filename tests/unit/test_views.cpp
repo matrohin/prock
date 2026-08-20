@@ -15,6 +15,7 @@ using ImPlotShadedFlags = int;
 #include "views/brief_table_logic.h"
 #include "views/common.h"
 #include "views/common_charts.h"
+#include "views/path_elide.h"
 #include "views/table_item.h"
 
 #include <pwd.h>
@@ -1673,5 +1674,112 @@ TEST_CASE("UsernameResolver") {
   }
 
   resolver.cache.destroy();
+  arena.destroy();
+}
+
+// ============================================================================
+// path_elide Tests
+// ============================================================================
+
+static String elide(BumpArena &arena, const char *path,
+                    const uint32_t max_chars) {
+  return path_elide(arena, path, static_cast<uint32_t>(strlen(path)),
+                    max_chars);
+}
+
+// The ellipsis is three bytes but one rendered character, which is what the
+// budget counts.
+static uint32_t char_count(const String &text) {
+  uint32_t chars = 0;
+  for (uint32_t i = 0; i < text.len; ++i) {
+    if ((static_cast<unsigned char>(text.data[i]) & 0xC0) != 0x80) ++chars;
+  }
+  return chars;
+}
+
+TEST_CASE("path_elide") {
+  BumpArena arena = BumpArena::create();
+
+  SUBCASE("a path that fits is returned untouched") {
+    const char *path = "/usr/lib/libc.so.6";
+    const String result = elide(arena, path, 32);
+    CHECK(result.data == path);
+    CHECK(result.len == strlen(path));
+  }
+
+  SUBCASE("keeps as many leading components as fit") {
+    const String result = elide(arena, "/begin/some/x/y/z/ending.jar", 24);
+    CHECK(strcmp(result.data, "/begin/some/…/ending.jar") == 0);
+    CHECK(char_count(result) == 24);
+  }
+
+  SUBCASE("drops leading components as the budget shrinks") {
+    const String result = elide(arena, "/begin/some/x/y/ending.jar", 19);
+    CHECK(strcmp(result.data, "/begin/…/ending.jar") == 0);
+  }
+
+  SUBCASE("no room for a leading component keeps only the basename") {
+    const String result = elide(arena, "/begin/some/x/y/ending.jar", 18);
+    CHECK(strcmp(result.data, "…/ending.jar") == 0);
+  }
+
+  SUBCASE("a relative path does not gain a leading slash") {
+    CHECK(strcmp(elide(arena, "some/dir/deeper/ending.jar", 17).data,
+                 "some/…/ending.jar") == 0);
+    CHECK(strcmp(elide(arena, "some/dir/deeper/ending.jar", 16).data,
+                 "…/ending.jar") == 0);
+  }
+
+  SUBCASE("an oversized basename keeps its end") {
+    const String result = elide(arena, "/a/bbbbbbbbbbbbbbbbbbbb.so", 12);
+    CHECK(strcmp(result.data, "…bbbbbbbb.so") == 0);
+    CHECK(char_count(result) == 12);
+  }
+
+  SUBCASE("a deleted mapping keeps its marker") {
+    const String result = elide(arena, "/usr/lib/x/y/libfoo.so (deleted)", 26);
+    CHECK(strcmp(result.data, "/usr/…/libfoo.so (deleted)") == 0);
+  }
+
+  SUBCASE("text without a separator is elided in the middle") {
+    const String result = elide(arena, "anon_inode:[eventpoll]", 12);
+    CHECK(strcmp(result.data, "anon_i…poll]") == 0);
+    CHECK(char_count(result) == 12);
+  }
+
+  SUBCASE("an empty string is returned untouched") {
+    const char *path = "";
+    const String result = elide(arena, path, 0);
+    CHECK(result.data == path);
+    CHECK(result.len == 0);
+  }
+
+  SUBCASE("a budget too small for the ellipsis yields nothing") {
+    CHECK(elide(arena, "/a/b/ccc", 0).len == 0);
+    CHECK(strcmp(elide(arena, "/a/b/ccc", 1).data, "…") == 0);
+    CHECK(strcmp(elide(arena, "/a/b/ccc", 2).data, "…c") == 0);
+    CHECK(strcmp(elide(arena, "/a/b/ccc", 5).data, "…/ccc") == 0);
+  }
+
+  SUBCASE("never exceeds the budget") {
+    const char *paths[] = {"/begin/some/x/y/ending.jar",
+                           "some/dir/deeper/ending.jar",
+                           "anon_inode:[eventpoll]",
+                           "/a/bbbbbbbbbbbbbbbbbbbb.so",
+                           "/usr/lib/x/y/libfoo.so (deleted)",
+                           "[heap]",
+                           "/",
+                           "//a//b//c",
+                           "/a/b/"};
+    for (const char *path : paths) {
+      const uint32_t len = static_cast<uint32_t>(strlen(path));
+      for (uint32_t max_chars = 0; max_chars <= len + 2; ++max_chars) {
+        const String result = elide(arena, path, max_chars);
+        CHECK(result.len == strlen(result.data));
+        CHECK(char_count(result) <= (max_chars >= len ? len : max_chars));
+      }
+    }
+  }
+
   arena.destroy();
 }

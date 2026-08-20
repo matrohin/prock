@@ -57,6 +57,7 @@
 #include "views/notifications.cpp"
 #include "views/on_demand_common.cpp"
 #include "views/open_files_viewer.cpp"
+#include "views/path_elide.cpp"
 #include "views/ports_viewer.cpp"
 #include "views/process_host.cpp"
 #include "views/process_window_flags.cpp"

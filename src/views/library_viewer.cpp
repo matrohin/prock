@@ -185,16 +185,20 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             if (!filter.PassFilter(lib.path.data)) continue;
             const bool is_selected =
                 win.od.selected_index == static_cast<int>(j);
+            ImGui::PushID(static_cast<int>(j));
             ImGui::TableNextRow();
 
-            // Path with selection
             ImGui::TableSetColumnIndex(eLibraryViewerColumnId_Path);
-            if (ImGui::Selectable(lib.path.data, is_selected,
+            const String shown = ui_path_fit(ctx.frame_arena, lib.path,
+                                             ImGui::GetContentRegionAvail().x);
+            const String label =
+                String::sprintf(ctx.frame_arena, "%s###row", shown.data);
+            if (ImGui::Selectable(label.data, is_selected,
                                   ImGuiSelectableFlags_SpanAllColumns) ||
                 ImGui::IsItemFocused()) {
               win.od.selected_index = static_cast<int>(j);
             }
-            if (ImGui::IsItemHovered()) {
+            if (shown.data != lib.path.data && ImGui::IsItemHovered()) {
               ImGui::SetTooltip("%s", lib.path.data);
             }
 
@@ -231,6 +235,7 @@ void library_viewer_draw(FrameContext &ctx, ViewState &view_state) {
             } else {
               table_item_draw_dim("N/A");
             }
+            ImGui::PopID();
           }
 
           ui_pop_mono_font();
